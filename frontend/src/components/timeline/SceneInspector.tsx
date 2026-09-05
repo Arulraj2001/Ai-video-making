@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Scissors, Copy, Trash2 } from "lucide-react";
 import type { Project, Scene, ImageMotion, TransitionType, ImageFit, ImagePosition, ImageCrop } from "../../types/project";
 import { api } from "../../services/api";
 
@@ -267,6 +268,77 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             Later ➡
           </button>
         </div>
+      </div>
+
+      {/* Timeline Clip Operations Toolbar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "8px 12px",
+          background: "var(--bg-card-subtle)",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--border-subtle)",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => onSplitScene(scene.id, currentTime)}
+          disabled={!canSplitAtPlayhead}
+          title={
+            canSplitAtPlayhead
+              ? `Split scene at current playhead position (${currentTime.toFixed(2)}s) [Shortcut: S]`
+              : `Playhead must be inside the scene (${scene.start.toFixed(1)}s - ${scene.end.toFixed(1)}s) to split`
+          }
+          className="btn-secondary text-xs"
+          style={{
+            padding: "5px 10px",
+            opacity: canSplitAtPlayhead ? 1 : 0.5,
+            cursor: canSplitAtPlayhead ? "pointer" : "not-allowed",
+            background: canSplitAtPlayhead ? "var(--accent-primary-subtle)" : "transparent",
+            color: canSplitAtPlayhead ? "var(--accent-primary)" : "var(--text-muted)",
+            borderColor: canSplitAtPlayhead ? "var(--accent-primary)" : "var(--border-subtle)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+          }}
+        >
+          <Scissors size={13} />
+          <span>Split at Playhead ({canSplitAtPlayhead ? `${currentTime.toFixed(1)}s` : "Seek to clip"})</span>
+        </button>
+
+        <button
+          onClick={() => onDuplicateScene(scene.id)}
+          title="Duplicate scene directly downstream"
+          className="btn-secondary text-xs"
+          style={{
+            padding: "5px 10px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+          }}
+        >
+          <Copy size={13} />
+          <span>Duplicate</span>
+        </button>
+
+        <button
+          onClick={() => onDeleteScene(scene.id)}
+          title="Delete scene from timeline with ripple shift [Shortcut: Del]"
+          className="btn-ghost text-xs"
+          style={{
+            padding: "5px 10px",
+            color: "var(--accent-danger-text)",
+            marginLeft: "auto",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+          }}
+        >
+          <Trash2 size={13} />
+          <span>Delete Clip</span>
+        </button>
       </div>
 
       {/* Visual Preview & Quick Actions */}

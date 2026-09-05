@@ -74,6 +74,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [clusterTargetDuration, setClusterTargetDuration] = useState<number>(15.0);
   const [clusterMode, setClusterMode] = useState<"fixed_duration" | "smart_llm">("fixed_duration");
   const [clusteringInProgress, setClusteringInProgress] = useState(false);
+  const [dismissRapidAlert, setDismissRapidAlert] = useState(false);
 
   // Variations modal
   const [variationsModalScene, setVariationsModalScene] = useState<Scene | null>(null);
@@ -170,6 +171,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const isAllImagesCompleted = scenes.length > 0 && imagesCompletedCount === scenes.length;
 
   const totalVideoDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
+  const avgSceneDuration = scenes.length > 0 ? totalVideoDuration / scenes.length : 0;
+  const isRapidPaced = scenes.length > 3 && avgSceneDuration < 8.0;
 
   // Filtered scenes based on search and status
   const filteredScenes = useMemo(() => {
@@ -697,6 +700,48 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Rapid Captions Advisory Banner */}
+      {isRapidPaced && !dismissRapidAlert && (
+        <div
+          className="p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm"
+          style={{
+            background: "rgba(234, 179, 8, 0.08)",
+            borderColor: "rgba(234, 179, 8, 0.4)",
+            color: "var(--text-primary)",
+          }}
+        >
+          <div className="flex items-start gap-2.5">
+            <Sparkles size={16} className="shrink-0 mt-0.5" style={{ color: "#eab308" }} />
+            <div>
+              <span className="font-bold text-amber-300">Fast Subtitle Pacing Detected ({avgSceneDuration.toFixed(1)}s average): </span>
+              <span style={{ color: "var(--text-secondary)" }}>
+                Generating visual frames for every 2-3 second line causes strobe-like image cuts. 
+                Use <strong>Smart Cluster</strong> to group captions into 15–20s scenes for professional cinematic video pacing.
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <button
+              onClick={() => setClusteringModalOpen(true)}
+              className="text-xs py-1 px-3 rounded-lg font-bold transition-opacity hover:opacity-90"
+              style={{
+                background: "#eab308",
+                color: "#000",
+              }}
+            >
+              Cluster to 15s Pacing
+            </button>
+            <button
+              onClick={() => setDismissRapidAlert(true)}
+              className="p-1 rounded text-zinc-400 hover:text-zinc-200"
+              title="Dismiss alert"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
 
       {/* Real-time Generation Progress Bar */}
@@ -1301,10 +1346,25 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                             </button>
                           </div>
 
+                          {/* Source Tag Badge (Top Left) */}
+                          <div className="absolute top-2 left-2 pointer-events-none">
+                            {scene.image_metadata?.source === "graphic_template" ? (
+                              <span className="px-2 py-0.5 rounded bg-indigo-900/90 backdrop-blur-md text-[10px] font-semibold text-indigo-200 border border-indigo-500/40 flex items-center gap-1 shadow">
+                                📊 Graphic: {scene.image_metadata.template_type?.replace("_", " ").toUpperCase()}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-black/75 backdrop-blur-md text-[10px] font-semibold text-purple-200 border border-purple-500/30 flex items-center gap-1 shadow">
+                                🎨 AI Visual: {scene.image_metadata?.model || selectedModelId || "FLUX"}
+                              </span>
+                            )}
+                          </div>
+
                           {/* Metadata Pill */}
                           <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                             <span className="px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-[10px] font-mono text-zinc-300 border border-zinc-700/60">
-                              {scene.image_metadata?.width || 1024}x{scene.image_metadata?.height || 576} • {scene.image_metadata?.provider?.toUpperCase() || "AI"}
+                              {scene.image_metadata?.source === "graphic_template"
+                                ? "1080p • Pillow Engine"
+                                : `${scene.image_metadata?.width || 1024}x${scene.image_metadata?.height || 576} • ${scene.image_metadata?.provider?.toUpperCase() || "AI"}`}
                             </span>
                             {Boolean(scene.image_metadata?.references_used && scene.image_metadata.references_used.length > 0) && (
                               <span className="px-2 py-0.5 rounded bg-indigo-950/80 backdrop-blur-md text-[10px] font-mono text-indigo-300 border border-indigo-800/60">
