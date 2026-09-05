@@ -1,0 +1,26 @@
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Storage & Uploads
+backend/storage/projects/
+storage/
+
+# Environment secrets
+.env
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
