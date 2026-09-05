@@ -122,6 +122,8 @@ export interface SceneUpdateInput {
   image_prompt?: string;
   suggested_motion?: string;
   suggested_transition?: string;
+  image_status?: ImageStatus;
+  image_url?: string | null;
   motion?: ImageMotion;
   transition?: TransitionType;
   transition_duration?: number;
@@ -130,6 +132,7 @@ export interface SceneUpdateInput {
   image_zoom?: number;
   image_crop?: ImageCrop | null;
 }
+
 
 export interface RegenerateSceneInput {
   instructions?: string;
@@ -157,6 +160,65 @@ export interface GenerateImageInput {
   prompt_override?: string;
   /** Art style mode: photorealistic | cinematic | anime | manga | 3d | cartoon | flat | sketch | lineart | stickfigure | documentary | watercolor */
   style_mode?: string;
+  provider?: string;
+  model_id?: string;
+}
+
+export interface ModelCatalogItem {
+  id: string;
+  name: string;
+  provider: string;
+  model_id: string;
+  description: string;
+  quality: number;
+  speed: string;
+  is_free: boolean;
+  is_ready: boolean;
+  supported_styles: string[];
+}
+
+export interface ModelCatalogResponse {
+  current_provider: string;
+  models: ModelCatalogItem[];
+}
+
+export interface ClusterScenesInput {
+  mode?: "fixed_duration" | "smart_llm" | "caption_count";
+  target_duration?: number;
+  captions_per_scene?: number;
+}
+
+export interface ClusterScenesResponse {
+  project_id: string;
+  original_scene_count: number;
+  new_scene_count: number;
+  scenes: Scene[];
+}
+
+export interface MergeScenesInput {
+  scene_ids: string[];
+}
+
+export interface GraphicTemplateInput {
+  template_type: "title_card" | "quote_card" | "stats_card" | "step_card" | "split_layout";
+  headline?: string;
+  subtext?: string;
+  accent_color?: string;
+  step_number?: string;
+  stat_number?: string;
+}
+
+export interface SceneVariationItem {
+  id: string;
+  image_url: string;
+  prompt: string;
+  seed: number;
+}
+
+export interface SceneVariationsResponse {
+  project_id: string;
+  scene_id: string;
+  variations: SceneVariationItem[];
 }
 
 export interface GenerateAllImagesResponse {
@@ -167,3 +229,4 @@ export interface GenerateAllImagesResponse {
   failed_count: number;
   provider: string;
 }
+

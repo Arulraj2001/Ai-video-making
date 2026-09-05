@@ -17,12 +17,18 @@ import type {
   ImageGeneratorCapabilities,
   GenerateImageInput,
   GenerateAllImagesResponse,
+  ModelCatalogResponse,
+  ClusterScenesInput,
+  ClusterScenesResponse,
+  GraphicTemplateInput,
+  SceneVariationsResponse,
   RenderJob,
   RenderRequestInput,
   RenderJobListResponse,
 } from "../types";
 
 class ApiService {
+
   private baseUrl: string;
 
   constructor() {
@@ -328,11 +334,61 @@ class ApiService {
     projectId: string,
     options?: GenerateImageInput
   ): Promise<GenerateAllImagesResponse> {
-    return this.request<GenerateAllImagesResponse>(`/api/projects/${projectId}/scenes/generate-all-images`, {
+    return this.request<GenerateAllImagesResponse>(
+      `/api/projects/${projectId}/scenes/generate-all-images`,
+      {
+        method: "POST",
+        body: JSON.stringify(options || {}),
+      }
+    );
+  }
+
+  async getModelCatalog(): Promise<ModelCatalogResponse> {
+    return this.request<ModelCatalogResponse>("/api/images/models");
+  }
+
+  async clusterScenes(
+    projectId: string,
+    input?: ClusterScenesInput
+  ): Promise<ClusterScenesResponse> {
+    return this.request<ClusterScenesResponse>(`/api/projects/${projectId}/storyboard/cluster`, {
+      method: "POST",
+      body: JSON.stringify(input || {}),
+    });
+  }
+
+  async mergeScenes(
+    projectId: string,
+    sceneIds: string[]
+  ): Promise<ClusterScenesResponse> {
+    return this.request<ClusterScenesResponse>(`/api/projects/${projectId}/storyboard/merge`, {
+      method: "POST",
+      body: JSON.stringify({ scene_ids: sceneIds }),
+    });
+  }
+
+  async generateSceneVariations(
+    projectId: string,
+    sceneId: string,
+    options?: GenerateImageInput
+  ): Promise<SceneVariationsResponse> {
+    return this.request<SceneVariationsResponse>(`/api/projects/${projectId}/scenes/${sceneId}/variations`, {
       method: "POST",
       body: JSON.stringify(options || {}),
     });
   }
+
+  async applyGraphicTemplate(
+    projectId: string,
+    sceneId: string,
+    input: GraphicTemplateInput
+  ): Promise<Scene> {
+    return this.request<Scene>(`/api/projects/${projectId}/scenes/${sceneId}/graphic-template`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
 
   // --- Phase 6: Visual Timeline Methods ---
 

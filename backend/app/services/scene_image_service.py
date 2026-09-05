@@ -123,6 +123,8 @@ class SceneImageService:
         force: bool = False,
         prompt_override: Optional[str] = None,
         style_mode: Optional[str] = None,
+        provider_name: Optional[str] = None,
+        model_name: Optional[str] = None,
         generator: Optional[BaseImageGenerator] = None
     ) -> SceneModel:
         """
@@ -137,8 +139,13 @@ class SceneImageService:
         if not force and target_scene.image_status == "completed" and target_scene.image_url:
             return target_scene
 
-        active_generator = generator or get_image_generator(style_mode=style_mode)
+        active_generator = generator or get_image_generator(
+            provider_name=provider_name,
+            model_name=model_name,
+            style_mode=style_mode
+        )
         capabilities = active_generator.capabilities
+
 
         # 1. Update status to 'generating'
         project_service.update_scene_image_state(
@@ -318,4 +325,76 @@ class SceneImageService:
 
         return results
 
+    async def generate_scene_variations(
+        self,
+        project: ProjectModel,
+        scene_id: str,
+        count: int = 3,
+        style_mode: Optional[str] = None,
+        provider_name: Optional[str] = None,
+        model_name: Optional[str] = None
+    ) -> List[dict]:
+        """
+        Generates N candidate image variations with varying seeds for creator A/B selection.
+        Returns a list of {id, image_url, prompt, seed}.
+        """
+        import random
+        target_scene = next((s for s in project.scenes if s.id == scene_id), None)
+        if not target_scene:
+            raise ValueError(f"Scene '{scene_id}' not found in project '{project.id}'")
+
+        active_generator = get_image_generator(
+            provider_name=provider_name,
+            model_name=model_name,
+            style_mode=style_mode
+        )
+
+        effective_prompt = target_scene.image_prompt or target_scene.caption or "Cinematic scene"
+        aspect_ratio = settings.DEFAULT_ASPECT_RATIO or "16:9"
+        width, height = self.get_dimensions_for_aspect_ratio(aspect_ratio)
+
+        options = ImageGenerationOptions(
+            aspect_ratio=aspect_ratio,
+            width=width,
+            height=height,
+            negative_prompt="text, watermark, logo, bad quality, blurry"
+        )
+
+        variations = []
+        base_seed = random.randint(1000, 999999)
+
+        for i in range(count):
+            var_seed = base_seed + i * 137
+            # If generator supports seed or build_url
+            if hasattr(active_generator, "_build_url"):
+                url = active_generator._build_url(effective_prompt, options, style_mode=style_mode, seed=var_seed)
+                # Fetch image bytes
+                import urllib.request
+                req = urllib.request.Request(url, headers={"User-Agent": "AIVideoMaker/1.0"})
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    img_bytes = resp.read()
+            else:
+                gen_result = await active_generator.generate_image(effective_prompt, options)
+                img_bytes = gen_result.image_bytes
+
+            # Save variation
+            timestamp = int(time.time())
+            filename = f"{scene_id}_var_{i+1}_{timestamp}.png"
+            storage_path, image_url = project_service.save_scene_image_asset(
+                project_id=project.id,
+                scene_id=scene_id,
+                image_bytes=img_bytes,
+                filename=filename
+            )
+
+            variations.append({
+                "id": f"var-{i+1}",
+                "image_url": image_url,
+                "prompt": effective_prompt,
+                "seed": var_seed
+            })
+
+        return variations
+
 scene_image_service = SceneImageService()
+

@@ -23,26 +23,33 @@ class Settings:
     CORS_ORIGIN_REGEX: str = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.netlify\.app")
 
     # LLM Provider Configuration for Storyboard Generation
-    # Supported: "mock", "openai", "gemini", "anthropic"
+    # Supported: "mock", "openai", "gemini", "anthropic", "openrouter"
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "mock").lower()
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
     LLM_BASE_URL: Optional[str] = os.getenv("LLM_BASE_URL", None)
+
+    # OpenRouter API Key (handles both OPENROUTER_API_KEY and OpenRouter_key)
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", os.getenv("OpenRouter_key", ""))
+
+    # Gemini API Key (handles GEMINI_API_KEY or LLM_API_KEY)
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", os.getenv("LLM_API_KEY", ""))
     
-    # Image Generator Provider Configuration for Phase 5
-    # Supported: "mock", "cloudflare", "huggingface"
-    IMAGE_GENERATOR_PROVIDER: str = os.getenv("IMAGE_GENERATOR_PROVIDER", "mock").lower()
+    # Image Generator Provider Configuration
+    # Supported: "pollinations", "mock", "cloudflare", "huggingface", "gemini"
+    IMAGE_GENERATOR_PROVIDER: str = os.getenv("IMAGE_GENERATOR_PROVIDER", "pollinations").lower()
     IMAGE_GENERATOR_MODEL: Optional[str] = os.getenv("IMAGE_GENERATOR_MODEL", None)
     
-    # Cloudflare Workers AI credentials
-    CLOUDFLARE_ACCOUNT_ID: str = os.getenv("CLOUDFLARE_ACCOUNT_ID", "")
-    CLOUDFLARE_API_TOKEN: str = os.getenv("CLOUDFLARE_API_TOKEN", "")
+    # Cloudflare Workers AI credentials (support CF_ACCOUNT_ID and CF_API_TOKEN)
+    CLOUDFLARE_ACCOUNT_ID: str = os.getenv("CLOUDFLARE_ACCOUNT_ID", os.getenv("CF_ACCOUNT_ID", ""))
+    CLOUDFLARE_API_TOKEN: str = os.getenv("CLOUDFLARE_API_TOKEN", os.getenv("CF_API_TOKEN", ""))
     CLOUDFLARE_IMAGE_MODEL: str = os.getenv("CLOUDFLARE_IMAGE_MODEL", "@cf/black-forest-labs/flux-1-schnell")
     
-    # Hugging Face Inference credentials
-    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
+    # Hugging Face Inference credentials (support HF_API_KEY and HUGGINGFACE_API_KEY)
+    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", os.getenv("HF_API_KEY", ""))
     HUGGINGFACE_IMAGE_MODEL: str = os.getenv("HUGGINGFACE_IMAGE_MODEL", "black-forest-labs/FLUX.1-schnell")
     
     DEFAULT_ASPECT_RATIO: str = os.getenv("DEFAULT_ASPECT_RATIO", "16:9")
 
 settings = Settings()
+

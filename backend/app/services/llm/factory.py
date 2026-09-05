@@ -6,6 +6,7 @@ from .mock_provider import MockLLMProvider
 from .openai_provider import OpenAIProvider
 from .gemini_provider import GeminiProvider
 from .anthropic_provider import AnthropicProvider
+from .openrouter_provider import OpenRouterProvider
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +26,25 @@ def get_llm_provider(
     selected_model = model or settings.LLM_MODEL
     url = base_url or settings.LLM_BASE_URL
 
-    if selected_provider == "openai":
+    if selected_provider == "openrouter":
+        router_key = api_key or settings.OPENROUTER_API_KEY or settings.LLM_API_KEY or ""
+        if not router_key:
+            logger.warning("OpenRouter provider selected but OPENROUTER_API_KEY is not set. Falling back to MockLLMProvider.")
+            return MockLLMProvider()
+        return OpenRouterProvider(api_key=router_key, model=selected_model or "meta-llama/llama-3.3-70b-instruct:free", base_url=url)
+
+    elif selected_provider == "openai":
         if not key and not url:
             logger.warning("OpenAI provider selected but LLM_API_KEY is not set. Falling back to MockLLMProvider.")
             return MockLLMProvider()
         return OpenAIProvider(api_key=key, model=selected_model or "gpt-4o-mini", base_url=url)
 
     elif selected_provider == "gemini":
-        if not key:
-            logger.warning("Gemini provider selected but LLM_API_KEY is not set. Falling back to MockLLMProvider.")
+        gemini_key = api_key or settings.GEMINI_API_KEY or settings.LLM_API_KEY or ""
+        if not gemini_key:
+            logger.warning("Gemini provider selected but GEMINI_API_KEY is not set. Falling back to MockLLMProvider.")
             return MockLLMProvider()
-        return GeminiProvider(api_key=key, model=selected_model or "gemini-1.5-flash")
+        return GeminiProvider(api_key=gemini_key, model=selected_model or "gemini-1.5-flash")
 
     elif selected_provider == "anthropic":
         if not key:
@@ -46,3 +55,4 @@ def get_llm_provider(
     else:
         # Default mock provider
         return MockLLMProvider()
+

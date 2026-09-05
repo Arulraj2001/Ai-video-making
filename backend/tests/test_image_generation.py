@@ -21,6 +21,7 @@ client = TestClient(app)
 def project_with_storyboard(tmp_path, monkeypatch):
     monkeypatch.setattr("app.services.project_service.PROJECTS_DIR", tmp_path)
     monkeypatch.setattr("app.services.scene_image_service.STORAGE_DIR", tmp_path)
+    monkeypatch.setattr("app.configuration.config.settings.IMAGE_GENERATOR_PROVIDER", "mock")
     project_service._projects.clear()
 
     project = project_service.create_project(

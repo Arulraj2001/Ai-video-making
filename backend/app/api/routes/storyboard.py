@@ -5,6 +5,9 @@ from app.schemas.project import (
     SceneUpdate,
     RegenerateSceneRequest,
     StoryboardGenerateResponse,
+    ClusterScenesRequest,
+    ClusterScenesResponse,
+    MergeScenesRequest,
 )
 from app.services.project_service import project_service
 from app.services.storyboard_service import storyboard_service
@@ -125,3 +128,64 @@ async def update_scene_storyboard_endpoint(
     except Exception as e:
         logger.error(f"Error updating scene {scene_id} in project {project_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Scene update failed: {str(e)}")
+
+@router.post("/cluster", response_model=ClusterScenesResponse)
+async def cluster_scenes_endpoint(
+    project_id: str = Path(..., description="Project ID"),
+    request: ClusterScenesRequest = ClusterScenesRequest()
+):
+    """
+    Groups rapid captions into coherent 10-25 second visual scenes to give the output a true video feel.
+    """
+    project = project_service.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
+
+    original_count = len(project.scenes)
+    try:
+        updated_project = await project_service.cluster_scenes(
+            project_id=project_id,
+            mode=request.mode,
+            target_duration=request.target_duration,
+            captions_per_scene=request.captions_per_scene
+        )
+        return ClusterScenesResponse(
+            project_id=project_id,
+            original_scene_count=original_count,
+            new_scene_count=len(updated_project.scenes),
+            scenes=[SceneSchema.model_validate(s) for s in updated_project.scenes]
+        )
+    except Exception as e:
+        logger.error(f"Error clustering scenes for project {project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Scene clustering failed: {str(e)}")
+
+@router.post("/merge", response_model=ClusterScenesResponse)
+def merge_scenes_endpoint(
+    project_id: str = Path(..., description="Project ID"),
+    request: MergeScenesRequest = ...
+):
+    """
+    Merges selected scenes into a single composite scene with continuous duration.
+    """
+    project = project_service.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
+
+    original_count = len(project.scenes)
+    try:
+        updated_project = project_service.merge_scenes(
+            project_id=project_id,
+            scene_ids=request.scene_ids
+        )
+        return ClusterScenesResponse(
+            project_id=project_id,
+            original_scene_count=original_count,
+            new_scene_count=len(updated_project.scenes),
+            scenes=[SceneSchema.model_validate(s) for s in updated_project.scenes]
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error merging scenes in project {project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Scene merge failed: {str(e)}")
+

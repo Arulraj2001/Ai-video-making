@@ -74,6 +74,57 @@ class GenerateImageRequest(BaseModel):
             "Options: photorealistic, anime, manga, 3d, cartoon, flat, sketch, lineart, stickfigure, documentary, cinematic, watercolor"
         )
     )
+    provider: Optional[str] = Field(default=None, description="Provider override: pollinations, huggingface, cloudflare, mock")
+    model_id: Optional[str] = Field(default=None, description="Specific model ID override")
+
+class ModelCatalogItem(BaseModel):
+    id: str
+    name: str
+    provider: str
+    model_id: str
+    description: str
+    quality: int = Field(default=4, ge=1, le=5)
+    speed: str = "Fast"
+    is_free: bool = True
+    is_ready: bool = True
+    supported_styles: List[str] = Field(default_factory=list)
+
+class ModelCatalogResponse(BaseModel):
+    current_provider: str
+    models: List[ModelCatalogItem]
+
+class ClusterScenesRequest(BaseModel):
+    mode: str = Field(default="fixed_duration", description="Clustering mode: 'fixed_duration', 'smart_llm', 'caption_count'")
+    target_duration: float = Field(default=15.0, description="Target duration in seconds for each visual scene (e.g. 15.0 to 25.0)")
+    captions_per_scene: int = Field(default=4, description="Number of captions to group together if using caption_count mode")
+
+class ClusterScenesResponse(BaseModel):
+    project_id: str
+    original_scene_count: int
+    new_scene_count: int
+    scenes: List[SceneSchema]
+
+class MergeScenesRequest(BaseModel):
+    scene_ids: List[str] = Field(..., min_length=2, description="List of scene IDs to merge sequentially")
+
+class GraphicTemplateRequest(BaseModel):
+    template_type: str = Field(..., description="Template type: 'title_card', 'split_layout', 'quote_card', 'stats_card', 'step_card', 'comparison'")
+    headline: Optional[str] = Field(default=None, description="Primary heading text")
+    subtext: Optional[str] = Field(default=None, description="Secondary description or citation")
+    accent_color: Optional[str] = Field(default="#6366f1", description="Accent color in hex")
+    step_number: Optional[str] = Field(default=None, description="Step number e.g. '01' or 'STEP 1'")
+    stat_number: Optional[str] = Field(default=None, description="Big statistic e.g. '87%' or '3x'")
+
+class SceneVariationItem(BaseModel):
+    id: str
+    image_url: str
+    prompt: str
+    seed: int
+
+class SceneVariationsResponse(BaseModel):
+    project_id: str
+    scene_id: str
+    variations: List[SceneVariationItem]
 
 class GenerateAllImagesResponse(BaseModel):
     project_id: str
@@ -91,6 +142,7 @@ class ImageCapabilitiesResponse(BaseModel):
     supported_aspect_ratios: List[str]
     notes: str
     available_providers: List[str]
+
 
 class StoryboardGenerateResponse(BaseModel):
     project_id: str

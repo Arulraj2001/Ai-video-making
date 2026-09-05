@@ -62,6 +62,24 @@ class ProjectService:
     def _get_project_file(self, project_id: str) -> Path:
         return self._get_project_dir(project_id) / "project.json"
 
+    def save_scene_image_asset(
+        self,
+        project_id: str,
+        scene_id: str,
+        image_bytes: bytes,
+        filename: str
+    ) -> tuple[str, str]:
+        """Saves raw image bytes for a scene to storage and returns (relative_path, public_url)."""
+        images_dir = STORAGE_DIR / "projects" / project_id / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        safe_filename = sanitize_filename(filename)
+        file_path = images_dir / safe_filename
+        with open(file_path, "wb") as f:
+            f.write(image_bytes)
+        relative_path = f"storage/projects/{project_id}/images/{safe_filename}"
+        public_url = f"/media/{project_id}/images/{safe_filename}"
+        return relative_path, public_url
+
     def _serialize_ref_image(self, ref: Optional[ReferenceImageModel]) -> Optional[dict]:
         if not ref:
             return None
@@ -1257,4 +1275,95 @@ class ProjectService:
             "freed_mb": round(freed_bytes / (1024 * 1024), 2)
         }
 
+    def merge_scenes(self, project_id: str, scene_ids: List[str]) -> ProjectModel:
+        project = self.get_project(project_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        if len(scene_ids) < 2:
+            raise ValueError("Must provide at least 2 scene IDs to merge")
+
+        scenes_to_merge = [s for s in project.scenes if s.id in scene_ids]
+        if len(scenes_to_merge) != len(scene_ids):
+            missing = set(scene_ids) - {s.id for s in scenes_to_merge}
+            raise ValueError(f"Scene(s) not found: {missing}")
+
+        scenes_to_merge.sort(key=lambda s: s.start)
+        first = scenes_to_merge[0]
+        last = scenes_to_merge[-1]
+
+        merged_start = first.start
+        merged_end = last.end
+        merged_duration = round(merged_end - merged_start, 3)
+        merged_caption = " ".join(s.caption.strip() for s in scenes_to_merge if s.caption.strip())
+
+        completed = next((s for s in scenes_to_merge if s.image_status == "completed" and s.image_url), None)
+        image_url = completed.image_url if completed else first.image_url
+        image_path = completed.image_path if completed else first.image_path
+        image_status = "completed" if image_url else "pending"
+
+        prompts = [s.image_prompt for s in scenes_to_merge if s.image_prompt]
+        image_prompt = prompts[0] if prompts else f"Cinematic visual for: {merged_caption[:180]}"
+
+        merged_scene = SceneModel(
+            id=first.id,
+            start=merged_start,
+            end=merged_end,
+            duration=merged_duration,
+            caption=merged_caption,
+            visual_description=f"Merged visual scene covering: {merged_caption[:100]}...",
+            image_prompt=image_prompt,
+            suggested_motion=first.suggested_motion or "slow zoom in",
+            suggested_transition=first.suggested_transition or "fade",
+            image_status=image_status,
+            image_url=image_url,
+            image_path=image_path,
+            motion=first.motion if first.motion != "none" else "slow zoom in",
+            transition=first.transition if first.transition != "none" else "fade",
+            transition_duration=first.transition_duration,
+            image_fit=first.image_fit,
+            image_position=first.image_position,
+            image_zoom=first.image_zoom,
+        )
+
+        new_scenes = []
+        remove_set = set(s.id for s in scenes_to_merge[1:])
+        for s in project.scenes:
+            if s.id == first.id:
+                new_scenes.append(merged_scene)
+            elif s.id in remove_set:
+                continue
+            else:
+                new_scenes.append(s)
+
+        project.scenes = new_scenes
+        project.updated_at = datetime.now(timezone.utc).isoformat()
+        self._save_to_disk(project)
+        return project
+
+    async def cluster_scenes(
+        self,
+        project_id: str,
+        mode: str = "fixed_duration",
+        target_duration: float = 15.0,
+        captions_per_scene: int = 4
+    ) -> ProjectModel:
+        project = self.get_project(project_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        from app.services.scene_clustering_service import scene_clustering_service
+        if mode == "caption_count":
+            new_scenes = scene_clustering_service.cluster_by_caption_count(project.scenes, captions_per_scene)
+        elif mode == "smart_llm":
+            new_scenes = await scene_clustering_service.cluster_by_smart_llm(project, project.scenes, target_duration)
+        else:
+            new_scenes = scene_clustering_service.cluster_by_fixed_duration(project.scenes, target_duration)
+
+        project.scenes = new_scenes
+        project.updated_at = datetime.now(timezone.utc).isoformat()
+        self._save_to_disk(project)
+        return project
+
 project_service = ProjectService()
+

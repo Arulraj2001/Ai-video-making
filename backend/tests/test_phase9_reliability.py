@@ -14,7 +14,8 @@ from app.schemas.project import ProjectCreate
 client = TestClient(app)
 
 @pytest.fixture
-def clean_project():
+def clean_project(monkeypatch):
+    monkeypatch.setattr("app.configuration.config.settings.IMAGE_GENERATOR_PROVIDER", "mock")
     proj = project_service.create_project(ProjectCreate(name="Phase 9 Test Project", description="Reliability testing"))
     # Add dummy scenes
     scenes = [

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Clapperboard,
   Sparkles,
@@ -18,10 +18,23 @@ import {
   Cpu,
   Info,
   ExternalLink,
+  Merge,
+  Search,
+  Palette,
+  CheckSquare,
+  Square,
+  LayoutGrid,
+  ListFilter,
 } from "lucide-react";
 import { formatTimecode } from "../../utils/formatters";
 import { api } from "../../services/api";
-import type { Project, Scene, ImageGeneratorCapabilities } from "../../types";
+import type {
+  Project,
+  Scene,
+  ImageGeneratorCapabilities,
+  ModelCatalogItem,
+  SceneVariationItem,
+} from "../../types";
 
 interface StoryboardViewProps {
   project: Project;
@@ -41,6 +54,41 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [generatingSceneIds, setGeneratingSceneIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
+
+  // Model catalog
+  const [models, setModels] = useState<ModelCatalogItem[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>("flux-realism");
+  const [selectedProvider, setSelectedProvider] = useState<string>("pollinations");
+
+  // Multi-select & Merge state
+  const [selectedSceneIds, setSelectedSceneIds] = useState<Set<string>>(new Set());
+  const [mergingInProgress, setMergingInProgress] = useState(false);
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
+  const [viewLayout, setViewLayout] = useState<"cards" | "compact">("cards");
+
+  // Smart Clustering modal
+  const [clusteringModalOpen, setClusteringModalOpen] = useState(false);
+  const [clusterTargetDuration, setClusterTargetDuration] = useState<number>(15.0);
+  const [clusterMode, setClusterMode] = useState<"fixed_duration" | "smart_llm">("fixed_duration");
+  const [clusteringInProgress, setClusteringInProgress] = useState(false);
+
+  // Variations modal
+  const [variationsModalScene, setVariationsModalScene] = useState<Scene | null>(null);
+  const [variations, setVariations] = useState<SceneVariationItem[]>([]);
+  const [variationsLoading, setVariationsLoading] = useState(false);
+
+  // Graphic template modal
+  const [graphicModalScene, setGraphicModalScene] = useState<Scene | null>(null);
+  const [graphicTemplateType, setGraphicTemplateType] = useState<
+    "title_card" | "quote_card" | "stats_card" | "step_card" | "split_layout"
+  >("title_card");
+  const [graphicHeadline, setGraphicHeadline] = useState("");
+  const [graphicSubtext, setGraphicSubtext] = useState("");
+  const [graphicAccent, setGraphicAccent] = useState("#6366f1");
+  const [graphicApplying, setGraphicApplying] = useState(false);
 
   // Provider capabilities
   const [capabilities, setCapabilities] = useState<ImageGeneratorCapabilities | null>(null);
@@ -85,18 +133,31 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     setScenes(project.scenes || []);
   }, [project.scenes]);
 
-  // Load image capabilities on mount
+  // Load image capabilities and model catalog on mount
   useEffect(() => {
     let isMounted = true;
-    const loadCaps = async () => {
+    const loadData = async () => {
       try {
         const caps = await api.getImageCapabilities();
         if (isMounted) setCapabilities(caps);
       } catch (err) {
         console.warn("Could not fetch image capabilities:", err);
       }
+      try {
+        const cat = await api.getModelCatalog();
+        if (isMounted) {
+          setModels(cat.models);
+          const readyDefault = cat.models.find((m) => m.is_ready) || cat.models[0];
+          if (readyDefault) {
+            setSelectedModelId(readyDefault.model_id);
+            setSelectedProvider(readyDefault.provider);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch model catalog:", err);
+      }
     };
-    loadCaps();
+    loadData();
     return () => {
       isMounted = false;
     };
@@ -107,6 +168,27 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const imagesCompletedCount = scenes.filter((s) => s.image_status === "completed" && Boolean(s.image_url)).length;
   const imagesFailedCount = scenes.filter((s) => s.image_status === "failed").length;
   const isAllImagesCompleted = scenes.length > 0 && imagesCompletedCount === scenes.length;
+
+  const totalVideoDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
+
+  // Filtered scenes based on search and status
+  const filteredScenes = useMemo(() => {
+    return scenes.filter((scene) => {
+      if (statusFilter === "completed" && !(scene.image_status === "completed" && scene.image_url)) return false;
+      if (statusFilter === "pending" && scene.image_status !== "pending") return false;
+      if (statusFilter === "failed" && scene.image_status !== "failed") return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const inCaption = scene.caption?.toLowerCase().includes(q);
+        const inPrompt = scene.image_prompt?.toLowerCase().includes(q);
+        const inDesc = scene.visual_description?.toLowerCase().includes(q);
+        return inCaption || inPrompt || inDesc;
+      }
+      return true;
+    });
+  }, [scenes, statusFilter, searchQuery]);
+
 
   // Generate or Regenerate all storyboard prompts
   const handleGenerateAllStoryboard = async () => {
@@ -140,7 +222,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         )
       );
 
-      const res = await api.generateAllSceneImages(project.id, { force, style_mode: styleMode });
+      const res = await api.generateAllSceneImages(project.id, {
+        force,
+        style_mode: styleMode,
+        provider: selectedProvider,
+        model_id: selectedModelId,
+      });
       setScenes(res.scenes);
       if (onProjectUpdated) {
         onProjectUpdated({ ...project, scenes: res.scenes });
@@ -179,7 +266,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   };
 
   // Generate or Regenerate SINGLE scene image
-  const handleGenerateSceneImage = async (sceneId: string, force: boolean = false) => {
+  const handleGenerateSceneImage = async (
+    sceneId: string,
+    force: boolean = false,
+    overrideProvider?: string,
+    overrideModel?: string
+  ) => {
     try {
       setGeneratingSceneIds((prev) => new Set(prev).add(sceneId));
       setError(null);
@@ -191,9 +283,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
       const updated = await api.generateSceneImage(project.id, sceneId, {
         force,
-        // Fix: send the current edited prompt to the image generator
         prompt_override: scenes.find((s) => s.id === sceneId)?.image_prompt || undefined,
         style_mode: styleMode,
+        provider: overrideProvider || selectedProvider,
+        model_id: overrideModel || selectedModelId,
       });
       const nextScenes = scenes.map((s) => (s.id === sceneId ? updated : s));
       setScenes(nextScenes);
@@ -220,9 +313,135 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     }
   };
 
+  // Smart Scene Clustering Handler
+  const handleClusterScenes = async () => {
+    try {
+      setClusteringInProgress(true);
+      setError(null);
+      const res = await api.clusterScenes(project.id, {
+        mode: clusterMode,
+        target_duration: clusterTargetDuration,
+      });
+      setScenes(res.scenes);
+      if (onProjectUpdated) {
+        onProjectUpdated({ ...project, scenes: res.scenes });
+      }
+      setClusteringModalOpen(false);
+      setSelectedSceneIds(new Set());
+    } catch (err: any) {
+      setError(err.message || "Failed to cluster scenes");
+    } finally {
+      setClusteringInProgress(false);
+    }
+  };
+
+  // Multi-select & Merge Handler
+  const handleMergeSelected = async () => {
+    if (selectedSceneIds.size < 2) return;
+    try {
+      setMergingInProgress(true);
+      setError(null);
+      const res = await api.mergeScenes(project.id, Array.from(selectedSceneIds));
+      setScenes(res.scenes);
+      if (onProjectUpdated) {
+        onProjectUpdated({ ...project, scenes: res.scenes });
+      }
+      setSelectedSceneIds(new Set());
+    } catch (err: any) {
+      setError(err.message || "Failed to merge selected scenes");
+    } finally {
+      setMergingInProgress(false);
+    }
+  };
+
+  // Variations Modal Handlers
+  const handleOpenVariations = async (scene: Scene) => {
+    setVariationsModalScene(scene);
+    setVariations([]);
+    setVariationsLoading(true);
+    try {
+      const res = await api.generateSceneVariations(project.id, scene.id, {
+        style_mode: styleMode,
+        provider: selectedProvider,
+        model_id: selectedModelId,
+      });
+      setVariations(res.variations);
+    } catch (err: any) {
+      setError(err.message || "Failed to generate variations");
+    } finally {
+      setVariationsLoading(false);
+    }
+  };
+
+  const handleApplyVariation = async (sceneId: string, varItem: SceneVariationItem) => {
+    try {
+      const updated = await api.updateSceneTimeline(project.id, sceneId, {
+        image_url: varItem.image_url,
+      });
+      setScenes(updated.scenes);
+      if (onProjectUpdated) {
+        onProjectUpdated(updated);
+      }
+      setVariationsModalScene(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to apply variation");
+    }
+  };
+
+  // Graphic Template Handlers
+  const handleOpenGraphicModal = (scene: Scene) => {
+    setGraphicModalScene(scene);
+    setGraphicHeadline(scene.caption.slice(0, 70));
+    setGraphicSubtext(scene.caption.length > 70 ? scene.caption.slice(70, 160) : "");
+    setGraphicAccent("#6366f1");
+    setGraphicTemplateType("title_card");
+  };
+
+  const handleApplyGraphicTemplate = async () => {
+    if (!graphicModalScene) return;
+    try {
+      setGraphicApplying(true);
+      setError(null);
+      const updatedScene = await api.applyGraphicTemplate(project.id, graphicModalScene.id, {
+        template_type: graphicTemplateType,
+        headline: graphicHeadline.trim() || graphicModalScene.caption,
+        subtext: graphicSubtext.trim() || undefined,
+        accent_color: graphicAccent,
+      });
+      const nextScenes = scenes.map((s) => (s.id === graphicModalScene.id ? updatedScene : s));
+      setScenes(nextScenes);
+      if (onProjectUpdated) {
+        onProjectUpdated({ ...project, scenes: nextScenes });
+      }
+      setGraphicModalScene(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to apply graphic template");
+    } finally {
+      setGraphicApplying(false);
+    }
+  };
+
+  const toggleSelectScene = (id: string) => {
+    setSelectedSceneIds((prev) => {
+      const copy = new Set(prev);
+      if (copy.has(id)) copy.delete(id);
+      else copy.add(id);
+      return copy;
+    });
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedSceneIds(new Set(filteredScenes.map((s) => s.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedSceneIds(new Set());
+  };
+
   const handleCopyPrompt = (sceneId: string, promptText: string) => {
     navigator.clipboard.writeText(promptText);
     setCopiedSceneId(sceneId);
+
     setTimeout(() => setCopiedSceneId(null), 2000);
   };
 
@@ -336,6 +555,35 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* AI Model Selector */}
+            {models.length > 0 && (
+
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 rounded-xl border text-xs"
+                style={{ background: "var(--bg-card-subtle)", borderColor: "var(--border-subtle)" }}
+              >
+                <Cpu size={13} style={{ color: "var(--accent-primary)" }} />
+                <select
+                  value={selectedModelId}
+                  onChange={(e) => {
+                    const mid = e.target.value;
+                    setSelectedModelId(mid);
+                    const found = models.find((m) => m.model_id === mid);
+                    if (found) setSelectedProvider(found.provider);
+                  }}
+                  className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer py-0.5"
+                  style={{ color: "var(--text-primary)" }}
+                  title="Choose active AI image model"
+                >
+                  {models.map((m) => (
+                    <option key={m.id} value={m.model_id} className="bg-zinc-900 text-white">
+                      {m.name} {m.is_free ? "(Free)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Art Style Mode Selector */}
             <div
               className="flex items-center gap-1.5 p-1 rounded-xl border"
@@ -380,6 +628,17 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Smart Cluster Button */}
+            <button
+              onClick={() => setClusteringModalOpen(true)}
+              disabled={clusteringInProgress || scenes.length === 0}
+              className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
+              title="Intelligently group fast captions into 15-25s visual scenes"
+            >
+              <Layers className="w-3.5 h-3.5" style={{ color: "var(--accent-primary)" }} />
+              <span>Smart Cluster ({scenes.length})</span>
+            </button>
 
             {/* Prompt Synthesis Button */}
             <button
@@ -438,6 +697,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
           </div>
         </div>
       </div>
+
 
       {/* Real-time Generation Progress Bar */}
       {(generatingAllImages || retryingFailed) && (
@@ -523,36 +783,178 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         </div>
       ) : (
         /* Storyboard Scenes List */
-        <div className="space-y-6">
-          {scenes.map((scene, index) => {
-            const isEditing = editingSceneId === scene.id;
-            const isCopied = copiedSceneId === scene.id;
-            const isSceneGenerating =
-              generatingSceneIds.has(scene.id) ||
-              scene.image_status === "generating" ||
-              (generatingAllImages && scene.image_status !== "completed");
-            const isCompleted = scene.image_status === "completed" && Boolean(scene.image_url);
-            const isFailed = scene.image_status === "failed";
 
-            return (
+        <div className="space-y-4">
+          {/* SaaS Search, Filter, and Bulk Actions Toolbar */}
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border"
+            style={{ background: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+          >
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[220px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <input
+                type="text"
+                placeholder="Search captions or prompts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border bg-transparent focus:outline-none"
+                style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Status Filter Pills */}
+            <div className="flex items-center gap-1">
+              {(["all", "completed", "pending", "failed"] as const).map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg capitalize transition-colors"
+                  style={{
+                    background: statusFilter === st ? "var(--accent-primary)" : "transparent",
+                    color: statusFilter === st ? "#fff" : "var(--text-secondary)",
+                    border: statusFilter === st ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
+                  }}
+                >
+                  {st}{" "}
+                  {st === "all"
+                    ? `(${scenes.length})`
+                    : st === "completed"
+                    ? `(${imagesCompletedCount})`
+                    : st === "failed"
+                    ? `(${imagesFailedCount})`
+                    : `(${scenes.length - imagesCompletedCount - imagesFailedCount})`}
+                </button>
+              ))}
+            </div>
+
+            {/* Bulk Selection Actions */}
+            <div className="flex items-center gap-2">
+              {selectedSceneIds.size > 0 ? (
+                <div className="flex items-center gap-2 bg-indigo-950/60 border border-indigo-800 px-3 py-1 rounded-lg text-xs">
+                  <span className="font-semibold text-indigo-300">{selectedSceneIds.size} selected</span>
+                  {selectedSceneIds.size >= 2 && (
+                    <button
+                      onClick={handleMergeSelected}
+                      disabled={mergingInProgress}
+                      className="btn-primary text-xs py-0.5 px-2.5 flex items-center gap-1"
+                      title="Merge selected scenes into 1 continuous visual scene"
+                    >
+                      <Merge size={12} />
+                      <span>{mergingInProgress ? "Merging..." : `Merge ${selectedSceneIds.size} Scenes`}</span>
+                    </button>
+                  )}
+                  <button onClick={clearSelection} className="text-zinc-400 hover:text-zinc-200 text-xs">
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={selectAllFiltered}
+                  className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1.5"
+                >
+                  <CheckSquare size={13} />
+                  <span>Select All</span>
+                </button>
+              )}
+
+              {/* View Layout Toggle */}
               <div
-                key={scene.id}
-                className="studio-card p-5 sm:p-6 space-y-4 relative overflow-hidden"
+                className="flex items-center rounded-lg border p-0.5"
+                style={{ borderColor: "var(--border-subtle)" }}
               >
-                {/* Scene Header & Badges */}
-                <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b" style={{ borderColor: "var(--border-subtle)" }}>
-                  <div className="flex items-center gap-3">
-                    <span className="badge badge-info text-xs font-mono font-bold px-3 py-1">
-                      <Film size={13} />
-                      Scene {index + 1}
-                    </span>
-                    <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
-                      ID: {scene.id}
-                    </span>
-                    <span className="badge badge-neutral font-mono text-xs">
-                      {formatTimecode(scene.start)} → {formatTimecode(scene.end)} ({scene.duration.toFixed(2)}s)
-                    </span>
-                  </div>
+                <button
+                  onClick={() => setViewLayout("cards")}
+                  className="p-1 rounded transition-colors"
+                  style={{
+                    background: viewLayout === "cards" ? "var(--accent-primary)" : "transparent",
+                    color: viewLayout === "cards" ? "#fff" : "var(--text-muted)",
+                  }}
+                  title="Full Cards View"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+                <button
+                  onClick={() => setViewLayout("compact")}
+                  className="p-1 rounded transition-colors"
+                  style={{
+                    background: viewLayout === "compact" ? "var(--accent-primary)" : "transparent",
+                    color: viewLayout === "compact" ? "#fff" : "var(--text-muted)",
+                  }}
+                  title="Compact View"
+                >
+                  <ListFilter size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Render Filtered Scenes */}
+          {filteredScenes.length === 0 ? (
+            <div className="text-center py-12 studio-card p-8 text-xs" style={{ color: "var(--text-secondary)" }}>
+              No scenes match the filter criteria.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredScenes.map((scene) => {
+                const index = scenes.findIndex((s) => s.id === scene.id);
+                const isSelected = selectedSceneIds.has(scene.id);
+                const isEditing = editingSceneId === scene.id;
+                const isCopied = copiedSceneId === scene.id;
+                const isSceneGenerating =
+                  generatingSceneIds.has(scene.id) ||
+                  scene.image_status === "generating" ||
+                  (generatingAllImages && scene.image_status !== "completed");
+                const isCompleted = scene.image_status === "completed" && Boolean(scene.image_url);
+                const isFailed = scene.image_status === "failed";
+
+                return (
+                  <div
+                    key={scene.id}
+                    className="studio-card p-5 sm:p-6 space-y-4 relative overflow-hidden transition-all"
+                    style={{
+                      borderLeft: isSelected ? "4px solid var(--accent-primary)" : undefined,
+                    }}
+                  >
+                    {/* Scene Header & Badges */}
+                    <div
+                      className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b"
+                      style={{ borderColor: "var(--border-subtle)" }}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Multi-select Checkbox */}
+                        <button
+                          onClick={() => toggleSelectScene(scene.id)}
+                          className="p-1 rounded hover:bg-white/10 transition-colors"
+                          title={isSelected ? "Deselect scene" : "Select scene for batch merge"}
+                        >
+                          {isSelected ? (
+                            <CheckSquare size={16} style={{ color: "var(--accent-primary)" }} />
+                          ) : (
+                            <Square size={16} style={{ color: "var(--text-muted)" }} />
+                          )}
+                        </button>
+
+                        <span className="badge badge-info text-xs font-mono font-bold px-3 py-1">
+                          <Film size={13} />
+                          Scene {index + 1}
+                        </span>
+                        <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+                          ID: {scene.id}
+                        </span>
+                        <span className="badge badge-neutral font-mono text-xs">
+                          {formatTimecode(scene.start)} → {formatTimecode(scene.end)} ({scene.duration.toFixed(2)}s)
+                        </span>
+                      </div>
+
 
                   {/* Status, Motion & Transition Badges */}
                   <div className="flex flex-wrap items-center gap-2">
@@ -675,8 +1077,28 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                                 <Wand2 size={12} style={{ color: "var(--accent-primary)" }} />
                                 <span>Tweak Prompt</span>
                               </button>
+
+                              <button
+                                onClick={() => handleOpenVariations(scene)}
+                                disabled={variationsLoading && variationsModalScene?.id === scene.id}
+                                className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
+                                title="Generate 3 image variations for A/B testing"
+                              >
+                                <Palette size={12} style={{ color: "var(--accent-primary)" }} />
+                                <span>Variations</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleOpenGraphicModal(scene)}
+                                className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
+                                title="Use a clean graphic template card instead of AI image"
+                              >
+                                <Layers size={12} style={{ color: "var(--accent-primary)" }} />
+                                <span>Graphic Card</span>
+                              </button>
                             </div>
                           </div>
+
 
                           <div
                             className="p-3.5 rounded-xl border text-xs font-mono leading-relaxed select-all max-h-32 overflow-y-auto"
@@ -959,8 +1381,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </div>
             );
           })}
+            </div>
+          )}
         </div>
       )}
+
+
 
       {/* Prompt Regeneration Modal */}
       {regenModalScene && (
@@ -1103,6 +1529,299 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Smart Scene Clustering Modal */}
+      {clusteringModalOpen && (
+
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-700 p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-400" />
+                Smart Visual Scene Clustering
+              </h3>
+              <button onClick={() => setClusteringModalOpen(false)} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Rapid sentence-by-sentence captions make videos feel like a slideshow. Smart Clustering groups consecutive captions into 15–25 second visual scenes so images hold naturally while captions animate.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div
+                onClick={() => setClusterMode("fixed_duration")}
+                className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                  clusterMode === "fixed_duration"
+                    ? "border-indigo-500 bg-indigo-950/40 text-white"
+                    : "border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:border-zinc-700"
+                }`}
+              >
+                <span className="block text-xs font-bold mb-1">Target Duration</span>
+                <span className="text-[11px] leading-tight block">
+                  Groups captions into natural ~{clusterTargetDuration}s visual chunks
+                </span>
+              </div>
+
+              <div
+                onClick={() => setClusterMode("smart_llm")}
+                className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                  clusterMode === "smart_llm"
+                    ? "border-indigo-500 bg-indigo-950/40 text-white"
+                    : "border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:border-zinc-700"
+                }`}
+              >
+                <span className="block text-xs font-bold mb-1">Smart AI Clustering</span>
+                <span className="text-[11px] leading-tight block">
+                  LLM analyzes narrative & topic shifts to detect scene boundaries
+                </span>
+              </div>
+            </div>
+
+            {clusterMode === "fixed_duration" && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-medium text-zinc-300">
+                  <span>Target Scene Length</span>
+                  <span className="font-mono text-indigo-400">{clusterTargetDuration} seconds</span>
+                </div>
+                <div className="flex gap-2">
+                  {[10, 15, 20, 25, 30].map((dur) => (
+                    <button
+                      key={dur}
+                      type="button"
+                      onClick={() => setClusterTargetDuration(dur)}
+                      className={`flex-1 py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all ${
+                        clusterTargetDuration === dur
+                          ? "bg-indigo-600 border-indigo-500 text-white"
+                          : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
+                      }`}
+                    >
+                      {dur}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-900/60 text-xs text-indigo-200 flex items-center justify-between">
+              <span>Current: <strong className="text-white">{scenes.length}</strong> rapid captions</span>
+              <span>→</span>
+              <span>
+                Est. Result: <strong className="text-indigo-300">~{Math.max(1, Math.round(totalVideoDuration / clusterTargetDuration))}</strong> visual scenes
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2 border-t border-zinc-800">
+              <button
+                onClick={() => setClusteringModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClusterScenes}
+                disabled={clusteringInProgress}
+                className="btn-primary text-xs py-2 px-5 flex items-center gap-2"
+              >
+                {clusteringInProgress ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Clustering Scenes...</span>
+                  </>
+                ) : (
+                  <>
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Run Smart Clustering</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Variations Modal */}
+      {variationsModalScene && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl rounded-2xl bg-zinc-900 border border-zinc-700 p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Palette className="w-4 h-4 text-purple-400" />
+                Scene Visual Variations (A/B Test) • {variationsModalScene.id}
+              </h3>
+              <button onClick={() => setVariationsModalScene(null)} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-400">
+              Choose the best candidate visual for this scene. Click any variation to apply it directly.
+            </p>
+
+            {variationsLoading ? (
+              <div className="py-16 text-center space-y-3">
+                <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
+                <span className="text-xs text-zinc-300 block">Generating 3 candidate variations in parallel...</span>
+              </div>
+            ) : variations.length === 0 ? (
+              <div className="py-12 text-center text-xs text-zinc-500">
+                No variations available. Click below to generate candidates.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {variations.map((v, i) => (
+                  <div
+                    key={v.id}
+                    onClick={() => handleApplyVariation(variationsModalScene.id, v)}
+                    className="group border border-zinc-800 hover:border-purple-500 rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] bg-black/40 p-2 space-y-2"
+                  >
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-950">
+                      <img src={api.getMediaUrl(v.image_url)} alt={`Variation ${i + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-black/70 text-[10px] font-mono text-zinc-300">
+                        Option {i + 1}
+                      </span>
+                    </div>
+                    <button className="w-full btn-secondary text-xs py-1 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                      Select Option {i + 1}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
+              <button
+                onClick={() => handleOpenVariations(variationsModalScene)}
+                disabled={variationsLoading}
+                className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${variationsLoading ? "animate-spin" : ""}`} />
+                <span>Re-roll 3 More</span>
+              </button>
+              <button
+                onClick={() => setVariationsModalScene(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Graphic Template Card Modal */}
+      {graphicModalScene && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-700 p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-400" />
+                Use Graphic Template Card • {graphicModalScene.id}
+              </h3>
+              <button onClick={() => setGraphicModalScene(null)} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-400">
+              Generate crisp high-res cards (Key Point, Quote, Stat, Step) server-side without needing an AI generator.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">Template Style</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "title_card", label: "Title / Key Point" },
+                    { id: "quote_card", label: "Quote Card" },
+                    { id: "stats_card", label: "Stat / Number" },
+                    { id: "step_card",  label: "Step Card" },
+                    { id: "split_layout", label: "Split Overview" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setGraphicTemplateType(t.id as any)}
+                      className={`p-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                        graphicTemplateType === t.id
+                          ? "bg-indigo-600 border-indigo-500 text-white"
+                          : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">Headline Text</label>
+                <input
+                  type="text"
+                  value={graphicHeadline}
+                  onChange={(e) => setGraphicHeadline(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">Subtext / Citation (Optional)</label>
+                <input
+                  type="text"
+                  value={graphicSubtext}
+                  onChange={(e) => setGraphicSubtext(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-medium text-zinc-300">Accent Color:</label>
+                <div className="flex items-center gap-2">
+                  {["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#3b82f6"].map((col) => (
+                    <button
+                      key={col}
+                      type="button"
+                      onClick={() => setGraphicAccent(col)}
+                      className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                        graphicAccent === col ? "scale-125 border-white" : "border-transparent"
+                      }`}
+                      style={{ background: col }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-zinc-800">
+              <button
+                onClick={() => setGraphicModalScene(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyGraphicTemplate}
+                disabled={graphicApplying}
+                className="btn-primary text-xs py-2 px-5 flex items-center gap-2"
+              >
+                {graphicApplying ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Rendering Card...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Render & Apply</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
