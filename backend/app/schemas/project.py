@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+from app.schemas.video_bible import VideoBibleSchema
 
 class SceneSchema(BaseModel):
     id: str = Field(..., description="Canonical scene ID e.g. scene-001")
@@ -20,10 +21,15 @@ class SceneSchema(BaseModel):
     transition: str = Field(default="none", description="Transition: none, fade, crossfade, slide")
     transition_duration: float = Field(default=0.5, description="Transition duration in seconds")
     # Phase 8: Image Transform settings
-    image_fit: str = Field(default="cover", description="Image fit: cover, contain, fill")
+    image_fit: str = Field(default="cover", description="Image fit: cover, contain, blur, fill")
     image_position: str = Field(default="center", description="Image position: center, top, bottom, left, right")
     image_zoom: float = Field(default=1.0, description="Image zoom level (1.0 to 2.5)")
     image_crop: Optional[Dict[str, Any]] = Field(default=None, description="Optional bounding crop")
+    # Visual Adjustments & Filters
+    brightness: float = Field(default=0.0, description="Brightness adjustment: -0.5 to +0.5")
+    contrast: float = Field(default=1.0, description="Contrast adjustment: 0.5 to 2.0")
+    saturation: float = Field(default=1.0, description="Saturation adjustment: 0.0 to 2.5")
+    color_filter: str = Field(default="none", description="Color filter: none, cinematic, warm, cyberpunk, noir, vivid")
 
     model_config = {"from_attributes": True}
 
@@ -46,6 +52,10 @@ class SceneUpdate(BaseModel):
     image_position: Optional[str] = None
     image_zoom: Optional[float] = None
     image_crop: Optional[Dict[str, Any]] = None
+    brightness: Optional[float] = None
+    contrast: Optional[float] = None
+    saturation: Optional[float] = None
+    color_filter: Optional[str] = None
 
 class SplitSceneRequest(BaseModel):
     split_time: float = Field(..., description="Timestamp in seconds at which to split the scene")
@@ -88,6 +98,12 @@ class ModelCatalogItem(BaseModel):
     is_free: bool = True
     is_ready: bool = True
     supported_styles: List[str] = Field(default_factory=list)
+    supports_reference_images: bool = False
+    supports_seed: bool = False
+    supports_aspect_ratio: bool = True
+    supports_negative_prompt: bool = True
+    supports_image_to_image: bool = False
+    supports_variations: bool = True
 
 class ModelCatalogResponse(BaseModel):
     current_provider: str
@@ -120,6 +136,7 @@ class SceneVariationItem(BaseModel):
     image_url: str
     prompt: str
     seed: int
+    metadata: Optional[dict] = None
 
 class SceneVariationsResponse(BaseModel):
     project_id: str
@@ -142,6 +159,17 @@ class ImageCapabilitiesResponse(BaseModel):
     supported_aspect_ratios: List[str]
     notes: str
     available_providers: List[str]
+    supports_seed: bool = False
+    supports_aspect_ratio: bool = True
+    supports_image_to_image: bool = False
+    supports_reference_descriptions: bool = True
+    supports_variations: bool = True
+
+class ImageProviderHealthResponse(BaseModel):
+    provider: str
+    model: str
+    status: str
+    message: str
 
 
 class StoryboardGenerateResponse(BaseModel):
@@ -177,6 +205,8 @@ class AudioSettingsSchema(BaseModel):
     music_fade_in: float = Field(default=1.0, ge=0.0, le=10.0, description="Background music fade in duration in seconds")
     music_fade_out: float = Field(default=2.0, ge=0.0, le=10.0, description="Background music fade out duration in seconds")
     music_muted: bool = Field(default=False, description="Whether background music is muted")
+    ducking_enabled: bool = Field(default=True, description="Whether background music automatically ducks under voice narration")
+
 
 class CanvasSettingsSchema(BaseModel):
     aspect_ratio: str = Field(default="9:16", description="Canvas aspect ratio: 9:16, 16:9, 1:1")
@@ -208,6 +238,7 @@ class ProjectResponse(BaseModel):
     audio_file: Optional[AudioFileSchema] = None
     raw_captions: Optional[str] = ""
     scenes: List[SceneSchema] = Field(default_factory=list)
+    video_bible: Optional[VideoBibleSchema] = None
     caption_settings: Optional[CaptionSettingsSchema] = None
     audio_settings: Optional[AudioSettingsSchema] = None
     canvas_settings: Optional[CanvasSettingsSchema] = None

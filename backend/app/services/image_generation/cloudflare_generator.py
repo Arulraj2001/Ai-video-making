@@ -46,6 +46,11 @@ class CloudflareImageGenerator(BaseImageGenerator):
         clean_model = self.model_name.lstrip("/")
         return f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/{clean_model}"
 
+    # Cloudflare FLUX.1-schnell only accepts 'prompt' and 'steps'.
+    # Sending any other field causes HTTP 400 "Additional properties not allowed".
+    # Width/height/negative_prompt/guidance are silently ignored at the model level.
+    _FLUX_SCHNELL_ACCEPTED_PARAMS = frozenset({"prompt", "steps"})
+
     async def generate_image(self, prompt: str, options: ImageGenerationOptions) -> GeneratedImageResult:
         url = self._build_url()
         headers = {
@@ -53,17 +58,12 @@ class CloudflareImageGenerator(BaseImageGenerator):
             "Content-Type": "application/json"
         }
 
-        payload = {
+        # The FLUX.1-schnell schema only permits 'prompt' and 'steps'.
+        # Using 'steps' (not 'num_steps') per the live API schema.
+        payload: dict = {
             "prompt": prompt,
-            "num_steps": min(options.num_inference_steps or 20, 25),
+            "steps": min(options.num_inference_steps or 4, 8),
         }
-        if options.negative_prompt:
-            payload["negative_prompt"] = options.negative_prompt
-        if options.guidance_scale is not None:
-            payload["guidance"] = options.guidance_scale
-        if options.width and options.height:
-            payload["width"] = options.width
-            payload["height"] = options.height
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:

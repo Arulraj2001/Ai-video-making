@@ -167,3 +167,75 @@ def test_ass_subtitle_generation():
     assert "PlayResY: 1920" in ass_content
     assert "Dialogue: 0,0:00:00.00,0:00:02.50,Default,,0,0,0,,Hello World" in ass_content
     assert "Dialogue: 0,0:00:02.50,0:00:05.00,Default,,0,0,0,,Second Subtitle" in ass_content
+
+
+def test_voiceover_upload_and_delete(project_for_settings):
+    project_id = project_for_settings["id"]
+    fake_audio = io.BytesIO(b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x44\xac\x00\x00\x88\x58\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00")
+
+    upload_res = client.post(
+        f"/api/projects/{project_id}/audio",
+        files={"audio_file": ("test_voice.wav", fake_audio, "audio/wav")}
+    )
+    assert upload_res.status_code == 200
+    updated = upload_res.json()
+    assert updated["audio_file"] is not None
+    assert "test_voice" in updated["audio_file"]["filename"]
+
+    # Delete voiceover audio
+    del_res = client.delete(f"/api/projects/{project_id}/audio")
+    assert del_res.status_code == 200
+    updated_after_del = del_res.json()
+    assert updated_after_del["audio_file"] is None
+
+
+def test_audio_ducking_settings(project_for_settings):
+    project_id = project_for_settings["id"]
+    res = client.put(
+        f"/api/projects/{project_id}/settings",
+        json={"audio_settings": {"ducking_enabled": False}}
+    )
+    assert res.status_code == 200
+    updated = res.json()
+    assert updated["audio_settings"]["ducking_enabled"] is False
+
+    res_enable = client.put(
+        f"/api/projects/{project_id}/settings",
+        json={"audio_settings": {"ducking_enabled": True}}
+    )
+    assert res_enable.status_code == 200
+    assert res_enable.json()["audio_settings"]["ducking_enabled"] is True
+
+
+def test_ass_subtitle_escaping():
+    scenes = [
+        SceneModel(id="s1", start=0.0, end=3.0, duration=3.0, caption="Special {tag} text"),
+    ]
+    settings = CaptionSettingsModel(enabled=True)
+    ass = _generate_ass_subtitles(scenes, settings, 1080, 1920)
+    assert "{tag}" not in ass
+    assert "(tag)" in ass
+
+
+def test_scene_color_grading_settings(project_for_settings):
+    project_id = project_for_settings["id"]
+    scene_id = project_for_settings["scenes"][0]["id"]
+
+    update_res = client.put(
+        f"/api/projects/{project_id}/scenes/{scene_id}",
+        json={
+            "brightness": 1.15,
+            "contrast": 1.2,
+            "saturation": 1.3,
+            "color_filter": "cinematic",
+            "image_fit": "blur"
+        }
+    )
+    assert update_res.status_code == 200
+    updated = update_res.json()
+    assert updated["brightness"] == 1.15
+    assert updated["contrast"] == 1.2
+    assert updated["saturation"] == 1.3
+    assert updated["color_filter"] == "cinematic"
+    assert updated["image_fit"] == "blur"
+

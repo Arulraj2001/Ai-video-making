@@ -29,7 +29,7 @@ interface WorkspaceProps {
   onOpenImport: () => void;
   onUpdateScene: (sceneId: string, update: { start?: number; end?: number; caption?: string }) => Promise<any>;
   onBibleUpdated?: (bible: VideoBible) => void;
-  onProjectUpdated?: (project: Project) => void;
+  onProjectUpdated?: (project: Project | ((previous: Project) => Project)) => void;
 }
 
 export const Workspace: React.FC<WorkspaceProps> = ({

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Header, type StudioStage } from "../components/Header";
 import { EmptyState } from "../components/EmptyState";
 import { Workspace } from "../components/Workspace";
@@ -24,6 +24,7 @@ export const DashboardPage: React.FC = () => {
     updateScene,
     deleteProject,
     selectProject,
+    applyProjectUpdate,
     patchActiveProject,
     refresh,
   } = useProjects();
@@ -32,7 +33,30 @@ export const DashboardPage: React.FC = () => {
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"dashboard" | "import">("dashboard");
-  const [activeStage, setActiveStage] = useState<StudioStage>("script");
+  const [activeStage, setActiveStage] = useState<StudioStage>(() => {
+    const stage = new URLSearchParams(window.location.search).get("stage");
+    return stage === "script" || stage === "bible" || stage === "storyboard" || stage === "timeline" || stage === "export"
+      ? stage
+      : "script";
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const stage = new URLSearchParams(window.location.search).get("stage");
+      if (stage === "script" || stage === "bible" || stage === "storyboard" || stage === "timeline" || stage === "export") {
+        setActiveStage(stage);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const handleChangeStage = (stage: StudioStage) => {
+    setActiveStage(stage);
+    const url = new URL(window.location.href);
+    url.searchParams.set("stage", stage);
+    window.history.pushState({ stage }, "", url);
+  };
 
   const displayError = projectsError || (isHealthy === false ? healthError : null);
 
@@ -66,7 +90,7 @@ export const DashboardPage: React.FC = () => {
         onOpenImport={() => setViewMode("import")}
         onRefreshHealth={refetchHealth}
         activeStage={activeStage}
-        onChangeStage={setActiveStage}
+        onChangeStage={handleChangeStage}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenRestore={() => setIsRestoreOpen(true)}
         onExportProject={handleExportBackup}
@@ -128,7 +152,7 @@ export const DashboardPage: React.FC = () => {
           <Workspace
             project={activeProject}
             activeStage={activeStage}
-            onChangeStage={setActiveStage}
+            onChangeStage={handleChangeStage}
             onDeleteProject={deleteProject}
             onOpenImport={() => setViewMode("import")}
             onUpdateScene={async (sceneId, update) => {
@@ -139,7 +163,7 @@ export const DashboardPage: React.FC = () => {
               // which would cause a re-render loop via onBibleUpdated → refresh → remount
               patchActiveProject((prev) => ({ ...prev, video_bible: bible }));
             }}
-            onProjectUpdated={refresh}
+            onProjectUpdated={applyProjectUpdate}
           />
         )}
       </main>

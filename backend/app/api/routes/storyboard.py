@@ -42,20 +42,7 @@ async def generate_storyboard_endpoint(
         scenes = await storyboard_service.generate_storyboard(project, llm_provider=provider)
         return StoryboardGenerateResponse(
             project_id=project_id,
-            scenes=[
-                SceneSchema(
-                    id=s.id,
-                    start=s.start,
-                    end=s.end,
-                    duration=s.duration,
-                    caption=s.caption,
-                    visual_description=s.visual_description,
-                    image_prompt=s.image_prompt,
-                    suggested_motion=s.suggested_motion,
-                    suggested_transition=s.suggested_transition,
-                )
-                for s in scenes
-            ],
+            scenes=[SceneSchema.model_validate(s) for s in scenes],
             total_scenes=len(scenes),
             llm_provider=provider.provider_name,
         )
@@ -84,17 +71,7 @@ async def regenerate_scene_endpoint(
             scene_id=scene_id,
             instructions=request.instructions
         )
-        return SceneSchema(
-            id=updated_scene.id,
-            start=updated_scene.start,
-            end=updated_scene.end,
-            duration=updated_scene.duration,
-            caption=updated_scene.caption,
-            visual_description=updated_scene.visual_description,
-            image_prompt=updated_scene.image_prompt,
-            suggested_motion=updated_scene.suggested_motion,
-            suggested_transition=updated_scene.suggested_transition,
-        )
+        return SceneSchema.model_validate(updated_scene)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -112,17 +89,7 @@ async def update_scene_storyboard_endpoint(
     """
     try:
         updated = project_service.update_scene(project_id, scene_id, update)
-        return SceneSchema(
-            id=updated.id,
-            start=updated.start,
-            end=updated.end,
-            duration=updated.duration,
-            caption=updated.caption,
-            visual_description=updated.visual_description,
-            image_prompt=updated.image_prompt,
-            suggested_motion=updated.suggested_motion,
-            suggested_transition=updated.suggested_transition,
-        )
+        return SceneSchema.model_validate(updated)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

@@ -207,3 +207,31 @@ def test_upload_replacement_image(test_project_with_scenes):
     assert updated_scene["image_status"] == "completed"
     assert "/media/" in updated_scene["image_url"]
     assert updated_scene["image_metadata"]["source"] == "user_upload"
+
+def test_timeline_framing_and_settings_persistence(test_project_with_scenes):
+    project_id = test_project_with_scenes
+    get_res = client.get(f"/api/projects/{project_id}")
+    scenes = get_res.json()["scenes"]
+    target = scenes[0]
+
+    update_res = client.put(
+        f"/api/projects/{project_id}/timeline/scenes/{target['id']}",
+        json={
+            "image_fit": "contain",
+            "image_position": "top",
+            "image_zoom": 1.8,
+            "image_crop": {"x": 10, "y": 15, "width": 80, "height": 70}
+        }
+    )
+    assert update_res.status_code == 200
+    res_data = update_res.json()
+    assert res_data["caption_settings"] is not None
+    assert res_data["audio_settings"] is not None
+    assert res_data["canvas_settings"] is not None
+
+    updated_scene = res_data["scenes"][0]
+    assert updated_scene["image_fit"] == "contain"
+    assert updated_scene["image_position"] == "top"
+    assert updated_scene["image_zoom"] == 1.8
+    assert updated_scene["image_crop"]["width"] == 80
+

@@ -32,21 +32,34 @@ class Settings:
     # OpenRouter API Key (handles both OPENROUTER_API_KEY and OpenRouter_key)
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", os.getenv("OpenRouter_key", ""))
 
-    # Gemini API Key (handles GEMINI_API_KEY or LLM_API_KEY)
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", os.getenv("LLM_API_KEY", ""))
+    # Gemini image/LLM provider key. Image generation requires this explicit variable.
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     
     # Image Generator Provider Configuration
     # Supported: "pollinations", "mock", "cloudflare", "huggingface", "gemini"
     IMAGE_GENERATOR_PROVIDER: str = os.getenv("IMAGE_GENERATOR_PROVIDER", "pollinations").lower()
     IMAGE_GENERATOR_MODEL: Optional[str] = os.getenv("IMAGE_GENERATOR_MODEL", None)
     
-    # Cloudflare Workers AI credentials (support CF_ACCOUNT_ID and CF_API_TOKEN)
-    CLOUDFLARE_ACCOUNT_ID: str = os.getenv("CLOUDFLARE_ACCOUNT_ID", os.getenv("CF_ACCOUNT_ID", ""))
-    CLOUDFLARE_API_TOKEN: str = os.getenv("CLOUDFLARE_API_TOKEN", os.getenv("CF_API_TOKEN", ""))
+    # Cloudflare Workers AI credentials.
+    # Supports both CLOUDFLARE_ACCOUNT_ID and the shorter CF_ACCOUNT_ID alias.
+    # Uses explicit non-empty check so that an empty primary var falls back to alias.
+    CLOUDFLARE_ACCOUNT_ID: str = (
+        os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+        or os.getenv("CF_ACCOUNT_ID", "").strip()
+    )
+    CLOUDFLARE_API_TOKEN: str = (
+        os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+        or os.getenv("CF_API_TOKEN", "").strip()
+    )
     CLOUDFLARE_IMAGE_MODEL: str = os.getenv("CLOUDFLARE_IMAGE_MODEL", "@cf/black-forest-labs/flux-1-schnell")
-    
-    # Hugging Face Inference credentials (support HF_API_KEY and HUGGINGFACE_API_KEY)
-    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", os.getenv("HF_API_KEY", ""))
+
+    # Hugging Face Inference credentials.
+    # Supports both HUGGINGFACE_API_KEY and the shorter HF_API_KEY alias.
+    # Uses explicit non-empty check so that an empty primary var falls back to alias.
+    HUGGINGFACE_API_KEY: str = (
+        os.getenv("HUGGINGFACE_API_KEY", "").strip()
+        or os.getenv("HF_API_KEY", "").strip()
+    )
     HUGGINGFACE_IMAGE_MODEL: str = os.getenv("HUGGINGFACE_IMAGE_MODEL", "black-forest-labs/FLUX.1-schnell")
     
     DEFAULT_ASPECT_RATIO: str = os.getenv("DEFAULT_ASPECT_RATIO", "16:9")

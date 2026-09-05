@@ -1,6 +1,7 @@
 import os
 import time
 import hashlib
+import inspect
 from pathlib import Path
 from typing import List, Optional, Tuple
 from datetime import datetime, timezone
@@ -9,7 +10,7 @@ from app.configuration.config import settings
 from app.models.project import ProjectModel
 from app.models.scene import SceneModel
 from app.services.project_service import project_service, STORAGE_DIR
-from app.services.visual_context import build_visual_context
+from app.services.visual_style_engine import build_scene_prompt, resolve_scene_context
 from app.services.image_generation.base import (
     BaseImageGenerator,
     ImageGenerationOptions,
@@ -38,9 +39,66 @@ class SceneImageService:
         # Default 16:9 widescreen
         return (1024, 576)
 
-    def get_capabilities(self, provider_name: Optional[str] = None) -> ProviderCapabilities:
-        generator = get_image_generator(provider_name)
+    def _validate_aspect_ratio(self, aspect_ratio: str, capabilities: ProviderCapabilities) -> None:
+        if capabilities.supports_aspect_ratio and aspect_ratio not in capabilities.supported_aspect_ratios:
+            raise ValueError(
+                f"Model '{capabilities.model_name}' does not support project aspect ratio '{aspect_ratio}'. "
+                f"Supported ratios: {', '.join(capabilities.supported_aspect_ratios)}"
+            )
+
+    def get_capabilities(
+        self,
+        provider_name: Optional[str] = None,
+        model_name: Optional[str] = None,
+        style_mode: Optional[str] = None,
+    ) -> ProviderCapabilities:
+        generator = get_image_generator(
+            provider_name=provider_name,
+            model_name=model_name,
+            style_mode=style_mode,
+        )
         return generator.capabilities
+
+    def _previous_scene(self, project: ProjectModel, scene_id: str) -> Optional[SceneModel]:
+        index = next((index for index, scene in enumerate(project.scenes) if scene.id == scene_id), None)
+        return project.scenes[index - 1] if index and index > 0 else None
+
+    def _optional_generation_kwargs(
+        self,
+        generator: BaseImageGenerator,
+        style_mode: Optional[str],
+        seed: Optional[int],
+    ) -> dict:
+        parameters = inspect.signature(generator.generate_image).parameters
+        kwargs = {}
+        if "style_mode" in parameters and style_mode:
+            kwargs["style_mode"] = style_mode
+        if "seed" in parameters and seed is not None and generator.capabilities.supports_seed:
+            kwargs["seed"] = seed
+        return kwargs
+
+    async def _generate_with_context(
+        self,
+        generator: BaseImageGenerator,
+        prompt: str,
+        references: List[ImageReference],
+        options: ImageGenerationOptions,
+        style_mode: Optional[str],
+        seed: Optional[int],
+    ):
+        if references and generator.capabilities.supports_reference_images:
+            method = generator.generate_image_with_references
+            kwargs = self._optional_generation_kwargs(generator, style_mode, seed)
+            return await method(prompt=prompt, references=references, options=options, **kwargs)
+        if references and generator.capabilities.supports_reference_descriptions:
+            method = generator.generate_image_with_references
+            kwargs = self._optional_generation_kwargs(generator, style_mode, seed)
+            return await method(prompt=prompt, references=references, options=options, **kwargs)
+        return await generator.generate_image(
+            prompt=prompt,
+            options=options,
+            **self._optional_generation_kwargs(generator, style_mode, seed),
+        )
 
     def _derive_character_seed(self, character_name: str) -> int:
         """
@@ -156,11 +214,20 @@ class SceneImageService:
         )
 
         try:
-            # 2. Determine prompt
-            effective_prompt = prompt_override or target_scene.image_prompt or target_scene.caption or "Cinematic scene"
+            # 2. Resolve canonical style, relevant entities, and continuity context.
+            context = resolve_scene_context(
+                project=project,
+                scene=target_scene,
+                style_id=style_mode,
+                custom_instructions=prompt_override,
+                previous_scene=self._previous_scene(project, scene_id),
+            )
+            source_prompt = prompt_override or target_scene.image_prompt or target_scene.caption or "Cinematic scene"
+            effective_prompt = build_scene_prompt(context, source_prompt)
 
             # 3. Determine aspect ratio and dimensions
-            aspect_ratio = settings.DEFAULT_ASPECT_RATIO or "16:9"
+            aspect_ratio = project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO or "16:9"
+            self._validate_aspect_ratio(aspect_ratio, capabilities)
             width, height = self.get_dimensions_for_aspect_ratio(aspect_ratio)
 
             options = ImageGenerationOptions(
@@ -170,52 +237,26 @@ class SceneImageService:
                 negative_prompt="text, watermark, logo, bad quality, blurry, artifact"
             )
 
-            # 4. Resolve references from Video Bible
-            references = self._resolve_scene_references(
-                project=project,
-                prompt=effective_prompt,
-                caption=target_scene.caption
-            )
+            # 4. Resolve references from the same canonical scene context.
+            references = context["references"]
 
             # 4b. Derive character seed for consistency (Pollinations seed locking)
             seed: Optional[int] = None
-            if references:
+            if references and capabilities.supports_seed:
                 # Use the first matched character's seed for facial consistency
                 char_refs = [r for r in references if r.entity_type == "character"]
                 if char_refs:
                     seed = self._derive_character_seed(char_refs[0].entity_name)
 
-            # 5. Call ImageGenerator adapter
-            if references and capabilities.supports_reference_images:
-                result = await active_generator.generate_image_with_references(
-                    prompt=effective_prompt,
-                    references=references,
-                    options=options
-                )
-            else:
-                # For Pollinations (no img2img), pass references as prompt enrichment via generate_image_with_references
-                if references:
-                    result = await active_generator.generate_image_with_references(
-                        prompt=effective_prompt,
-                        references=references,
-                        options=options,
-                        style_mode=style_mode,
-                        seed=seed,
-                    )
-                else:
-                    # Check if generator accepts style_mode / seed kwargs
-                    import inspect
-                    sig = inspect.signature(active_generator.generate_image)
-                    extra_kwargs = {}
-                    if "style_mode" in sig.parameters:
-                        extra_kwargs["style_mode"] = style_mode
-                    if "seed" in sig.parameters:
-                        extra_kwargs["seed"] = seed
-                    result = await active_generator.generate_image(
-                        prompt=effective_prompt,
-                        options=options,
-                        **extra_kwargs
-                    )
+            # 5. Call the provider through the capability-aware context path.
+            result = await self._generate_with_context(
+                generator=active_generator,
+                prompt=effective_prompt,
+                references=references,
+                options=options,
+                style_mode=style_mode,
+                seed=seed,
+            )
 
             # 6. Save image bytes to project storage
             images_dir = STORAGE_DIR / "projects" / project.id / "images"
@@ -233,12 +274,20 @@ class SceneImageService:
             public_url = f"/media/{project.id}/images/{filename}"
 
             metadata = result.metadata or {}
+            metadata = dict(metadata)
             metadata["filename"] = filename
             metadata["file_size"] = len(result.image_bytes)
             metadata["aspect_ratio"] = aspect_ratio
             metadata["width"] = width
             metadata["height"] = height
             metadata["generated_at"] = datetime.now(timezone.utc).isoformat()
+            metadata["style_id"] = context["style_id"]
+            metadata["style_label"] = context["style"].label
+            metadata["reference_entities"] = [entity["id"] for entity in context["entities"]]
+            metadata["references_used"] = [reference.entity_name for reference in references]
+            metadata["reference_mode"] = "image" if references and capabilities.supports_reference_images else ("text" if references else "none")
+            metadata["continuity_scene_id"] = context.get("previous_scene_id")
+            metadata["prompt_hash"] = hashlib.sha256(effective_prompt.encode("utf-8")).hexdigest()[:16]
 
             # 7. Update scene to 'completed'
             updated_scene = project_service.update_scene_image_state(
@@ -296,13 +345,20 @@ class SceneImageService:
     async def retry_failed_scene_images(
         self,
         project: ProjectModel,
-        generator: Optional[BaseImageGenerator] = None
+        generator: Optional[BaseImageGenerator] = None,
+        style_mode: Optional[str] = None,
+        provider_name: Optional[str] = None,
+        model_name: Optional[str] = None,
     ) -> List[SceneModel]:
         """
         Retries generation only for scenes that previously failed or are missing images,
         strictly preserving all already-successful scene images.
         """
-        active_generator = generator or get_image_generator()
+        active_generator = generator or get_image_generator(
+            provider_name=provider_name,
+            model_name=model_name,
+            style_mode=style_mode,
+        )
         results: List[SceneModel] = []
 
         for scene in project.scenes:
@@ -316,6 +372,9 @@ class SceneImageService:
                     project=project,
                     scene_id=scene.id,
                     force=True,
+                    style_mode=style_mode,
+                    provider_name=provider_name,
+                    model_name=model_name,
                     generator=active_generator
                 )
                 results.append(updated)
@@ -349,8 +408,19 @@ class SceneImageService:
             style_mode=style_mode
         )
 
-        effective_prompt = target_scene.image_prompt or target_scene.caption or "Cinematic scene"
-        aspect_ratio = settings.DEFAULT_ASPECT_RATIO or "16:9"
+        context = resolve_scene_context(
+            project=project,
+            scene=target_scene,
+            style_id=style_mode,
+            previous_scene=self._previous_scene(project, scene_id),
+        )
+        effective_prompt = build_scene_prompt(
+            context,
+            target_scene.image_prompt or target_scene.caption or "Cinematic scene",
+        )
+        references = context["references"]
+        aspect_ratio = project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO or "16:9"
+        self._validate_aspect_ratio(aspect_ratio, active_generator.capabilities)
         width, height = self.get_dimensions_for_aspect_ratio(aspect_ratio)
 
         options = ImageGenerationOptions(
@@ -365,21 +435,20 @@ class SceneImageService:
 
         for i in range(count):
             var_seed = base_seed + i * 137
-            # If generator supports seed or build_url
-            if hasattr(active_generator, "_build_url"):
-                url = active_generator._build_url(effective_prompt, options, style_mode=style_mode, seed=var_seed)
-                # Fetch image bytes
-                import urllib.request
-                req = urllib.request.Request(url, headers={"User-Agent": "AIVideoMaker/1.0"})
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    img_bytes = resp.read()
-            else:
-                gen_result = await active_generator.generate_image(effective_prompt, options)
-                img_bytes = gen_result.image_bytes
+            gen_result = await self._generate_with_context(
+                generator=active_generator,
+                prompt=f"{effective_prompt} Variation {i + 1}: use a distinct shot size or camera angle while preserving identity.",
+                references=references,
+                options=options,
+                style_mode=style_mode,
+                seed=var_seed,
+            )
+            img_bytes = gen_result.image_bytes
 
             # Save variation
             timestamp = int(time.time())
-            filename = f"{scene_id}_var_{i+1}_{timestamp}.png"
+            extension = "png" if "png" in gen_result.content_type else "jpg"
+            filename = f"{scene_id}_var_{i+1}_{timestamp}.{extension}"
             storage_path, image_url = project_service.save_scene_image_asset(
                 project_id=project.id,
                 scene_id=scene_id,
@@ -387,11 +456,22 @@ class SceneImageService:
                 filename=filename
             )
 
+            variation_metadata = dict(gen_result.metadata or {})
+            variation_metadata.update({
+                "style_id": context["style_id"],
+                "aspect_ratio": aspect_ratio,
+                "width": width,
+                "height": height,
+                "seed": var_seed,
+                "reference_entities": [entity["id"] for entity in context["entities"]],
+                "reference_mode": "image" if references and active_generator.capabilities.supports_reference_images else ("text" if references else "none"),
+            })
             variations.append({
                 "id": f"var-{i+1}",
                 "image_url": image_url,
                 "prompt": effective_prompt,
-                "seed": var_seed
+                "seed": var_seed,
+                "metadata": variation_metadata,
             })
 
         return variations

@@ -18,6 +18,8 @@ RESOLUTIONS = {
     "1080x1920": {"width": 1080, "height": 1920, "aspect_ratio": "9:16", "name": "Vertical (TikTok/Shorts/Reels)"},
     "1920x1080": {"width": 1920, "height": 1080, "aspect_ratio": "16:9", "name": "Landscape (YouTube/Cinema)"},
     "1080x1080": {"width": 1080, "height": 1080, "aspect_ratio": "1:1", "name": "Square (Instagram)"},
+    "720x1280": {"width": 720, "height": 1280, "aspect_ratio": "9:16", "name": "Vertical 720p"},
+    "1280x720": {"width": 1280, "height": 720, "aspect_ratio": "16:9", "name": "Landscape 720p"},
 }
 DEFAULT_RESOLUTION = "1080x1920"
 
@@ -129,7 +131,12 @@ def _generate_ass_subtitles(
         text = (getattr(sc, "caption", "") or "").strip()
         if not text:
             continue
-        cleaned_text = text.replace("\r\n", "\\N").replace("\n", "\\N")
+        cleaned_text = (
+            text.replace("{", "(")
+            .replace("}", ")")
+            .replace("\r\n", "\\N")
+            .replace("\n", "\\N")
+        )
         start_str = _format_ass_time(sc.start)
         end_str = _format_ass_time(sc.end)
         ass_lines.append(f"Dialogue: 0,{start_str},{end_str},Default,,0,0,0,,{cleaned_text}")
@@ -244,6 +251,30 @@ class RenderService:
     def list_jobs_for_project(self, project_id: str) -> List[RenderJobModel]:
         return [j for j in self._jobs.values() if j.project_id == project_id]
 
+    def delete_job(self, job_id: str) -> bool:
+        job = self.get_job(job_id)
+        if not job:
+            return False
+        if job.output_path:
+            p = STORAGE_DIR / job.output_path
+            if p.exists():
+                try:
+                    p.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            # Clean up sibling transcode caches
+            for ext in [".mp3", "_720p.mp4", ".webm", ".gif", "_preview.gif"]:
+                s = p.parent / f"{job_id}{ext}"
+                if s.exists():
+                    try:
+                        s.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+        if job.id in self._jobs:
+            del self._jobs[job.id]
+            self._save_jobs_for_project(job.project_id)
+        return True
+
     def create_render_job(
         self,
         project_id: str,
@@ -335,6 +366,7 @@ class RenderService:
             res_info = RESOLUTIONS.get(job.resolution, RESOLUTIONS[DEFAULT_RESOLUTION])
             target_width = res_info["width"]
             target_height = res_info["height"]
+            target_fps = int(getattr(project.canvas_settings, "fps", 30) or 30) if getattr(project, "canvas_settings", None) else 30
 
             # --- STAGE 1: Preparing... (0% -> 15%) ---
             job.status = "processing"
@@ -391,7 +423,7 @@ class RenderService:
             scene_clips: List[Path] = []
             for idx, (scene, img_path) in enumerate(zip(scenes, scene_image_paths)):
                 duration = max(0.1, scene.duration)
-                num_frames = int(round(duration * 30))
+                num_frames = int(round(duration * target_fps))
                 clip_path = temp_dir / f"scene_{idx:03d}.mp4"
 
                 # Construct safe filter chain
@@ -415,7 +447,7 @@ class RenderService:
                     "-preset", "fast",
                     "-crf", "20",
                     "-pix_fmt", "yuv420p",
-                    "-r", "30",
+                    "-r", str(target_fps),
                     str(clip_path)
                 ]
 
@@ -501,7 +533,7 @@ class RenderService:
                     "-preset", "fast",
                     "-crf", "20",
                     "-pix_fmt", "yuv420p",
-                    "-r", "30",
+                    "-r", str(target_fps),
                     "subtitled_video.mp4"
                 ]
                 result_subs = await loop.run_in_executor(
@@ -562,13 +594,25 @@ class RenderService:
 
             # Construct safe audio mixing command
             if narr_path and bgm_path:
-                filter_complex = (
-                    f"[1:a]volume={narr_vol:.2f},apad[narr];"
-                    f"[2:a]aloop=loop=-1:size=2e+09,atrim=0:{total_duration:.3f},"
-                    f"afade=t=in:st=0:d={fade_in:.2f},afade=t=out:st={fade_out_st:.3f}:d={fade_out:.2f},"
-                    f"volume={bgm_vol:.2f}[bgm];"
-                    f"[narr][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout]"
-                )
+                ducking_enabled = getattr(audio_settings, "ducking_enabled", True) if audio_settings else True
+                if ducking_enabled and narr_vol > 0.01:
+                    # Broadcast mastering: Auto-duck BGM when voiceover speaks using sidechain compression
+                    filter_complex = (
+                        f"[1:a]volume={narr_vol:.2f},apad,asplit=2[narr_voice][narr_sc];"
+                        f"[2:a]aloop=loop=-1:size=2e+09,atrim=0:{total_duration:.3f},"
+                        f"afade=t=in:st=0:d={fade_in:.2f},afade=t=out:st={fade_out_st:.3f}:d={fade_out:.2f},"
+                        f"volume={bgm_vol:.2f}[bgm];"
+                        f"[bgm][narr_sc]sidechaincompress=threshold=0.08:ratio=3:attack=50:release=350[bgm_ducked];"
+                        f"[narr_voice][bgm_ducked]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]"
+                    )
+                else:
+                    filter_complex = (
+                        f"[1:a]volume={narr_vol:.2f},apad[narr];"
+                        f"[2:a]aloop=loop=-1:size=2e+09,atrim=0:{total_duration:.3f},"
+                        f"afade=t=in:st=0:d={fade_in:.2f},afade=t=out:st={fade_out_st:.3f}:d={fade_out:.2f},"
+                        f"volume={bgm_vol:.2f}[bgm];"
+                        f"[narr][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]"
+                    )
                 cmd_final = [
                     ffmpeg_exe, "-y",
                     "-i", str(video_for_audio.resolve()),
@@ -690,6 +734,11 @@ class RenderService:
         image_zoom = getattr(scene, "image_zoom", 1.0) or 1.0
         image_crop = getattr(scene, "image_crop", None)
 
+        brightness = float(getattr(scene, "brightness", 0.0) or 0.0)
+        contrast = float(getattr(scene, "contrast", 1.0) or 1.0)
+        saturation = float(getattr(scene, "saturation", 1.0) or 1.0)
+        color_filter = (getattr(scene, "color_filter", "none") or "none").lower()
+
         filter_parts = []
 
         # 1. Bounding Crop (if configured by user in UI)
@@ -708,7 +757,16 @@ class RenderService:
         scale_2x_w = target_width * 2
         scale_2x_h = target_height * 2
 
-        if motion != "none":
+        if image_fit == "blur":
+            # Blurred Mirror Framing: Background is scaled to fill and blurred, foreground is scaled to fit inside
+            blur_filter = (
+                f"split[fg][bg];"
+                f"[bg]scale={target_width}:{target_height}:force_original_aspect_ratio=increase,crop={target_width}:{target_height},boxblur=20:5,eq=brightness=-0.15[bgblur];"
+                f"[fg]scale={target_width}:{target_height}:force_original_aspect_ratio=decrease[fgscaled];"
+                f"[bgblur][fgscaled]overlay=(W-w)/2:(H-h)/2"
+            )
+            filter_parts.append(blur_filter)
+        elif motion != "none":
             # Motion takes precedence with zoom factor scaling
             base_z = max(1.0, min(2.5, image_zoom))
             if motion == "slow zoom in":
@@ -776,12 +834,31 @@ class RenderService:
                 else:  # "center"
                     filter_parts.append(f"crop={target_width}:{target_height}:(in_w-out_w)/2:(in_h-out_h)/2")
 
-        # 3. Transition Filter Logic
+        # 3. Color Filter Presets
+        if color_filter == "noir":
+            filter_parts.append("hue=s=0,eq=contrast=1.2:brightness=-0.02")
+        elif color_filter == "warm":
+            filter_parts.append("colorbalance=rs=0.15:gs=0.05:bs=-0.15:rm=0.1:gm=0.03:bm=-0.1")
+        elif color_filter == "cyberpunk":
+            filter_parts.append("colorbalance=rs=-0.1:gs=0.05:bs=0.25:rh=0.2:gh=-0.05:bh=0.15,eq=saturation=1.3")
+        elif color_filter == "cinematic":
+            filter_parts.append("colorbalance=rs=-0.1:gs=0.02:bs=0.15:rh=0.18:gh=0.05:bh=-0.12,eq=contrast=1.1")
+        elif color_filter == "vivid":
+            filter_parts.append("eq=saturation=1.4:contrast=1.1")
+
+        # 4. Color Grading (Brightness, Contrast, Saturation)
+        brightness = max(-1.0, min(1.0, brightness))
+        contrast = max(0.1, min(3.0, contrast))
+        saturation = max(0.0, min(3.0, saturation))
+        if abs(brightness) > 0.001 or abs(contrast - 1.0) > 0.001 or abs(saturation - 1.0) > 0.001:
+            filter_parts.append(f"eq=brightness={brightness:.2f}:contrast={contrast:.2f}:saturation={saturation:.2f}")
+
+        # 5. Transition Filter Logic
         if transition in ("fade", "crossfade") and trans_duration > 0 and duration > trans_duration:
             fade_start = duration - trans_duration
             filter_parts.append(f"fade=t=out:st={fade_start:.3f}:d={trans_duration:.3f}")
 
-        # 4. Enforce SAR and 30 fps
+        # 6. Enforce SAR and 30 fps
         filter_parts.append("setsar=1")
         filter_parts.append("fps=30")
 

@@ -11,10 +11,20 @@ import {
   Square,
   RefreshCw,
   X,
+  Play,
+  Trash2,
 } from "lucide-react";
 import type { Project } from "../../types/project";
 import type { RenderJob } from "../../types/render";
 import { api } from "../../services/api";
+
+const DOWNLOAD_FORMATS = [
+  { id: "mp4", label: "MP4 (1080p)", desc: "Original Full HD Video", ext: "mp4" },
+  { id: "720p", label: "720p (HD)", desc: "Compressed HD for Fast Sharing", ext: "mp4" },
+  { id: "mp3", label: "MP3 (Audio)", desc: "Extracted Audio-Only Mix", ext: "mp3" },
+  { id: "webm", label: "WebM (VP9)", desc: "Web High-Efficiency Video", ext: "webm" },
+  { id: "gif", label: "GIF (Loop)", desc: "6s Animated Loop Preview", ext: "gif" },
+];
 
 interface ExportModalProps {
   project: Project;
@@ -67,6 +77,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [recentJobs, setRecentJobs] = useState<RenderJob[]>([]);
+  const [activePreviewJobId, setActivePreviewJobId] = useState<string | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
 
   const totalDuration =
@@ -170,6 +182,25 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const handleResetForNewRender = () => {
     setActiveJob(null);
     setErrorMsg(null);
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!confirm("Are you sure you want to delete this export?")) return;
+    setDeletingJobId(jobId);
+    try {
+      await api.deleteRenderJob(project.id, jobId);
+      if (activeJob?.id === jobId) {
+        setActiveJob(null);
+      }
+      if (activePreviewJobId === jobId) {
+        setActivePreviewJobId(null);
+      }
+      await fetchRecentJobs();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete export");
+    } finally {
+      setDeletingJobId(null);
+    }
   };
 
   if (!isOpen) return null;
@@ -301,7 +332,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                         transition: "all 0.2s ease",
                       }}
                     >
-                      {opt.defaultBadge && (
+                      {(project.canvas_settings?.resolution === opt.id || (!project.canvas_settings?.resolution && opt.defaultBadge)) && (
                         <span
                           style={{
                             position: "absolute",
@@ -316,7 +347,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                             border: "1px solid var(--accent-primary)",
                           }}
                         >
-                          Default
+                          {project.canvas_settings?.resolution === opt.id ? "Canvas Choice" : "Default"}
                         </span>
                       )}
 
@@ -376,26 +407,36 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <div>
                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
-                  FRAMERATE
-                </span>
-                <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                  30 FPS
-                </span>
-              </div>
-              <div>
-                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
-                  AUDIO CODEC
-                </span>
-                <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                  AAC (192 kbps)
-                </span>
-              </div>
-              <div>
-                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
                   TIMELINE
                 </span>
                 <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                  {project.scenes?.length || 0} scenes • {totalDuration.toFixed(1)}s
+                  {project.scenes?.length || 0} scenes ({totalDuration.toFixed(1)}s)
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                  FRAMERATE
+                </span>
+                <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                  {project.canvas_settings?.fps || 30} FPS
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                  AUDIO TRACKS
+                </span>
+                <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                  {project.audio_file ? "Voice" : "No Voice"}
+                  {project.audio_settings?.music_file ? " + BGM" : ""}
+                  {project.audio_settings?.ducking_enabled !== false && project.audio_file && project.audio_settings?.music_file ? " (Ducked)" : ""}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                  SUBTITLES
+                </span>
+                <span style={{ fontSize: "0.85rem", fontWeight: 600, color: project.caption_settings?.enabled !== false ? "#10b981" : "var(--text-muted)" }}>
+                  {project.caption_settings?.enabled !== false ? `Burned (${project.caption_settings?.font_family || "Inter"})` : "Disabled"}
                 </span>
               </div>
             </div>
@@ -639,27 +680,36 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 </div>
               </div>
 
+              {/* Multi-Format Downloads Bar */}
               {downloadUrl && (
-                <a
-                  href={downloadUrl}
-                  download={activeJob.output_filename || "video.mp4"}
-                  className="btn-primary"
-                  style={{
-                    padding: "10px 20px",
-                    fontSize: "0.9rem",
-                    fontWeight: 700,
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                    border: "none",
-                    boxShadow: "0 8px 16px -4px rgba(16, 185, 129, 0.4)",
-                  }}
-                >
-                  <Download size={16} />
-                  <span>Download MP4</span>
-                </a>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-end" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "flex-end" }}>
+                    {DOWNLOAD_FORMATS.map((fmt) => (
+                      <a
+                        key={fmt.id}
+                        href={api.getRenderDownloadUrl(project.id, activeJob.id, fmt.id)}
+                        download={`${(activeJob.output_filename || "video").replace(/\.[^/.]+$/, "")}_${fmt.id}.${fmt.ext}`}
+                        title={fmt.desc}
+                        className={fmt.id === "mp4" ? "btn-primary" : "btn-secondary"}
+                        style={{
+                          padding: "8px 14px",
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          textDecoration: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          borderRadius: "8px",
+                          background: fmt.id === "mp4" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "rgba(255, 255, 255, 0.08)",
+                          boxShadow: fmt.id === "mp4" ? "0 8px 16px -4px rgba(16, 185, 129, 0.4)" : "none",
+                        }}
+                      >
+                        <Download size={13} />
+                        <span>{fmt.label}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -782,7 +832,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </div>
         )}
 
-        {/* Recent Renders History (if any) */}
+        {/* Recent Renders History (Previous Exports) */}
         {!activeJob && recentJobs.length > 0 && (
           <div>
             <span
@@ -793,50 +843,203 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 textTransform: "uppercase",
                 display: "block",
                 marginBottom: "8px",
+                letterSpacing: "0.04em",
               }}
             >
-              PREVIOUS EXPORTS
+              PREVIOUS EXPORTS ({recentJobs.length})
             </span>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {recentJobs.map((j) => (
                 <div
                   key={j.id}
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 14px",
-                    borderRadius: "10px",
+                    flexDirection: "column",
+                    gap: "10px",
+                    padding: "12px 16px",
+                    borderRadius: "12px",
                     background: "var(--bg-card-subtle)",
                     border: "1px solid var(--border-subtle)",
                     fontSize: "0.82rem",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Film size={15} className="text-indigo-400" />
-                    <span style={{ fontWeight: 600 }}>{j.resolution}</span>
-                    <span style={{ color: "var(--text-muted)" }}>•</span>
-                    <span style={{ color: "var(--text-muted)" }}>
-                      {j.duration ? `${j.duration.toFixed(1)}s` : ""}
-                    </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div
+                        style={{
+                          width: "34px",
+                          height: "34px",
+                          borderRadius: "8px",
+                          background: j.status === "completed" ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.15)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: j.status === "completed" ? "#34d399" : "var(--primary)",
+                        }}
+                      >
+                        <Film size={16} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{j.resolution}</span>
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontWeight: 600,
+                              background:
+                                j.status === "completed"
+                                  ? "rgba(16, 185, 129, 0.15)"
+                                  : j.status === "processing"
+                                  ? "rgba(99, 102, 241, 0.15)"
+                                  : "rgba(239, 68, 68, 0.15)",
+                              color:
+                                j.status === "completed"
+                                  ? "#34d399"
+                                  : j.status === "processing"
+                                  ? "#818cf8"
+                                  : "#f87171",
+                            }}
+                          >
+                            {j.status.toUpperCase()}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                          {j.duration ? `${j.duration.toFixed(1)}s` : ""}
+                          {j.file_size ? ` • ${(j.file_size / (1024 * 1024)).toFixed(1)} MB` : ""}
+                          {j.created_at ? ` • ${new Date(j.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions: Preview Toggle & Delete */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {j.status === "completed" && (
+                        <button
+                          type="button"
+                          onClick={() => setActivePreviewJobId(activePreviewJobId === j.id ? null : j.id)}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "6px",
+                            border: "1px solid var(--border-subtle)",
+                            background: activePreviewJobId === j.id ? "rgba(99, 102, 241, 0.2)" : "rgba(255, 255, 255, 0.05)",
+                            color: activePreviewJobId === j.id ? "var(--primary)" : "var(--text-secondary)",
+                            fontSize: "0.76rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <Play size={12} />
+                          <span>{activePreviewJobId === j.id ? "Hide Preview" : "Preview"}</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteJob(j.id)}
+                        disabled={deletingJobId === j.id}
+                        title="Delete Export"
+                        style={{
+                          padding: "5px 8px",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(239, 68, 68, 0.2)",
+                          background: "rgba(239, 68, 68, 0.06)",
+                          color: "#f87171",
+                          fontSize: "0.76rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Multi-Format Download Buttons for completed export */}
                   {j.status === "completed" && (
-                    <a
-                      href={api.getRenderDownloadUrl(project.id, j.id)}
-                      download={j.output_filename || "video.mp4"}
+                    <div
                       style={{
-                        color: "#34d399",
-                        textDecoration: "none",
-                        fontWeight: 600,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                        paddingTop: "8px",
+                        borderTop: "1px solid rgba(255, 255, 255, 0.05)",
                       }}
                     >
-                      <Download size={13} />
-                      <span>Download</span>
-                    </a>
+                      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                        Download Formats:
+                      </span>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {DOWNLOAD_FORMATS.map((fmt) => (
+                          <a
+                            key={fmt.id}
+                            href={api.getRenderDownloadUrl(project.id, j.id, fmt.id)}
+                            download={`${(j.output_filename || "video").replace(/\.[^/.]+$/, "")}_${fmt.id}.${fmt.ext}`}
+                            title={fmt.desc}
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              background: fmt.id === "mp4" ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                              border: fmt.id === "mp4" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(255, 255, 255, 0.08)",
+                              color: fmt.id === "mp4" ? "#34d399" : "var(--text-secondary)",
+                              fontSize: "0.74rem",
+                              fontWeight: 600,
+                              textDecoration: "none",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <Download size={11} />
+                            <span>{fmt.label}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline Video Player Preview when toggled */}
+                  {activePreviewJobId === j.id && j.status === "completed" && (
+                    <div
+                      style={{
+                        marginTop: "8px",
+                        borderRadius: "10px",
+                        overflow: "hidden",
+                        background: "#000",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        maxHeight: "260px",
+                      }}
+                    >
+                      <video
+                        controls
+                        autoPlay
+                        playsInline
+                        src={api.getRenderDownloadUrl(project.id, j.id, "mp4")}
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "260px",
+                          objectFit: "contain",
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               ))}

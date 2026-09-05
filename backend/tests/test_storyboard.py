@@ -8,6 +8,11 @@ from app.services.project_service import project_service
 from app.services.storyboard_service import storyboard_service
 from app.services.llm.mock_provider import MockLLMProvider
 from app.services.visual_context import build_visual_context
+from app.services.visual_style_engine import (
+    build_scene_prompt,
+    normalize_style_id,
+    resolve_scene_context,
+)
 
 client = TestClient(app)
 
@@ -91,8 +96,6 @@ def sample_project_with_bible(tmp_path, monkeypatch):
 def test_mock_provider_rules_and_generation(sample_project_with_bible):
     """Verify MockLLMProvider enforces all 10 prompt rules and returns all required fields."""
     provider = MockLLMProvider()
-    visual_context = build_visual_context(sample_project_with_bible.video_bible)
-
     scenes_input = [
         {
             "id": s.id,
@@ -104,35 +107,42 @@ def test_mock_provider_rules_and_generation(sample_project_with_bible):
         for s in sample_project_with_bible.scenes
     ]
 
-    results = asyncio.run(provider.generate_storyboard_scenes(
-        scenes=scenes_input,
-        visual_context=visual_context,
-        aspect_ratio="16:9"
-    ))
+    for aspect_ratio, guidance in (
+        ("16:9", "landscape composition"),
+        ("9:16", "vertical mobile composition"),
+        ("1:1", "balanced square composition"),
+    ):
+        visual_context = build_visual_context(
+            sample_project_with_bible.video_bible,
+            aspect_ratio=aspect_ratio,
+        )
+        results = asyncio.run(provider.generate_storyboard_scenes(
+            scenes=scenes_input,
+            visual_context=visual_context,
+            aspect_ratio=aspect_ratio
+        ))
 
-    assert len(results) == 2
-    for r in results:
-        # Check required fields
-        assert "id" in r
-        assert "visual_description" in r
-        assert "image_prompt" in r
-        assert "suggested_motion" in r
-        assert "suggested_transition" in r
+        assert len(results) == 2
+        for result in results:
+            # Check required fields
+            assert "id" in result
+            assert "visual_description" in result
+            assert "image_prompt" in result
+            assert "suggested_motion" in result
+            assert "suggested_transition" in result
 
-        prompt = r["image_prompt"]
+            prompt = result["image_prompt"]
 
-        # Rule 1: Visual description describes scene
-        assert len(r["visual_description"]) > 20
+            # Visual description and Video Bible identity remain present.
+            assert len(result["visual_description"]) > 20
+            assert "Cyberpunk Blade Runner Neo-noir" in prompt or "Teal and neon magenta" in prompt or "Volumetric neon reflections" in prompt
 
-        # Rule 2: Incorporates Video Bible style
-        assert "Cyberpunk Blade Runner Neo-noir" in prompt or "Teal and neon magenta" in prompt or "Volumetric neon reflections" in prompt
+            # Negative prompt guidance remains present.
+            assert "--no text" in prompt
+            assert "watermark" in prompt
 
-        # Rule 6 & 7: Negative prompt avoiding text & watermarks
-        assert "--no text" in prompt
-        assert "watermark" in prompt
-
-        # Rule 8: Aspect ratio specified
-        assert "16:9 widescreen composition" in prompt
+            # Aspect ratio is expressed through semantic composition guidance.
+            assert guidance in prompt
 
 def test_storyboard_service_flow(sample_project_with_bible):
     """Test storyboard_service.generate_storyboard and regenerate_scene_prompt."""
@@ -151,6 +161,32 @@ def test_storyboard_service_flow(sample_project_with_bible):
     ))
     assert "ocular implant" in updated_scene.image_prompt.lower() or "close-up" in updated_scene.image_prompt.lower()
     assert "Directed alteration" in updated_scene.visual_description or "ocular implant" in updated_scene.visual_description.lower()
+
+def test_visual_style_engine_resolves_relevant_entities_and_composition(sample_project_with_bible):
+    scene = sample_project_with_bible.scenes[0]
+    scene.visual_description = "Kaelen enters The Spire Underbelly while carrying The Neural Shard."
+    context = resolve_scene_context(sample_project_with_bible, scene, style_id="stickman")
+    prompt = build_scene_prompt(context, scene.image_prompt)
+
+    assert normalize_style_id("Stickman") == "stickfigure"
+    assert context["style_id"] == "stickfigure"
+    assert {entity["id"] for entity in context["entities"]} == {"char-001", "loc-001", "obj-001"}
+    assert "vertical mobile composition" in context["composition"]
+    assert "canonical character identity: Kaelen" in prompt
+    assert "canonical location identity: The Spire Underbelly" in prompt
+
+    sample_project_with_bible.canvas_settings.aspect_ratio = "16:9"
+    landscape_context = resolve_scene_context(sample_project_with_bible, scene, style_id="stickman")
+    assert "landscape composition" in landscape_context["composition"]
+
+    sample_project_with_bible.canvas_settings.aspect_ratio = "1:1"
+    square_context = resolve_scene_context(sample_project_with_bible, scene, style_id="stickman")
+    assert "balanced square composition" in square_context["composition"]
+
+    unrelated_scene = sample_project_with_bible.scenes[1]
+    unrelated_scene.caption = "A quiet empty street with no named entities."
+    unrelated_context = resolve_scene_context(sample_project_with_bible, unrelated_scene, style_id="cinematic")
+    assert unrelated_context["entities"] == []
 
 def test_storyboard_api_endpoints(sample_project_with_bible):
     """Test full HTTP API routes for storyboard generation, regeneration, and editing."""
@@ -192,3 +228,16 @@ def test_storyboard_api_endpoints(sample_project_with_bible):
     assert edit_data["image_prompt"] == "Custom tailored master prompt, 35mm film grain, 16:9"
     assert edit_data["suggested_motion"] == "Dramatic orbital push"
     assert edit_data["suggested_transition"] == "Match cut"
+
+    # Every storyboard mutation returns the complete persisted scene contract.
+    for field in ("image_status", "image_url", "image_error", "image_metadata"):
+        assert field in scene1
+        assert field in regen_data
+        assert field in edit_data
+
+    # Project responses retain the Video Bible used by storyboard generation.
+    project_resp = client.get(f"/api/projects/{pid}")
+    assert project_resp.status_code == 200
+    project_data = project_resp.json()
+    assert project_data["video_bible"]["overall_style"]["visual_style"] == "Cyberpunk Blade Runner Neo-noir"
+    assert len(project_data["video_bible"]["characters"]) == 1

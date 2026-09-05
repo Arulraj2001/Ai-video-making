@@ -1,12 +1,18 @@
 from typing import Dict, Any, List
 from app.models.video_bible import VideoBibleModel
+from app.services.visual_style_engine import get_style_preset, normalize_style_id, composition_guidance
 
-def build_visual_context(video_bible: VideoBibleModel) -> Dict[str, Any]:
+def build_visual_context(
+    video_bible: VideoBibleModel,
+    style_mode: str | None = None,
+    aspect_ratio: str = "16:9",
+) -> Dict[str, Any]:
     """
     Produces a normalized visual-consistency context dictionary
     that downstream AI prompt-generation services can use to enforce visual coherence.
     """
     style = video_bible.overall_style
+    preset = get_style_preset(style_mode or style.visual_style)
     rules_str = ", ".join(video_bible.rules) if video_bible.rules else "None"
 
     # 1. Synthesize style prompt fragment
@@ -18,6 +24,9 @@ def build_visual_context(video_bible: VideoBibleModel) -> Dict[str, Any]:
         f"Camera: {style.camera_style}",
         f"Lens & Cinematography: {style.lens_cinematography}",
         f"Mood: {style.mood}",
+        f"Normalized Style Preset: {preset.label}",
+        f"Style Language: {preset.visual_language}; Rendering: {preset.rendering}; Texture: {preset.texture}; Background: {preset.background}",
+        f"Composition Guidance ({aspect_ratio}): {composition_guidance(aspect_ratio)}",
         f"Visual Directives: {rules_str}"
     ]
     style_prompt_fragment = ". ".join(style_fragments) + "."
@@ -117,5 +126,17 @@ def build_visual_context(video_bible: VideoBibleModel) -> Dict[str, Any]:
         "locations_catalog": locations_catalog,
         "objects_catalog": objects_catalog,
         "active_rules": video_bible.rules,
+        "style_preset_id": normalize_style_id(style_mode or style.visual_style),
+        "style_preset": {
+            "id": preset.id,
+            "label": preset.label,
+            "visual_language": preset.visual_language,
+            "rendering": preset.rendering,
+            "composition": preset.composition,
+            "camera": preset.camera,
+            "lighting": preset.lighting,
+            "mood": preset.mood,
+        },
+        "composition_guidance": composition_guidance(aspect_ratio),
         "reference_images_catalog": reference_images
     }

@@ -22,7 +22,12 @@ class SceneModel:
     transition: str = "none"  # "none", "fade", "crossfade", "slide"
     transition_duration: float = 0.5
     # Phase 8: Image Transform settings
-    image_fit: str = "cover"  # "cover", "contain", "fill"
+    image_fit: str = "cover"  # "cover", "contain", "blur", "fill"
     image_position: str = "center"  # "center", "top", "bottom", "left", "right"
     image_zoom: float = 1.0  # 1.0 to 2.5
     image_crop: Optional[dict] = None  # {"x": 0, "y": 0, "width": 100, "height": 100}
+    # Visual Adjustments & Filters
+    brightness: float = 0.0  # -0.5 to +0.5 (0.0 default)
+    contrast: float = 1.0  # 0.5 to 2.0 (1.0 default)
+    saturation: float = 1.0  # 0.0 to 2.5 (1.0 default)
+    color_filter: str = "none"  # "none", "cinematic", "warm", "cyberpunk", "noir", "vivid"

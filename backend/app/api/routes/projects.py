@@ -18,6 +18,7 @@ from app.schemas.project import (
 from app.services.project_service import project_service
 from app.services.caption_parser import parse_and_validate_captions
 from app.utils.errors import NotFoundException
+from app.api.routes.video_bible import _serialize_bible
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -67,7 +68,8 @@ def _to_project_response(p) -> ProjectResponse:
             music_volume=p.audio_settings.music_volume,
             music_fade_in=p.audio_settings.music_fade_in,
             music_fade_out=p.audio_settings.music_fade_out,
-            music_muted=p.audio_settings.music_muted
+            music_muted=p.audio_settings.music_muted,
+            ducking_enabled=getattr(p.audio_settings, "ducking_enabled", True)
         )
 
     canvas_settings = None
@@ -85,6 +87,7 @@ def _to_project_response(p) -> ProjectResponse:
         audio_file=audio,
         raw_captions=p.raw_captions,
         scenes=scenes,
+        video_bible=_serialize_bible(p.video_bible),
         caption_settings=caption_settings,
         audio_settings=audio_settings,
         canvas_settings=canvas_settings,
@@ -193,6 +196,16 @@ async def upload_project_audio(project_id: str, audio_file: UploadFile = File(..
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return _to_project_response(project_service.get_project(project_id))
+
+@router.delete("/{project_id}/audio", response_model=ProjectResponse)
+def delete_project_audio(project_id: str):
+    """Removes narration audio file from the project."""
+    p = project_service.get_project(project_id)
+    if not p:
+        raise NotFoundException("Project", project_id)
+
+    updated = project_service.delete_audio(project_id)
+    return _to_project_response(updated)
 
 @router.post("/{project_id}/captions", response_model=ProjectResponse)
 def update_project_captions(project_id: str, req: ParseCaptionsRequest):

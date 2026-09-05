@@ -5,9 +5,31 @@ from app.services.image_generation.mock_generator import MockImageGenerator
 from app.services.image_generation.cloudflare_generator import CloudflareImageGenerator
 from app.services.image_generation.huggingface_generator import HuggingFaceImageGenerator
 from app.services.image_generation.pollinations_generator import PollinationsImageGenerator
+from app.services.image_generation.gemini_generator import GeminiImageGenerator
 
 _cached_mock_generator: Optional[MockImageGenerator] = None
 _cached_pollinations_generator: Optional[PollinationsImageGenerator] = None
+
+def _validate_model(provider: str, model_name: Optional[str]) -> None:
+    if not model_name:
+        return
+    match = next(
+        (
+            item for item in get_model_catalog()
+            if item["provider"] == provider and item["model_id"] == model_name
+        ),
+        None,
+    )
+    if not match:
+        if provider == "gemini":
+            raise ValueError(
+                f"Unsupported Gemini image model '{model_name}'. "
+                f"Supported model: 'gemini-3.1-flash-image'."
+            )
+        raise ValueError(
+            f"Unsupported model '{model_name}' for provider '{provider}'. "
+            "Choose a model listed for the selected provider."
+        )
 
 def get_image_generator(
     provider_name: Optional[str] = None,
@@ -27,13 +49,13 @@ def get_image_generator(
     global _cached_mock_generator, _cached_pollinations_generator
     chosen_provider = (provider_name or settings.IMAGE_GENERATOR_PROVIDER or "pollinations").strip().lower()
 
+    if chosen_provider == "hf":
+        chosen_provider = "huggingface"
+    _validate_model(chosen_provider, model_name)
+
     if chosen_provider == "pollinations":
         mode = style_mode or "photorealistic"
-        gen = PollinationsImageGenerator(style_mode=mode)
-        if model_name:
-            # Override internal model if explicitly passed
-            gen.capabilities.model_name = model_name
-        return gen
+        return PollinationsImageGenerator(style_mode=mode, model_name=model_name)
 
     elif chosen_provider == "cloudflare":
         account_id = settings.CLOUDFLARE_ACCOUNT_ID
@@ -58,19 +80,44 @@ def get_image_generator(
         model = model_name or settings.IMAGE_GENERATOR_MODEL or ("mock-stickfigure-v1" if style_mode == "stickfigure" else "mock-cinematic-v1")
         return MockImageGenerator(model_name=model)
 
+    elif chosen_provider == "gemini":
+        if not settings.GEMINI_API_KEY:
+            raise ValueError("Gemini API key missing. Set GEMINI_API_KEY in the backend environment.")
+        model = model_name or GeminiImageGenerator.DEFAULT_MODEL
+        return GeminiImageGenerator(api_key=settings.GEMINI_API_KEY, model_name=model)
+
     else:
         raise ValueError(
-            f"Unsupported image generator provider '{chosen_provider}'. Supported: 'pollinations', 'mock', 'cloudflare', 'huggingface'."
+            f"Unsupported image generator provider '{chosen_provider}'. Supported: 'pollinations', 'mock', 'cloudflare', 'huggingface', 'gemini'."
         )
 
 def get_available_providers() -> List[str]:
-    return ["pollinations", "mock", "cloudflare", "huggingface"]
+    return ["pollinations", "mock", "cloudflare", "huggingface", "gemini"]
 
 def get_model_catalog() -> List[dict]:
     hf_ready = bool(settings.HUGGINGFACE_API_KEY)
     cf_ready = bool(settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN)
+    gemini_ready = bool(settings.GEMINI_API_KEY)
     
-    return [
+    catalog = [
+        {
+            "id": "gemini-3-1-flash-image",
+            "name": "Gemini 3.1 Flash Image",
+            "provider": "gemini",
+            "model_id": "gemini-3.1-flash-image",
+            "description": "Gemini native image generation and multi-reference image editing",
+            "quality": 5,
+            "speed": "Fast",
+            "is_free": False,
+            "is_ready": gemini_ready,
+            "supported_styles": ["stickfigure", "whiteboard", "cartoon", "flat", "sketch", "3d", "anime", "cinematic", "documentary", "custom"],
+            "supports_reference_images": True,
+            "supports_seed": False,
+            "supports_aspect_ratio": True,
+            "supports_negative_prompt": True,
+            "supports_image_to_image": True,
+            "supports_variations": True,
+        },
         {
             "id": "pollinations-flux-realism",
             "name": "FLUX.1 Realism",
@@ -192,5 +239,13 @@ def get_model_catalog() -> List[dict]:
             "supported_styles": ["cinematic", "photorealistic"]
         }
     ]
+    for item in catalog:
+        item.setdefault("supports_reference_images", False)
+        item.setdefault("supports_seed", item["provider"] in ("pollinations", "mock"))
+        item.setdefault("supports_aspect_ratio", True)
+        item.setdefault("supports_negative_prompt", True)
+        item.setdefault("supports_image_to_image", False)
+        item.setdefault("supports_variations", True)
+    return catalog
 
 

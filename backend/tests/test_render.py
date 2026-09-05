@@ -124,3 +124,89 @@ def test_build_scene_filters():
     assert "fps=30" in filters
     assert "setsar=1" in filters
     assert "fade=t=out" in filters
+
+
+def test_build_scene_filters_blur_mirror():
+    scene = SceneModel(
+        id="sc_blur",
+        start=0.0,
+        end=5.0,
+        duration=5.0,
+        caption="test blur",
+        image_fit="blur",
+    )
+    filters = render_service._build_scene_filters(
+        scene=scene,
+        duration=5.0,
+        num_frames=150,
+        target_width=1920,
+        target_height=1080,
+        is_last=False,
+    )
+    assert "split[fg][bg]" in filters
+    assert "boxblur" in filters
+    assert "overlay=" in filters
+    assert "setsar=1" in filters
+    assert "fps=30" in filters
+
+
+def test_build_scene_filters_color_grading_and_presets():
+    scene = SceneModel(
+        id="sc_color",
+        start=0.0,
+        end=3.0,
+        duration=3.0,
+        caption="test color",
+        brightness=0.15,
+        contrast=1.20,
+        saturation=1.35,
+        color_filter="cinematic",
+    )
+    filters = render_service._build_scene_filters(
+        scene=scene,
+        duration=3.0,
+        num_frames=90,
+        target_width=1280,
+        target_height=720,
+        is_last=False,
+    )
+    assert "colorbalance=" in filters
+    assert "eq=brightness=0.15:contrast=1.20:saturation=1.35" in filters
+    assert "fps=30" in filters
+
+
+def test_render_download_formats_and_deletion():
+    from app.services.project_service import STORAGE_DIR
+    from app.models.render import RenderJobModel
+
+    # Create dummy completed render job
+    dummy_job = RenderJobModel(
+        project_id="test_proj_dl",
+        status="completed",
+        resolution="1080x1920",
+        output_path="test_renders/dummy.mp4",
+        output_filename="dummy.mp4"
+    )
+    render_service._jobs[dummy_job.id] = dummy_job
+
+    dummy_file = STORAGE_DIR / "test_renders" / "dummy.mp4"
+    dummy_file.parent.mkdir(parents=True, exist_ok=True)
+    dummy_file.write_bytes(b"dummy video content")
+
+    try:
+        # 1. Download default MP4
+        res_mp4 = client.get(f"/api/projects/test_proj_dl/render/{dummy_job.id}/download")
+        assert res_mp4.status_code == 200
+        assert res_mp4.headers["content-type"] == "video/mp4"
+
+        # 2. Delete render job
+        del_res = client.delete(f"/api/projects/test_proj_dl/render/{dummy_job.id}")
+        assert del_res.status_code == 204
+        assert render_service.get_job(dummy_job.id) is None
+    finally:
+        if dummy_file.exists():
+            dummy_file.unlink(missing_ok=True)
+        if dummy_file.parent.exists():
+            dummy_file.parent.rmdir()
+
+

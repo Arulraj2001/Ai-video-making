@@ -13,8 +13,9 @@ export type ImageMotion =
 
 export type TransitionType = "none" | "fade" | "crossfade" | "slide";
 
-export type ImageFit = "cover" | "contain" | "fill";
+export type ImageFit = "cover" | "contain" | "blur" | "fill";
 export type ImagePosition = "center" | "top" | "bottom" | "left" | "right";
+export type ColorFilter = "none" | "cinematic" | "warm" | "cyberpunk" | "noir" | "vivid";
 
 export interface ImageCrop {
   x: number;
@@ -43,6 +44,7 @@ export interface AudioSettings {
   music_fade_in: number;
   music_fade_out: number;
   music_muted: boolean;
+  ducking_enabled?: boolean;
 }
 
 export interface CanvasSettings {
@@ -72,6 +74,10 @@ export interface Scene {
   image_position?: ImagePosition;
   image_zoom?: number;
   image_crop?: ImageCrop | null;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  color_filter?: ColorFilter;
 }
 
 export interface AudioFile {
@@ -124,6 +130,7 @@ export interface SceneUpdateInput {
   suggested_transition?: string;
   image_status?: ImageStatus;
   image_url?: string | null;
+  image_metadata?: Record<string, any> | null;
   motion?: ImageMotion;
   transition?: TransitionType;
   transition_duration?: number;
@@ -131,6 +138,10 @@ export interface SceneUpdateInput {
   image_position?: ImagePosition;
   image_zoom?: number;
   image_crop?: ImageCrop | null;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  color_filter?: ColorFilter;
 }
 
 
@@ -153,6 +164,18 @@ export interface ImageGeneratorCapabilities {
   supported_aspect_ratios: string[];
   notes: string;
   available_providers: string[];
+  supports_seed?: boolean;
+  supports_aspect_ratio?: boolean;
+  supports_image_to_image?: boolean;
+  supports_reference_descriptions?: boolean;
+  supports_variations?: boolean;
+}
+
+export interface ImageProviderHealth {
+  provider: string;
+  model: string;
+  status: string;
+  message: string;
 }
 
 export interface GenerateImageInput {
@@ -175,6 +198,12 @@ export interface ModelCatalogItem {
   is_free: boolean;
   is_ready: boolean;
   supported_styles: string[];
+  supports_reference_images?: boolean;
+  supports_seed?: boolean;
+  supports_aspect_ratio?: boolean;
+  supports_negative_prompt?: boolean;
+  supports_image_to_image?: boolean;
+  supports_variations?: boolean;
 }
 
 export interface ModelCatalogResponse {
@@ -213,6 +242,7 @@ export interface SceneVariationItem {
   image_url: string;
   prompt: string;
   seed: number;
+  metadata?: Record<string, any> | null;
 }
 
 export interface SceneVariationsResponse {

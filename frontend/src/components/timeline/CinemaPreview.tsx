@@ -10,6 +10,7 @@ interface CinemaPreviewProps {
   onSeek: (time: number) => void;
   onTogglePlay: () => void;
   onSelectScene?: (sceneId: string) => void;
+  onUploadImage?: (sceneId: string, file: File) => Promise<void>;
   audioRef: React.RefObject<HTMLAudioElement | null>;
 }
 
@@ -21,12 +22,15 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
   onSeek,
   onTogglePlay,
   onSelectScene,
+  onUploadImage,
   audioRef,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const [isCanvasUploading, setIsCanvasUploading] = useState(false);
 
   // Find currently active scene according to authoritative timestamps
   const scenes = project.scenes || [];
@@ -103,12 +107,15 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
     }
   }, [volume, isMuted, audioRef, project.audio_settings?.narration_volume, project.audio_settings?.narration_muted]);
 
-  // Update BGM audio volume and synchronization
+  // Update BGM audio volume and synchronization with auto-ducking
   useEffect(() => {
     if (bgmAudioRef.current) {
       const musicMuted = project.audio_settings?.music_muted || isMuted;
-      const musicVol = project.audio_settings?.music_volume ?? 0.25;
-      bgmAudioRef.current.volume = musicMuted ? 0 : Math.max(0, Math.min(1, volume * musicVol));
+      const baseMusicVol = project.audio_settings?.music_volume ?? 0.25;
+      // Auto-ducking: attenuate music when voiceover exists and ducking is enabled
+      const isVoiceActive = Boolean(project.audio_file && !project.audio_settings?.narration_muted);
+      const duckMultiplier = (project.audio_settings?.ducking_enabled !== false && isVoiceActive) ? 0.35 : 1.0;
+      bgmAudioRef.current.volume = musicMuted ? 0 : Math.max(0, Math.min(1, volume * baseMusicVol * duckMultiplier));
       if (isPlaying) {
         if (bgmAudioRef.current.paused) {
           bgmAudioRef.current.play().catch(() => {});
@@ -117,12 +124,24 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
         bgmAudioRef.current.pause();
       }
     }
-  }, [isPlaying, volume, isMuted, project.audio_settings?.music_volume, project.audio_settings?.music_muted]);
+  }, [
+    isPlaying,
+    volume,
+    isMuted,
+    project.audio_settings?.music_volume,
+    project.audio_settings?.music_muted,
+    project.audio_settings?.ducking_enabled,
+    project.audio_settings?.narration_muted,
+    project.audio_file,
+  ]);
 
   // Sync BGM time when user seeks
   useEffect(() => {
-    if (bgmAudioRef.current && Math.abs(bgmAudioRef.current.currentTime - currentTime) > 0.3) {
-      bgmAudioRef.current.currentTime = currentTime % (bgmAudioRef.current.duration || 1000);
+    if (bgmAudioRef.current && bgmAudioRef.current.duration) {
+      const targetTime = currentTime % bgmAudioRef.current.duration;
+      if (Math.abs(bgmAudioRef.current.currentTime - targetTime) > 0.4) {
+        bgmAudioRef.current.currentTime = targetTime;
+      }
     }
   }, [currentTime]);
 
@@ -152,6 +171,71 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
     }
   };
 
+  // Compute CSS visual filter based on brightness, contrast, saturation, and color filter preset
+  const getCssFilter = (scene?: Scene | null) => {
+    if (!scene) return "none";
+    const b = scene.brightness || 0.0;
+    const c = scene.contrast ?? 1.0;
+    const s = scene.saturation ?? 1.0;
+    const filterPreset = scene.color_filter || "none";
+
+    const filters: string[] = [];
+    const cssBrightness = Math.max(0, 1 + b);
+    if (Math.abs(cssBrightness - 1) > 0.01) {
+      filters.push(`brightness(${cssBrightness.toFixed(2)})`);
+    }
+    if (Math.abs(c - 1) > 0.01) {
+      filters.push(`contrast(${c.toFixed(2)})`);
+    }
+    if (Math.abs(s - 1) > 0.01) {
+      filters.push(`saturate(${s.toFixed(2)})`);
+    }
+
+    if (filterPreset === "noir") {
+      filters.push("grayscale(100%) contrast(120%)");
+    } else if (filterPreset === "warm") {
+      filters.push("sepia(30%) saturate(120%) hue-rotate(-15deg)");
+    } else if (filterPreset === "cyberpunk") {
+      filters.push("saturate(140%) hue-rotate(180deg) contrast(110%)");
+    } else if (filterPreset === "cinematic") {
+      filters.push("contrast(115%) saturate(110%) sepia(10%)");
+    } else if (filterPreset === "vivid") {
+      filters.push("saturate(140%) contrast(110%)");
+    }
+
+    return filters.length > 0 ? filters.join(" ") : "none";
+  };
+
+  const handleCanvasDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCanvas(true);
+  };
+
+  const handleCanvasDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCanvas(false);
+  };
+
+  const handleCanvasDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCanvas(false);
+    if (!activeScene || !onUploadImage) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setIsCanvasUploading(true);
+      try {
+        await onUploadImage(activeScene.id, file);
+      } catch (err: any) {
+        alert(err.message || "Failed to upload replacement image");
+      } finally {
+        setIsCanvasUploading(false);
+      }
+    }
+  };
+
   const audioUrl = project.audio_file
     ? api.getMediaUrl(project.audio_file.url || `/media/${project.id}/audio/${project.audio_file.filename}`)
     : null;
@@ -178,6 +262,11 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           src={audioUrl}
           preload="auto"
           style={{ display: "none" }}
+          onEnded={() => {
+            if (currentTime >= totalDuration - 0.3) {
+              onTogglePlay();
+            }
+          }}
         />
       )}
 
@@ -207,6 +296,11 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
       >
         {/* Canvas Screen */}
         <div
+          onClick={onTogglePlay}
+          onDragOver={handleCanvasDragOver}
+          onDragLeave={handleCanvasDragLeave}
+          onDrop={handleCanvasDrop}
+          title={isPlaying ? "Click to Pause (Space)" : "Click to Play (Space)"}
           style={{
             position: "relative",
             height: "100%",
@@ -219,9 +313,101 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             maxWidth: "100%",
             overflow: "hidden",
             background: "#000",
-            boxShadow: "0 0 35px rgba(0,0,0,0.8)",
+            boxShadow: isDraggingCanvas ? "0 0 35px var(--accent-cyan)" : "0 0 35px rgba(0,0,0,0.8)",
+            border: isDraggingCanvas ? "2px dashed var(--accent-cyan)" : "none",
+            cursor: "pointer",
+            transition: "box-shadow 0.15s ease, border 0.15s ease",
           }}
         >
+          {/* Centered Play Button HUD Overlay when Paused */}
+          {!isPlaying && !isDraggingCanvas && !isCanvasUploading && (
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "60px",
+                height: "60px",
+                borderRadius: "50%",
+                background: "rgba(15, 23, 42, 0.75)",
+                backdropFilter: "blur(10px)",
+                border: "2px solid rgba(255, 255, 255, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#FFFFFF",
+                fontSize: "22px",
+                paddingLeft: "4px",
+                boxShadow: "0 8px 30px rgba(0,0,0,0.6)",
+                pointerEvents: "none",
+                transition: "transform 0.15s ease",
+                zIndex: 30,
+              }}
+            >
+              ▶
+            </div>
+          )}
+
+          {/* Drag & Drop Canvas Overlay */}
+          {isDraggingCanvas && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(8, 20, 36, 0.85)",
+                backdropFilter: "blur(8px)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                zIndex: 40,
+                pointerEvents: "none",
+                padding: "20px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: "36px" }}>📥</div>
+              <div style={{ color: "#FFFFFF", fontWeight: 700, fontSize: "1.1rem" }}>
+                Drop image to replace Scene {activeSceneIndex !== -1 ? activeSceneIndex + 1 : 1}
+              </div>
+              <div style={{ color: "var(--accent-cyan)", fontSize: "0.8rem", fontWeight: 500 }}>
+                Instant desktop replacement with visual color grading
+              </div>
+            </div>
+          )}
+
+          {/* Uploading Status Overlay */}
+          {isCanvasUploading && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(8, 20, 36, 0.85)",
+                backdropFilter: "blur(8px)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                zIndex: 40,
+                pointerEvents: "none",
+              }}
+            >
+              <div style={{ fontSize: "32px", animation: "spin 1s linear infinite" }}>⏳</div>
+              <div style={{ color: "#FFFFFF", fontWeight: 600, fontSize: "0.95rem" }}>
+                Uploading Replacement Image...
+              </div>
+            </div>
+          )}
+
           {/* Active Scene Image Stage */}
           <div
             style={{
@@ -238,20 +424,45 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           >
             {activeScene ? (
               activeScene.image_url ? (
-                <img
-                  key={activeScene.id}
-                  src={api.getMediaUrl(activeScene.image_url)}
-                  alt={activeScene.caption || "Scene image"}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: (activeScene.image_fit || "cover") as any,
-                    objectPosition: activeScene.image_position || "center",
-                    transform: `${getMotionTransform(activeScene.motion, sceneProgress)} scale(${activeScene.image_zoom || 1.0})`,
-                    transition: isPlaying ? "none" : "transform 0.2s ease-out",
-                    willChange: "transform",
-                  }}
-                />
+                <>
+                  {/* Blurred Background Mirror if image_fit === "blur" */}
+                  {activeScene.image_fit === "blur" && (
+                    <img
+                      key={`bg-blur-${activeScene.id}`}
+                      src={api.getMediaUrl(activeScene.image_url)}
+                      alt="Background blur"
+                      aria-hidden="true"
+                      style={{
+                        position: "absolute",
+                        top: "-10%",
+                        left: "-10%",
+                        width: "120%",
+                        height: "120%",
+                        objectFit: "cover",
+                        filter: `blur(24px) brightness(0.65) ${getCssFilter(activeScene)}`,
+                        pointerEvents: "none",
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+                  <img
+                    key={activeScene.id}
+                    src={api.getMediaUrl(activeScene.image_url)}
+                    alt={activeScene.caption || "Scene image"}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: activeScene.image_fit === "blur" ? "contain" : ((activeScene.image_fit || "cover") as any),
+                      objectPosition: activeScene.image_position || "center",
+                      filter: getCssFilter(activeScene),
+                      transform: `${getMotionTransform(activeScene.motion, sceneProgress)} scale(${activeScene.image_zoom || 1.0})`,
+                      transition: isPlaying ? "none" : "transform 0.2s ease-out",
+                      willChange: "transform",
+                      position: "relative",
+                      zIndex: 2,
+                    }}
+                  />
+                </>
               ) : (
                 <div
                   style={{
@@ -347,6 +558,33 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
               />
             )}
 
+            {/* Slide Transition Overlay */}
+            {isTransitioning && activeScene?.transition === "slide" && nextScene?.image_url && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  transform: `translateX(${(1 - (currentTime - (activeScene.end - transitionDuration)) / transitionDuration) * 100}%)`,
+                  pointerEvents: "none",
+                  transition: "transform 0.05s linear",
+                }}
+              >
+                <img
+                  src={api.getMediaUrl(nextScene.image_url)}
+                  alt="Slide transition preview"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: (nextScene.image_fit || "cover") as any,
+                    objectPosition: nextScene.image_position || "center",
+                  }}
+                />
+              </div>
+            )}
+
             {/* Cinematic Subtitle Badge (Phase 8 Styling) */}
             {project.caption_settings?.enabled !== false && activeScene?.caption && (
               <div
@@ -403,6 +641,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
                         ? "0 1px 4px rgba(0,0,0,0.8)"
                         : "none",
                     lineHeight: 1.35,
+                    whiteSpace: "pre-line",
                     maxWidth: "92%",
                     boxShadow:
                       project.caption_settings?.background === "none"

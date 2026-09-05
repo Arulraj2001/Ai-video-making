@@ -15,6 +15,7 @@ import type {
   VisualContext,
   StoryboardGenerateResponse,
   ImageGeneratorCapabilities,
+  ImageProviderHealth,
   GenerateImageInput,
   GenerateAllImagesResponse,
   ModelCatalogResponse,
@@ -122,6 +123,13 @@ class ApiService {
     return this.request<Project>(`/api/projects/${projectId}/audio`, {
       method: "POST",
       body: formData,
+    });
+  }
+
+  // Delete project narration audio file
+  async deleteAudio(projectId: string): Promise<Project> {
+    return this.request<Project>(`/api/projects/${projectId}/audio`, {
+      method: "DELETE",
     });
   }
 
@@ -314,9 +322,19 @@ class ApiService {
 
   // --- Phase 5: Storyboard Scene Image Generation ---
 
-  async getImageCapabilities(provider?: string): Promise<ImageGeneratorCapabilities> {
-    const query = provider ? `?provider=${encodeURIComponent(provider)}` : "";
+  async getImageCapabilities(provider?: string, model?: string, style?: string): Promise<ImageGeneratorCapabilities> {
+    const params = new URLSearchParams();
+    if (provider) params.set("provider", provider);
+    if (model) params.set("model", model);
+    if (style) params.set("style", style);
+    const query = params.toString() ? `?${params.toString()}` : "";
     return this.request<ImageGeneratorCapabilities>(`/api/images/capabilities${query}`);
+  }
+
+  async getImageProviderHealth(provider: string, model?: string): Promise<ImageProviderHealth> {
+    const params = new URLSearchParams({ provider });
+    if (model) params.set("model", model);
+    return this.request<ImageProviderHealth>(`/api/images/provider-health?${params.toString()}`);
   }
 
   async generateSceneImage(
@@ -539,11 +557,15 @@ class ApiService {
     return this.request<any>("/api/health/diagnostics");
   }
 
-  async retryFailedImages(projectId: string): Promise<GenerateAllImagesResponse> {
+  async retryFailedImages(
+    projectId: string,
+    options?: GenerateImageInput
+  ): Promise<GenerateAllImagesResponse> {
     return this.request<GenerateAllImagesResponse>(
       `/api/projects/${projectId}/scenes/retry-failed`,
       {
         method: "POST",
+        body: JSON.stringify(options || {}),
       }
     );
   }
@@ -601,8 +623,15 @@ class ApiService {
     });
   }
 
-  getRenderDownloadUrl(projectId: string, jobId: string): string {
-    return `${this.baseUrl}/api/projects/${projectId}/render/${jobId}/download`;
+  getRenderDownloadUrl(projectId: string, jobId: string, format: string = "mp4"): string {
+    const query = format && format !== "mp4" ? `?format=${encodeURIComponent(format)}` : "";
+    return `${this.baseUrl}/api/projects/${projectId}/render/${jobId}/download${query}`;
+  }
+
+  async deleteRenderJob(projectId: string, jobId: string): Promise<void> {
+    return this.request<void>(`/api/projects/${projectId}/render/${jobId}`, {
+      method: "DELETE",
+    });
   }
 
   getMediaUrl(urlPath?: string): string {

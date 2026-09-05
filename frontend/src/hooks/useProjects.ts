@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "../services/api";
 import type { Project, ProjectCreateInput, SceneUpdateInput, Scene } from "../types";
 
+type ProjectUpdate = Project | ((previous: Project) => Project);
+
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
@@ -112,18 +114,31 @@ export function useProjects() {
     }
   };
 
+  const applyProjectUpdate = (update: ProjectUpdate) => {
+    const activeId = activeProject?.id;
+    setActiveProject((prev) => {
+      if (!prev || !activeId || prev.id !== activeId) return prev;
+      return typeof update === "function" ? update(prev) : update;
+    });
+    setProjects((projects) => projects.map((project) => {
+      if (typeof update !== "function") {
+        return project.id === update.id ? update : project;
+      }
+      return project.id === activeId ? update(project) : project;
+    }));
+  };
+
   /**
    * Patch the active project's local state without any API call.
    * Used to reflect sub-resource changes (e.g. video_bible updates) instantly
    * without triggering a full project list refresh.
    */
   const patchActiveProject = (updater: (prev: Project) => Project) => {
-    setActiveProject((prev) => (prev ? updater(prev) : prev));
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === activeProject?.id ? updater(p) : p
-      )
-    );
+    const activeId = activeProject?.id;
+    setActiveProject((prev) => prev && prev.id === activeId ? updater(prev) : prev);
+    setProjects((projects) => projects.map((project) =>
+      project.id === activeId ? updater(project) : project
+    ));
   };
 
   return {
@@ -137,6 +152,7 @@ export function useProjects() {
     updateScene,
     deleteProject,
     selectProject,
+    applyProjectUpdate,
     patchActiveProject,
     refresh: fetchProjects,
   };

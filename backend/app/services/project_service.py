@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import uuid
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -141,6 +142,10 @@ class ProjectService:
                     "image_position": getattr(s, "image_position", "center"),
                     "image_zoom": getattr(s, "image_zoom", 1.0),
                     "image_crop": getattr(s, "image_crop", None),
+                    "brightness": getattr(s, "brightness", 0.0),
+                    "contrast": getattr(s, "contrast", 1.0),
+                    "saturation": getattr(s, "saturation", 1.0),
+                    "color_filter": getattr(s, "color_filter", "none"),
                 }
                 for s in project.scenes
             ],
@@ -168,6 +173,7 @@ class ProjectService:
                 "music_fade_in": getattr(project.audio_settings, "music_fade_in", 1.0),
                 "music_fade_out": getattr(project.audio_settings, "music_fade_out", 2.0),
                 "music_muted": getattr(project.audio_settings, "music_muted", False),
+                "ducking_enabled": getattr(project.audio_settings, "ducking_enabled", True),
             } if hasattr(project, "audio_settings") and project.audio_settings else None,
             "canvas_settings": {
                 "aspect_ratio": getattr(project.canvas_settings, "aspect_ratio", "9:16"),
@@ -253,6 +259,10 @@ class ProjectService:
                     image_position=s.get("image_position", "center"),
                     image_zoom=s.get("image_zoom", 1.0),
                     image_crop=s.get("image_crop"),
+                    brightness=s.get("brightness", 0.0),
+                    contrast=s.get("contrast", 1.0),
+                    saturation=s.get("saturation", 1.0),
+                    color_filter=s.get("color_filter", "none"),
                 )
             )
 
@@ -339,6 +349,7 @@ class ProjectService:
             music_fade_in=as_data.get("music_fade_in", 1.0),
             music_fade_out=as_data.get("music_fade_out", 2.0),
             music_muted=as_data.get("music_muted", False),
+            ducking_enabled=as_data.get("ducking_enabled", True),
         )
 
         cv_data = data.get("canvas_settings") or {}
@@ -515,6 +526,14 @@ class ProjectService:
             target.image_zoom = max(1.0, min(3.0, round(update.image_zoom, 2)))
         if update.image_crop is not None:
             target.image_crop = update.image_crop
+        if update.brightness is not None:
+            target.brightness = round(update.brightness, 2)
+        if update.contrast is not None:
+            target.contrast = round(update.contrast, 2)
+        if update.saturation is not None:
+            target.saturation = round(update.saturation, 2)
+        if update.color_filter is not None:
+            target.color_filter = update.color_filter
 
         project.scenes.sort(key=lambda s: s.start)
         project.updated_at = datetime.now(timezone.utc).isoformat()
@@ -861,6 +880,14 @@ class ProjectService:
             target.image_zoom = max(1.0, min(3.0, round(update.image_zoom, 2)))
         if update.image_crop is not None:
             target.image_crop = update.image_crop
+        if update.brightness is not None:
+            target.brightness = max(-0.5, min(0.5, round(update.brightness, 2)))
+        if update.contrast is not None:
+            target.contrast = max(0.5, min(2.0, round(update.contrast, 2)))
+        if update.saturation is not None:
+            target.saturation = max(0.0, min(2.5, round(update.saturation, 2)))
+        if update.color_filter is not None:
+            target.color_filter = update.color_filter
 
         new_start = update.start if update.start is not None else target.start
         new_end = update.end if update.end is not None else target.end
@@ -930,7 +957,11 @@ class ProjectService:
             image_fit=target.image_fit,
             image_position=target.image_position,
             image_zoom=target.image_zoom,
-            image_crop=target.image_crop
+            image_crop=target.image_crop,
+            brightness=getattr(target, "brightness", 0.0),
+            contrast=getattr(target, "contrast", 1.0),
+            saturation=getattr(target, "saturation", 1.0),
+            color_filter=getattr(target, "color_filter", "none")
         )
 
         project.scenes.insert(target_idx + 1, new_scene)
@@ -986,7 +1017,11 @@ class ProjectService:
             image_fit=target.image_fit,
             image_position=target.image_position,
             image_zoom=target.image_zoom,
-            image_crop=target.image_crop
+            image_crop=target.image_crop,
+            brightness=getattr(target, "brightness", 0.0),
+            contrast=getattr(target, "contrast", 1.0),
+            saturation=getattr(target, "saturation", 1.0),
+            color_filter=getattr(target, "color_filter", "none")
         )
 
         project.scenes.insert(target_idx + 1, new_scene)
@@ -1126,6 +1161,8 @@ class ProjectService:
             project.audio_settings.music_fade_in = as_.music_fade_in
             project.audio_settings.music_fade_out = as_.music_fade_out
             project.audio_settings.music_muted = as_.music_muted
+            if hasattr(as_, "ducking_enabled") and as_.ducking_enabled is not None:
+                project.audio_settings.ducking_enabled = as_.ducking_enabled
 
         if update.canvas_settings is not None:
             cv = update.canvas_settings
@@ -1157,10 +1194,9 @@ class ProjectService:
             allowed = ", ".join(sorted(ALLOWED_AUDIO_EXTENSIONS))
             raise ValueError(f"Unsupported audio format '{ext}'. Allowed: {allowed}")
 
+        safe_name = f"bgm_{uuid.uuid4().hex[:6]}_{clean_name}"
         audio_dir = self._get_project_dir(project_id) / "audio"
         audio_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = int(datetime.now().timestamp() * 1000)
-        safe_name = f"bgm_{timestamp}_{clean_name}"
         dest_file = audio_dir / safe_name
 
         with open(dest_file, "wb") as f:
@@ -1184,6 +1220,16 @@ class ProjectService:
             raise ValueError(f"Project '{project_id}' not found")
 
         project.audio_settings.music_file = None
+        project.updated_at = datetime.now(timezone.utc).isoformat()
+        self._save_to_disk(project)
+        return project
+
+    def delete_audio(self, project_id: str) -> ProjectModel:
+        project = self.get_project(project_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        project.audio_file = None
         project.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_to_disk(project)
         return project

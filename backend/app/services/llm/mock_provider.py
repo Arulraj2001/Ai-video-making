@@ -19,19 +19,19 @@ class MockLLMProvider(BaseLLMProvider):
         matched_chars = []
         for key, data in visual_context.get("characters_catalog", {}).items():
             name = data.get("name", key)
-            if name.lower() in cap_lower or not matched_chars:
+            if name.lower() in cap_lower:
                 matched_chars.append({"name": name, **data})
 
         matched_locs = []
         for key, data in visual_context.get("locations_catalog", {}).items():
             name = data.get("name", key)
-            if name.lower() in cap_lower or not matched_locs:
+            if name.lower() in cap_lower:
                 matched_locs.append({"name": name, **data})
 
         matched_objs = []
         for key, data in visual_context.get("objects_catalog", {}).items():
             name = data.get("name", key)
-            if name.lower() in cap_lower or not matched_objs:
+            if name.lower() in cap_lower:
                 matched_objs.append({"name": name, **data})
 
         return {
@@ -109,7 +109,8 @@ class MockLLMProvider(BaseLLMProvider):
         if instructions:
             prompt_parts.append(f"stylistic modification: {instructions}")
 
-        prompt_parts.append(f"{aspect_ratio} widescreen composition, balanced rule-of-thirds cinematic framing, 8k resolution, sharp focus, master cinematography")
+        composition = visual_context.get("composition_guidance", f"{aspect_ratio} composition")
+        prompt_parts.append(f"{composition}, balanced readable framing, sharp focus, master cinematography")
         prompt_parts.append("--no text, typography, captions, subtitles, logos, watermarks, signature, split screen, low quality")
 
         image_prompt = ", ".join(prompt_parts)

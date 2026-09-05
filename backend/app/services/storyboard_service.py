@@ -3,6 +3,7 @@ from typing import List, Optional
 from app.models.project import ProjectModel
 from app.models.scene import SceneModel
 from app.services.visual_context import build_visual_context
+from app.services.visual_style_engine import resolve_scene_context
 from app.services.llm.base import BaseLLMProvider
 from app.services.llm.factory import get_llm_provider
 from app.services.project_service import project_service
@@ -17,6 +18,10 @@ class StoryboardService:
     Enforces Video Bible visual consistency and prompt synthesis rules across all scenes.
     """
 
+    def _previous_scene(self, project: ProjectModel, scene_id: str) -> Optional[SceneModel]:
+        index = next((index for index, scene in enumerate(project.scenes) if scene.id == scene_id), None)
+        return project.scenes[index - 1] if index is not None and index > 0 else None
+
     async def generate_storyboard(
         self,
         project: ProjectModel,
@@ -30,22 +35,35 @@ class StoryboardService:
             raise ValidationError("Cannot generate storyboard: Project has no parsed scenes.")
 
         provider = llm_provider or get_llm_provider()
-        ratio = aspect_ratio or settings.DEFAULT_ASPECT_RATIO
+        ratio = aspect_ratio or project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO
 
         # 1. Build normalized visual context from project Video Bible
-        visual_context = build_visual_context(project.video_bible)
+        visual_context = build_visual_context(
+            project.video_bible,
+            aspect_ratio=ratio,
+        )
 
         # 2. Prepare scene input payload for LLM
-        scenes_input = [
-            {
-                "id": s.id,
-                "start": s.start,
-                "end": s.end,
-                "duration": s.duration,
-                "caption": s.caption,
-            }
-            for s in project.scenes
-        ]
+        scenes_input = []
+        for index, scene in enumerate(project.scenes):
+            scene_context = resolve_scene_context(
+                project=project,
+                scene=scene,
+                previous_scene=project.scenes[index - 1] if index > 0 else None,
+            )
+            scenes_input.append({
+                "id": scene.id,
+                "start": scene.start,
+                "end": scene.end,
+                "duration": scene.duration,
+                "caption": scene.caption,
+                "scene_visual_context": {
+                    "style_id": scene_context["style_id"],
+                    "entities": scene_context["entities"],
+                    "composition": scene_context["composition"],
+                    "continuity_context": scene_context["continuity_context"],
+                },
+            })
 
         logger.info(
             f"Generating storyboard for project '{project.id}' ({len(project.scenes)} scenes) "
@@ -94,9 +112,18 @@ class StoryboardService:
             raise NotFoundError(f"Scene with ID '{scene_id}' not found in project '{project.id}'.")
 
         provider = llm_provider or get_llm_provider()
-        ratio = aspect_ratio or settings.DEFAULT_ASPECT_RATIO
-        visual_context = build_visual_context(project.video_bible)
+        ratio = aspect_ratio or project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO
+        visual_context = build_visual_context(
+            project.video_bible,
+            aspect_ratio=ratio,
+        )
 
+        scene_context = resolve_scene_context(
+            project=project,
+            scene=target_scene,
+            custom_instructions=instructions,
+            previous_scene=self._previous_scene(project, scene_id),
+        )
         scene_input = {
             "id": target_scene.id,
             "start": target_scene.start,
@@ -105,6 +132,12 @@ class StoryboardService:
             "caption": target_scene.caption,
             "current_image_prompt": target_scene.image_prompt,
             "current_visual_description": target_scene.visual_description,
+            "scene_visual_context": {
+                "style_id": scene_context["style_id"],
+                "entities": scene_context["entities"],
+                "composition": scene_context["composition"],
+                "continuity_context": scene_context["continuity_context"],
+            },
         }
 
         meta = await provider.regenerate_scene(

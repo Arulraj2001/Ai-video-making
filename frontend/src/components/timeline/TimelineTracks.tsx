@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import type { Project } from "../../types/project";
 import { api } from "../../services/api";
 
@@ -10,6 +10,8 @@ interface TimelineTracksProps {
   selectedSceneId: string | null;
   onSelectScene: (sceneId: string) => void;
   onSeek: (time: number) => void;
+  onUpdateSceneTimes?: (sceneId: string, start: number, end: number, ripple: boolean) => Promise<void>;
+  onUploadImage?: (sceneId: string, file: File) => Promise<void>;
 }
 
 export const TimelineTracks: React.FC<TimelineTracksProps> = ({
@@ -20,8 +22,11 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
   selectedSceneId,
   onSelectScene,
   onSeek,
+  onUpdateSceneTimes,
+  onUploadImage,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
   const scenes = project.scenes || [];
   const trackWidth = Math.max(800, totalDuration * pixelsPerSecond + 120);
 
@@ -29,14 +34,114 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
   const tickStep = pixelsPerSecond < 40 ? 5 : pixelsPerSecond < 80 ? 2 : 1;
   const numTicks = Math.ceil(totalDuration / tickStep) + 2;
 
-  const handleRulerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+  // --- Drag-to-Scrub on Ruler & Playhead Needle ---
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  const seekFromPointer = (clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const scrollLeft = containerRef.current.scrollLeft;
+    const clickX = clientX - rect.left + scrollLeft;
     const time = Math.max(0, Math.min(totalDuration, clickX / pixelsPerSecond));
-    onSeek(time);
+    onSeek(Number(time.toFixed(3)));
   };
 
+  const handleRulerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsScrubbing(true);
+    seekFromPointer(e.clientX);
+  };
+
+  useEffect(() => {
+    if (!isScrubbing) return;
+    const handlePointerMove = (e: MouseEvent) => {
+      seekFromPointer(e.clientX);
+    };
+    const handlePointerUp = () => {
+      setIsScrubbing(false);
+    };
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+  }, [isScrubbing, totalDuration, pixelsPerSecond]);
+
+  // --- Interactive Clip Edge Trimming State ---
+  const [trimmingState, setTrimmingState] = useState<{
+    sceneId: string;
+    handle: "left" | "right";
+    initialClientX: number;
+    initialStart: number;
+    initialEnd: number;
+    currentStart: number;
+    currentEnd: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!trimmingState) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - trimmingState.initialClientX;
+      const deltaTime = deltaX / pixelsPerSecond;
+
+      if (trimmingState.handle === "left") {
+        const rawStart = trimmingState.initialStart + deltaTime;
+        const boundedStart = Math.max(0, Math.min(trimmingState.initialEnd - 0.3, rawStart));
+        setTrimmingState((prev) => (prev ? { ...prev, currentStart: Number(boundedStart.toFixed(3)) } : null));
+      } else {
+        const rawEnd = trimmingState.initialEnd + deltaTime;
+        const boundedEnd = Math.max(trimmingState.initialStart + 0.3, rawEnd);
+        setTrimmingState((prev) => (prev ? { ...prev, currentEnd: Number(boundedEnd.toFixed(3)) } : null));
+      }
+    };
+
+    const handleMouseUp = async () => {
+      const stateToCommit = trimmingState;
+      setTrimmingState(null);
+      if (
+        stateToCommit &&
+        onUpdateSceneTimes &&
+        (stateToCommit.currentStart !== stateToCommit.initialStart ||
+          stateToCommit.currentEnd !== stateToCommit.initialEnd)
+      ) {
+        try {
+          await onUpdateSceneTimes(
+            stateToCommit.sceneId,
+            stateToCommit.currentStart,
+            stateToCommit.currentEnd,
+            true
+          );
+        } catch (err) {
+          console.error("Failed to commit clip edge trim:", err);
+        }
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [trimmingState, pixelsPerSecond, onUpdateSceneTimes]);
+
   const playheadLeft = currentTime * pixelsPerSecond;
+
+  // --- Auto-scroll Playhead Follow during playback ---
+  useEffect(() => {
+    if (containerRef.current) {
+      const container = containerRef.current;
+      const scrollLeft = container.scrollLeft;
+      const clientWidth = container.clientWidth;
+      if (playheadLeft > scrollLeft + clientWidth - 70) {
+        container.scrollLeft = playheadLeft - clientWidth + 240;
+      } else if (playheadLeft < scrollLeft) {
+        container.scrollLeft = Math.max(0, playheadLeft - 60);
+      }
+    }
+  }, [playheadLeft]);
 
   return (
     <div
@@ -58,13 +163,14 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
           overflowY: "hidden",
           position: "relative",
           paddingBottom: "8px",
+          userSelect: isScrubbing || Boolean(trimmingState) ? "none" : "auto",
         }}
       >
         <div
           style={{
             position: "relative",
             width: `${trackWidth}px`,
-            minHeight: "260px",
+            minHeight: "310px",
           }}
         >
           {/* Vertical Playhead Indicator spanning all tracks */}
@@ -72,23 +178,35 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
             className="timeline-playhead-line"
             style={{
               left: `${playheadLeft}px`,
-              transition: "left 0.05s linear",
+              transition: isScrubbing ? "none" : "left 0.05s linear",
+              cursor: "ew-resize",
+              zIndex: 40,
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsScrubbing(true);
             }}
           >
-            <div className="timeline-playhead-head" />
+            <div
+              className="timeline-playhead-head"
+              style={{ cursor: "ew-resize" }}
+              title="Drag playhead to scrub timeline"
+            />
           </div>
 
           {/* 1. Time Ruler Header */}
           <div
-            onClick={handleRulerClick}
+            onMouseDown={handleRulerMouseDown}
             style={{
               height: "36px",
               background: "var(--bg-card-subtle)",
               borderBottom: "1px solid var(--border-subtle)",
               position: "relative",
-              cursor: "pointer",
+              cursor: "ew-resize",
               userSelect: "none",
             }}
+            title="Click or drag along ruler to scrub playhead"
           >
             {Array.from({ length: numTicks }).map((_, i) => {
               const tickTime = i * tickStep;
@@ -112,6 +230,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                     justifyContent: "flex-end",
                     paddingLeft: "4px",
                     borderLeft: "1px solid var(--border-subtle)",
+                    pointerEvents: "none",
                   }}
                 >
                   <span
@@ -129,7 +248,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
             })}
           </div>
 
-          {/* 2. Track 1: Image Track (Master Timeline Rule Enforced) */}
+          {/* 2. Track 1: Image Track (Master Timeline Rule Enforced with Trimming) */}
           <div
             style={{
               padding: "10px 0",
@@ -154,15 +273,22 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                 zIndex: 10,
               }}
             >
-              📷 Image Track (Authoritative)
+              📷 Image Track (Master Timing)
             </div>
 
             {scenes.map((scene, idx) => {
-              const left = scene.start * pixelsPerSecond;
-              const width = Math.max(30, scene.duration * pixelsPerSecond);
+              const isBeingTrimmed = trimmingState?.sceneId === scene.id;
+              const displayStart = isBeingTrimmed ? trimmingState.currentStart : scene.start;
+              const displayEnd = isBeingTrimmed ? trimmingState.currentEnd : scene.end;
+              const displayDuration = Math.max(0.3, displayEnd - displayStart);
+
+              const left = displayStart * pixelsPerSecond;
+              const width = Math.max(32, displayDuration * pixelsPerSecond);
               const isSelected = selectedSceneId === scene.id;
               const isActiveInPlayback =
                 currentTime >= scene.start && currentTime < scene.end;
+
+              const isDragTarget = dragOverSceneId === scene.id;
 
               return (
                 <div
@@ -171,6 +297,27 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                     onSelectScene(scene.id);
                     onSeek(scene.start);
                   }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverSceneId(scene.id);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverSceneId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverSceneId(null);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file && file.type.startsWith("image/") && onUploadImage) {
+                      onUploadImage(scene.id, file).catch((err: any) =>
+                        alert(err.message || "Failed to upload image")
+                      );
+                    }
+                  }}
                   style={{
                     position: "absolute",
                     left: `${left}px`,
@@ -178,127 +325,257 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                     height: "80px",
                     top: "14px",
                     borderRadius: "var(--radius-sm)",
-                    overflow: "hidden",
+                    overflow: "visible",
                     cursor: "pointer",
                     boxSizing: "border-box",
-                    border: isSelected
+                    border: isDragTarget
+                      ? "2px dashed var(--accent-cyan)"
+                      : isSelected
                       ? "2px solid var(--accent-primary)"
                       : isActiveInPlayback
                       ? "2px solid var(--accent-primary)"
                       : "1px solid var(--border-subtle)",
-                    boxShadow: isSelected
+                    boxShadow: isDragTarget
+                      ? "0 0 20px rgba(6, 182, 212, 0.6)"
+                      : isSelected
                       ? "0 0 16px var(--accent-primary-subtle)"
                       : "none",
                     background: "var(--bg-card)",
-                    transition: "all 0.15s ease",
+                    transition: isBeingTrimmed ? "none" : "border 0.15s ease, box-shadow 0.15s ease",
                   }}
-                  title={`Scene ${idx + 1}: ${scene.caption}\n${scene.start}s - ${scene.end}s (${scene.duration}s)`}
+                  title={`Scene ${idx + 1}: ${scene.caption}\n${displayStart.toFixed(2)}s - ${displayEnd.toFixed(2)}s (${displayDuration.toFixed(2)}s)\n(Drag clip borders to trim duration, or drop image to replace)`}
                 >
-                  {/* Background Image Thumbnail */}
-                  {scene.image_url ? (
-                    <img
-                      src={api.getMediaUrl(scene.image_url)}
-                      alt={scene.caption}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        filter: isSelected ? "brightness(1)" : "brightness(0.85)",
-                      }}
-                    />
-                  ) : (
+                  {/* Floating Trim Tooltip */}
+                  {isBeingTrimmed && (
                     <div
                       style={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--text-muted)",
-                        fontSize: "0.75rem",
-                        background: "var(--bg-card-subtle)",
+                        position: "absolute",
+                        top: "-26px",
+                        left: trimmingState.handle === "left" ? 0 : "auto",
+                        right: trimmingState.handle === "right" ? 0 : "auto",
+                        background: "rgba(15, 23, 42, 0.95)",
+                        border: "1px solid var(--accent-primary)",
+                        color: "var(--text-primary)",
+                        borderRadius: "4px",
+                        padding: "2px 8px",
+                        fontSize: "0.72rem",
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                        zIndex: 35,
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.6)",
+                        pointerEvents: "none",
                       }}
                     >
-                      {scene.image_status === "generating" ? "⏳ Gen" : "No Visual"}
+                      {trimmingState.handle === "left"
+                        ? `Start: ${displayStart.toFixed(2)}s (${displayDuration.toFixed(2)}s)`
+                        : `End: ${displayEnd.toFixed(2)}s (${displayDuration.toFixed(2)}s)`}
                     </div>
                   )}
 
-                  {/* Scene Block Details Badge Overlay */}
+                  {/* Left Trim Handle */}
                   <div
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setTrimmingState({
+                        sceneId: scene.id,
+                        handle: "left",
+                        initialClientX: e.clientX,
+                        initialStart: scene.start,
+                        initialEnd: scene.end,
+                        currentStart: scene.start,
+                        currentEnd: scene.end,
+                      });
+                    }}
                     style={{
                       position: "absolute",
-                      bottom: 0,
                       left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: "8px",
+                      cursor: "col-resize",
+                      zIndex: 25,
+                      background: isSelected ? "var(--primary)" : "rgba(255,255,255,0.25)",
+                      opacity: isSelected ? 0.9 : 0.4,
+                      borderTopLeftRadius: "3px",
+                      borderBottomLeftRadius: "3px",
+                    }}
+                    title="Drag left edge to adjust scene start"
+                  />
+
+                  {/* Right Trim Handle */}
+                  <div
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setTrimmingState({
+                        sceneId: scene.id,
+                        handle: "right",
+                        initialClientX: e.clientX,
+                        initialStart: scene.start,
+                        initialEnd: scene.end,
+                        currentStart: scene.start,
+                        currentEnd: scene.end,
+                      });
+                    }}
+                    style={{
+                      position: "absolute",
                       right: 0,
-                      background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
-                      padding: "4px 6px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      pointerEvents: "none",
+                      top: 0,
+                      bottom: 0,
+                      width: "8px",
+                      cursor: "col-resize",
+                      zIndex: 25,
+                      background: isSelected ? "var(--primary)" : "rgba(255,255,255,0.25)",
+                      opacity: isSelected ? 0.9 : 0.4,
+                      borderTopRightRadius: "3px",
+                      borderBottomRightRadius: "3px",
+                    }}
+                    title="Drag right edge to trim scene length (ripples downstream scenes)"
+                  />
+
+                  {/* Clip Content Wrapper */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: "var(--radius-sm)",
+                      overflow: "hidden",
+                      position: "relative",
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        fontWeight: 700,
-                        color: "#fff",
-                        textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-                      }}
-                    >
-                      S{idx + 1}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.68rem",
-                        color: "rgba(255,255,255,0.8)",
-                        fontFamily: "var(--font-mono)",
-                      }}
-                    >
-                      {scene.duration.toFixed(1)}s
-                    </span>
-                  </div>
+                    {/* Background Image Thumbnail */}
+                    {scene.image_url ? (
+                      <img
+                        src={api.getMediaUrl(scene.image_url)}
+                        alt={scene.caption}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          filter: isSelected ? "brightness(1)" : "brightness(0.85)",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--text-muted)",
+                          fontSize: "0.75rem",
+                          background: "var(--bg-card-subtle)",
+                        }}
+                      >
+                        {scene.image_status === "generating" ? "⏳ Gen" : "No Visual"}
+                      </div>
+                    )}
 
-                  {/* Motion and Transition Badges */}
-                  {scene.motion && scene.motion !== "none" && (
+                    {/* Scene Block Details Badge Overlay */}
+                    {isDragTarget && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: "rgba(6, 182, 212, 0.45)",
+                          backdropFilter: "blur(2px)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#FFFFFF",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          zIndex: 22,
+                          pointerEvents: "none",
+                        }}
+                      >
+                        📥 Drop to Replace
+                      </div>
+                    )}
                     <div
                       style={{
                         position: "absolute",
-                        top: "4px",
-                        left: "4px",
-                        background: "rgba(0,0,0,0.7)",
-                        borderRadius: "4px",
-                        padding: "2px 4px",
-                        fontSize: "0.62rem",
-                        color: "var(--primary)",
-                        fontWeight: 600,
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
+                        padding: "4px 8px",
                         display: "flex",
                         alignItems: "center",
-                        gap: "2px",
+                        justifyContent: "space-between",
+                        pointerEvents: "none",
                       }}
                     >
-                      🎥 {scene.motion}
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          color: "#fff",
+                          textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                        }}
+                      >
+                        S{idx + 1}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.68rem",
+                          color: "rgba(255,255,255,0.8)",
+                          fontFamily: "var(--font-mono)",
+                        }}
+                      >
+                        {displayDuration.toFixed(1)}s
+                      </span>
                     </div>
-                  )}
 
-                  {scene.transition && scene.transition !== "none" && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "4px",
-                        right: "4px",
-                        background: "rgba(6, 182, 212, 0.25)",
-                        border: "1px solid rgba(6, 182, 212, 0.5)",
-                        borderRadius: "4px",
-                        padding: "2px 4px",
-                        fontSize: "0.6rem",
-                        color: "var(--accent-cyan)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      ⚡ {scene.transition}
-                    </div>
-                  )}
+                    {/* Motion and Transition Badges */}
+                    {scene.motion && scene.motion !== "none" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "4px",
+                          left: "8px",
+                          background: "rgba(0,0,0,0.75)",
+                          borderRadius: "4px",
+                          padding: "2px 5px",
+                          fontSize: "0.62rem",
+                          color: "var(--primary)",
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "2px",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        🎥 {scene.motion}
+                      </div>
+                    )}
+
+                    {scene.transition && scene.transition !== "none" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "4px",
+                          right: "8px",
+                          background: "rgba(6, 182, 212, 0.3)",
+                          border: "1px solid rgba(6, 182, 212, 0.5)",
+                          borderRadius: "4px",
+                          padding: "2px 5px",
+                          fontSize: "0.6rem",
+                          color: "var(--accent-cyan)",
+                          fontWeight: 600,
+                          pointerEvents: "none",
+                        }}
+                      >
+                        ⚡ {scene.transition}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -382,10 +659,11 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
             })}
           </div>
 
-          {/* 4. Track 3: Audio Track */}
+          {/* 4. Track 3: Voiceover Narration Track */}
           <div
             style={{
               padding: "6px 0",
+              borderBottom: "1px solid var(--border-subtle)",
               display: "flex",
               alignItems: "center",
               position: "relative",
@@ -406,7 +684,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                 zIndex: 10,
               }}
             >
-              🎵 Audio ({project.audio_file ? project.audio_file.filename : "No Audio"})
+              🎙 Narration ({project.audio_file ? project.audio_file.filename : "No Audio"})
             </div>
 
             {project.audio_file ? (
@@ -427,7 +705,6 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                   overflow: "hidden",
                 }}
               >
-                {/* Simulated waveform lines across duration */}
                 {Array.from({
                   length: Math.min(200, Math.floor((totalDuration * pixelsPerSecond) / 6)),
                 }).map((_, i) => {
@@ -464,6 +741,113 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                 }}
               >
                 No audio track uploaded. Voice audio will synchronize automatically when attached.
+              </div>
+            )}
+          </div>
+
+          {/* 5. Track 4: Background Music (BGM) Track */}
+          <div
+            style={{
+              padding: "6px 0",
+              display: "flex",
+              alignItems: "center",
+              position: "relative",
+              height: "46px",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                left: "8px",
+                top: "2px",
+                fontSize: "0.65rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: "#c084fc",
+                fontWeight: 700,
+                pointerEvents: "none",
+                zIndex: 10,
+              }}
+            >
+              🎼 Music ({project.audio_settings?.music_file ? project.audio_settings.music_file.filename : "No BGM"})
+            </div>
+
+            {project.audio_settings?.music_file ? (
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  width: `${totalDuration * pixelsPerSecond}px`,
+                  height: "30px",
+                  top: "12px",
+                  borderRadius: "4px",
+                  background: project.audio_settings.music_muted
+                    ? "rgba(239, 68, 68, 0.08)"
+                    : "rgba(168, 85, 247, 0.12)",
+                  border: project.audio_settings.music_muted
+                    ? "1px dashed rgba(239, 68, 68, 0.4)"
+                    : "1px solid rgba(168, 85, 247, 0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "0 10px",
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "3px", overflow: "hidden" }}>
+                  {Array.from({
+                    length: Math.min(200, Math.floor((totalDuration * pixelsPerSecond) / 8)),
+                  }).map((_, i) => {
+                    const pseudoRandomHeight = 6 + ((i * 23 + 11) % 16);
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          width: "3px",
+                          height: `${pseudoRandomHeight}px`,
+                          background: project.audio_settings?.music_muted
+                            ? "rgba(239, 68, 68, 0.5)"
+                            : "rgba(168, 85, 247, 0.6)",
+                          borderRadius: "1px",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontFamily: "var(--font-mono)",
+                    color: project.audio_settings.music_muted ? "#ef4444" : "#c084fc",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    marginLeft: "8px",
+                  }}
+                >
+                  {project.audio_settings.music_muted
+                    ? "MUTED"
+                    : `Vol: ${Math.round((project.audio_settings.music_volume ?? 0.25) * 100)}%`}
+                </span>
+              </div>
+            ) : (
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  width: `${Math.max(400, totalDuration * pixelsPerSecond)}px`,
+                  height: "30px",
+                  top: "12px",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--bg-card-subtle)",
+                  border: "1px dashed var(--border-default)",
+                  display: "flex",
+                  alignItems: "center",
+                  paddingLeft: "16px",
+                  color: "var(--text-muted)",
+                  fontSize: "0.75rem",
+                }}
+              >
+                No background music attached (configure & upload in Audio mixing tab)
               </div>
             )}
           </div>

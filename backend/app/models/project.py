@@ -33,6 +33,7 @@ class AudioSettingsModel:
     music_fade_in: float = 1.0
     music_fade_out: float = 2.0
     music_muted: bool = False
+    ducking_enabled: bool = True
 
 @dataclass
 class CanvasSettingsModel:

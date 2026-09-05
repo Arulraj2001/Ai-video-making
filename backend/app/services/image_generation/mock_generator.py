@@ -30,10 +30,13 @@ class MockImageGenerator(BaseImageGenerator):
         return ProviderCapabilities(
             provider_name="mock",
             model_name=self._model_name,
-            supports_reference_images=True,
+            supports_reference_images=False,
             supports_negative_prompt=True,
             supported_aspect_ratios=["16:9", "9:16", "1:1", "4:3", "21:9"],
-            notes="Offline deterministic generator. Use style_mode='stickfigure' for whiteboard animation style."
+            notes="Offline deterministic generator. Uses text-described entity context; it does not perform image-to-image conditioning.",
+            supports_seed=True,
+            supports_image_to_image=False,
+            supports_reference_descriptions=True,
         )
 
     # -------------------------------------------------------------------------

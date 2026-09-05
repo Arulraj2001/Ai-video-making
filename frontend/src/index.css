@@ -623,6 +623,99 @@ a {
    Complete Vanilla CSS Utility Engine (Replaces Missing Tailwind)
    ========================================================================== */
 
+/* Stage 3 storyboard workspace */
+.storyboard-scene-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.storyboard-scene-card { min-width: 0; }
+
+.storyboard-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(190px, 0.9fr);
+}
+
+.storyboard-card-inspector { display: none; min-width: 0; }
+.storyboard-scene-card.inspector-open .storyboard-card-inspector { display: block; }
+
+.storyboard-thumbnail { width: 100%; min-height: 120px; }
+
+.storyboard-style-select,
+.storyboard-advanced-controls {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-card-subtle);
+  color: var(--text-secondary);
+}
+
+.storyboard-style-select select,
+.storyboard-advanced-controls select {
+  max-width: 150px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.storyboard-advanced-controls summary { list-style: none; }
+.storyboard-advanced-controls summary::-webkit-details-marker { display: none; }
+
+.storyboard-advanced-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 230px;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-modal);
+}
+
+.storyboard-scene-card.is-compact { padding: 12px; }
+.storyboard-scene-card.is-compact .storyboard-card-body { display: block; }
+.storyboard-scene-card.is-compact .storyboard-card-visual {
+  display: grid;
+  grid-template-columns: minmax(110px, 34%) minmax(0, 1fr);
+  gap: 12px;
+}
+.storyboard-scene-card.is-compact .storyboard-card-visual > :first-child {
+  grid-column: 2;
+  grid-row: 1;
+}
+.storyboard-scene-card.is-compact .storyboard-thumbnail {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 74px;
+}
+.storyboard-scene-card.is-compact.inspector-open .storyboard-card-body { display: grid; }
+.storyboard-scene-card.is-compact.inspector-open .storyboard-card-visual { display: block; }
+
+@media (min-width: 1400px) {
+  .storyboard-scene-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .storyboard-scene-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .storyboard-card-body { grid-template-columns: 1fr; }
+  .storyboard-scene-card.is-compact .storyboard-card-visual {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .storyboard-style-select,
+  .storyboard-advanced-controls { flex: 1 1 auto; }
+  .storyboard-advanced-popover { left: 0; right: auto; }
+}
+
 /* Display & Flex */
 .flex { display: flex !important; }
 .inline-flex { display: inline-flex !important; }

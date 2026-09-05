@@ -53,21 +53,26 @@ class PollinationsImageGenerator(BaseImageGenerator):
 
     BASE_URL = "https://image.pollinations.ai/prompt"
 
-    def __init__(self, style_mode: str = "photorealistic"):
+    def __init__(self, style_mode: str = "photorealistic", model_name: Optional[str] = None):
         self._style_mode = style_mode.lower() if style_mode else "photorealistic"
+        default_model, _ = STYLE_MODE_MAP.get(self._style_mode, ("flux", ""))
+        self._model_name = model_name or default_model
 
     @property
     def capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(
             provider_name="pollinations",
-            model_name=f"flux-{self._style_mode}",
+            model_name=self._model_name,
             supports_reference_images=False,   # Pollinations does not support img2img
             supports_negative_prompt=True,
             supported_aspect_ratios=["16:9", "9:16", "1:1", "4:3", "21:9"],
             notes=(
                 "Free unlimited image generation via Pollinations.ai (no API key required). "
                 "Powered by FLUX.1, flux-realism, flux-anime, flux-3d, and turbo models."
-            )
+            ),
+            supports_seed=True,
+            supports_image_to_image=False,
+            supports_reference_descriptions=True,
         )
 
     def _build_url(
@@ -78,7 +83,8 @@ class PollinationsImageGenerator(BaseImageGenerator):
         seed: Optional[int] = None,
     ) -> str:
         mode = (style_mode or self._style_mode or "photorealistic").lower()
-        model, prefix = STYLE_MODE_MAP.get(mode, ("flux", ""))
+        _, prefix = STYLE_MODE_MAP.get(mode, ("flux", ""))
+        model = self._model_name
 
         # Build the full prompt with style prefix
         full_prompt = f"{prefix}{prompt}".strip()
@@ -131,7 +137,7 @@ class PollinationsImageGenerator(BaseImageGenerator):
         image_bytes = await loop.run_in_executor(None, self._fetch_image, url)
 
         mode = (style_mode or self._style_mode or "photorealistic").lower()
-        model, _ = STYLE_MODE_MAP.get(mode, ("flux", ""))
+        model = self._model_name
 
         return GeneratedImageResult(
             image_bytes=image_bytes,

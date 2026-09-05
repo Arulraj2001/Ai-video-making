@@ -33,6 +33,11 @@ class ProviderCapabilities(BaseModel):
     supports_negative_prompt: bool
     supported_aspect_ratios: List[str]
     notes: str
+    supports_seed: bool = False
+    supports_aspect_ratio: bool = True
+    supports_image_to_image: bool = False
+    supports_reference_descriptions: bool = True
+    supports_variations: bool = True
 
 class BaseImageGenerator(ABC):
     """

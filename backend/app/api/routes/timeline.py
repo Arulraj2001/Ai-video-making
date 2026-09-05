@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query, status
 from typing import List, Optional
+from datetime import datetime, timezone
 
 from app.schemas.project import (
     SceneSchema,
@@ -9,7 +10,9 @@ from app.schemas.project import (
     ProjectResponse,
     TimelineUpdateResponse,
 )
+from app.models.scene import SceneModel
 from app.services.project_service import project_service
+from app.api.routes.projects import _to_project_response
 
 router = APIRouter(prefix="/projects/{project_id}/timeline", tags=["timeline"])
 
@@ -21,7 +24,7 @@ def update_timeline_scene(
     ripple: bool = Query(default=True, description="Whether to ripple time changes to subsequent scenes")
 ):
     """
-    Updates scene timeline properties (start, end, duration, motion, transition).
+    Updates scene timeline properties (start, end, duration, motion, transition, framing).
     Enforces Master Timeline Rule: downstream scenes automatically ripple if scene length changes.
     """
     try:
@@ -31,16 +34,7 @@ def update_timeline_scene(
             update=update,
             ripple=ripple
         )
-        return ProjectResponse(
-            id=project.id,
-            name=project.name,
-            description=project.description,
-            audio_file=project.audio_file.__dict__ if project.audio_file else None,
-            raw_captions=project.raw_captions,
-            scenes=[SceneSchema.model_validate(s) for s in project.scenes],
-            created_at=project.created_at,
-            updated_at=project.updated_at
-        )
+        return _to_project_response(project)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
@@ -61,16 +55,7 @@ def split_timeline_scene(
             scene_id=scene_id,
             split_time=request.split_time
         )
-        return ProjectResponse(
-            id=project.id,
-            name=project.name,
-            description=project.description,
-            audio_file=project.audio_file.__dict__ if project.audio_file else None,
-            raw_captions=project.raw_captions,
-            scenes=[SceneSchema.model_validate(s) for s in project.scenes],
-            created_at=project.created_at,
-            updated_at=project.updated_at
-        )
+        return _to_project_response(project)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
@@ -89,16 +74,7 @@ def duplicate_timeline_scene(
             project_id=project_id,
             scene_id=scene_id
         )
-        return ProjectResponse(
-            id=project.id,
-            name=project.name,
-            description=project.description,
-            audio_file=project.audio_file.__dict__ if project.audio_file else None,
-            raw_captions=project.raw_captions,
-            scenes=[SceneSchema.model_validate(s) for s in project.scenes],
-            created_at=project.created_at,
-            updated_at=project.updated_at
-        )
+        return _to_project_response(project)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
@@ -119,16 +95,7 @@ def delete_timeline_scene(
             scene_id=scene_id,
             ripple=ripple
         )
-        return ProjectResponse(
-            id=project.id,
-            name=project.name,
-            description=project.description,
-            audio_file=project.audio_file.__dict__ if project.audio_file else None,
-            raw_captions=project.raw_captions,
-            scenes=[SceneSchema.model_validate(s) for s in project.scenes],
-            created_at=project.created_at,
-            updated_at=project.updated_at
-        )
+        return _to_project_response(project)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
@@ -147,16 +114,7 @@ def reorder_timeline_scenes(
             project_id=project_id,
             scene_ids=request.scene_ids
         )
-        return ProjectResponse(
-            id=project.id,
-            name=project.name,
-            description=project.description,
-            audio_file=project.audio_file.__dict__ if project.audio_file else None,
-            raw_captions=project.raw_captions,
-            scenes=[SceneSchema.model_validate(s) for s in project.scenes],
-            created_at=project.created_at,
-            updated_at=project.updated_at
-        )
+        return _to_project_response(project)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
@@ -192,10 +150,8 @@ def restore_timeline_scenes(
     scenes: List[SceneSchema]
 ):
     """
-    Restores an exact list of scenes (e.g. for Undo/Redo operations).
+    Restores an exact list of scenes (e.g. for Undo/Redo operations), preserving project settings.
     """
-    from datetime import datetime, timezone
-    from app.models.scene import SceneModel
     project = project_service.get_project(project_id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project '{project_id}' not found")
@@ -203,14 +159,4 @@ def restore_timeline_scenes(
     project.scenes = scene_models
     project.updated_at = datetime.now(timezone.utc).isoformat()
     project_service._save_to_disk(project)
-    return ProjectResponse(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        audio_file=project.audio_file.__dict__ if project.audio_file else None,
-        raw_captions=project.raw_captions,
-        scenes=[SceneSchema.model_validate(s) for s in project.scenes],
-        created_at=project.created_at,
-        updated_at=project.updated_at
-    )
-
+    return _to_project_response(project)

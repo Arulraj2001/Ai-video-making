@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Clapperboard,
   Sparkles,
@@ -25,6 +25,9 @@ import {
   Square,
   LayoutGrid,
   ListFilter,
+  PanelRight,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { formatTimecode } from "../../utils/formatters";
 import { api } from "../../services/api";
@@ -32,13 +35,14 @@ import type {
   Project,
   Scene,
   ImageGeneratorCapabilities,
+  ImageProviderHealth,
   ModelCatalogItem,
   SceneVariationItem,
 } from "../../types";
 
 interface StoryboardViewProps {
   project: Project;
-  onProjectUpdated?: (updated: Project) => void;
+  onProjectUpdated?: (updated: Project | ((previous: Project) => Project)) => void;
   onSwitchToBible?: () => void;
 }
 
@@ -52,6 +56,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [generatingAllImages, setGeneratingAllImages] = useState(false);
   const [retryingFailed, setRetryingFailed] = useState(false);
   const [generatingSceneIds, setGeneratingSceneIds] = useState<Set<string>>(new Set());
+  const sceneRequestTokens = useRef(new Map<string, number>());
   const [error, setError] = useState<string | null>(null);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
 
@@ -68,6 +73,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
   const [viewLayout, setViewLayout] = useState<"cards" | "compact">("cards");
+  const [inspectorSceneId, setInspectorSceneId] = useState<string | null>(null);
 
   // Smart Clustering modal
   const [clusteringModalOpen, setClusteringModalOpen] = useState(false);
@@ -93,19 +99,22 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
   // Provider capabilities
   const [capabilities, setCapabilities] = useState<ImageGeneratorCapabilities | null>(null);
+  const [providerHealth, setProviderHealth] = useState<ImageProviderHealth | null>(null);
 
   // Art style mode for image generation
   const [styleMode, setStyleMode] = useState<string>("photorealistic");
 
   const STYLE_MODES = [
-    { id: "photorealistic", label: "Photo", emoji: "📷" },
-    { id: "cinematic",      label: "Cinema", emoji: "🎬" },
-    { id: "anime",         label: "Anime", emoji: "✨" },
-    { id: "3d",            label: "3D", emoji: "🎲" },
-    { id: "cartoon",       label: "Cartoon", emoji: "🎨" },
-    { id: "stickfigure",   label: "Stick", emoji: "🖊️" },
-    { id: "sketch",        label: "Sketch", emoji: "✏️" },
-    { id: "watercolor",    label: "Watercolor", emoji: "🖌️" },
+    { id: "stickfigure", label: "Stickman" },
+    { id: "whiteboard", label: "Whiteboard" },
+    { id: "cartoon", label: "Minimal Cartoon" },
+    { id: "flat", label: "Flat Vector" },
+    { id: "sketch", label: "Hand Drawn" },
+    { id: "3d", label: "3D" },
+    { id: "anime", label: "Anime" },
+    { id: "cinematic", label: "Cinematic" },
+    { id: "documentary", label: "Documentary" },
+    { id: "custom", label: "Custom" },
   ];
 
   // Inline editing state
@@ -128,6 +137,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     caption: string;
     metadata?: any;
   } | null>(null);
+
+  const projectAspectRatio = project.canvas_settings?.aspect_ratio || "16:9";
 
   // Sync scenes if project prop updates
   useEffect(() => {
@@ -164,15 +175,81 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    api.getImageCapabilities(selectedProvider, selectedModelId, styleMode)
+      .then((caps) => {
+        if (isMounted) setCapabilities(caps);
+      })
+      .catch((err) => console.warn("Could not refresh selected model capabilities:", err));
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedProvider, selectedModelId, styleMode]);
+
+  useEffect(() => {
+    if (selectedProvider !== "gemini") {
+      setProviderHealth(null);
+      return;
+    }
+    let isMounted = true;
+    api.getImageProviderHealth(selectedProvider, selectedModelId)
+      .then((health) => {
+        if (isMounted) setProviderHealth(health);
+      })
+      .catch((err) => {
+        if (isMounted) setProviderHealth({
+          provider: selectedProvider,
+          model: selectedModelId,
+          status: "error",
+          message: err.message || "Gemini health check failed",
+        });
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedProvider, selectedModelId]);
+
   const storyboardedCount = scenes.filter((s) => Boolean(s.image_prompt)).length;
   const isAllStoryboarded = scenes.length > 0 && storyboardedCount === scenes.length;
   const imagesCompletedCount = scenes.filter((s) => s.image_status === "completed" && Boolean(s.image_url)).length;
   const imagesFailedCount = scenes.filter((s) => s.image_status === "failed").length;
+  const imagesGeneratingCount = scenes.filter((s) => s.image_status === "generating").length;
+  const imagesRemainingCount = Math.max(0, scenes.length - imagesCompletedCount - imagesFailedCount);
   const isAllImagesCompleted = scenes.length > 0 && imagesCompletedCount === scenes.length;
 
   const totalVideoDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
   const avgSceneDuration = scenes.length > 0 ? totalVideoDuration / scenes.length : 0;
   const isRapidPaced = scenes.length > 3 && avgSceneDuration < 8.0;
+
+  const applySceneCollection = (updatedScenes: Scene[], replace = false) => {
+    const updatedById = new Map(updatedScenes.map((scene) => [scene.id, scene]));
+    setScenes((previous) => replace
+      ? updatedScenes
+      : previous.map((scene) => updatedById.get(scene.id) || scene)
+    );
+    onProjectUpdated?.((previous) => ({
+      ...previous,
+      scenes: replace
+        ? updatedScenes
+        : previous.scenes.map((scene) => updatedById.get(scene.id) || scene),
+    }));
+    if (replace) {
+      const updatedIds = new Set(updatedScenes.map((scene) => scene.id));
+      setSelectedSceneIds((previous) => {
+        const reconciled = new Set([...previous].filter((id) => updatedIds.has(id)));
+        return reconciled.size === previous.size ? previous : reconciled;
+      });
+    }
+  };
+
+  const applySingleScene = (sceneId: string, updatedScene: Scene) => {
+    setScenes((previous) => previous.map((scene) => scene.id === sceneId ? updatedScene : scene));
+    onProjectUpdated?.((previous) => ({
+      ...previous,
+      scenes: previous.scenes.map((scene) => scene.id === sceneId ? updatedScene : scene),
+    }));
+  };
 
   // Filtered scenes based on search and status
   const filteredScenes = useMemo(() => {
@@ -199,10 +276,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       setGeneratingAllStoryboard(true);
       setError(null);
       const res = await api.generateStoryboard(project.id);
-      setScenes(res.scenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: res.scenes });
-      }
+      applySceneCollection(res.scenes);
     } catch (err: any) {
       setError(err.message || "Failed to generate visual storyboard");
     } finally {
@@ -231,10 +305,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         provider: selectedProvider,
         model_id: selectedModelId,
       });
-      setScenes(res.scenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: res.scenes });
-      }
+      applySceneCollection(res.scenes);
 
       if (res.failed_count > 0) {
         setError(
@@ -253,11 +324,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     try {
       setRetryingFailed(true);
       setError(null);
-      const res = await api.retryFailedImages(project.id);
-      setScenes(res.scenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: res.scenes });
-      }
+      const res = await api.retryFailedImages(project.id, {
+        style_mode: styleMode,
+        provider: selectedProvider,
+        model_id: selectedModelId,
+      });
+      applySceneCollection(res.scenes);
       if (res.failed_count > 0) {
         setError(`Retry completed: ${res.completed_count} ready, ${res.failed_count} still failing.`);
       }
@@ -275,6 +347,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     overrideProvider?: string,
     overrideModel?: string
   ) => {
+    const requestToken = (sceneRequestTokens.current.get(sceneId) || 0) + 1;
+    sceneRequestTokens.current.set(sceneId, requestToken);
     try {
       setGeneratingSceneIds((prev) => new Set(prev).add(sceneId));
       setError(null);
@@ -291,24 +365,20 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         provider: overrideProvider || selectedProvider,
         model_id: overrideModel || selectedModelId,
       });
-      const nextScenes = scenes.map((s) => (s.id === sceneId ? updated : s));
-      setScenes(nextScenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: nextScenes });
+      if (sceneRequestTokens.current.get(sceneId) === requestToken) {
+        applySingleScene(sceneId, updated);
       }
     } catch (err: any) {
-      const errText = err.message || "Scene image generation failed";
-      const nextScenes = scenes.map((s) =>
-        s.id === sceneId
-          ? { ...s, image_status: "failed" as const, image_error: errText }
-          : s
-      );
-      setScenes(nextScenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: nextScenes });
+      if (sceneRequestTokens.current.get(sceneId) === requestToken) {
+        const errText = err.message || "Scene image generation failed";
+        const failedScene = scenes.find((scene) => scene.id === sceneId);
+        if (failedScene) {
+          applySingleScene(sceneId, { ...failedScene, image_status: "failed", image_error: errText });
+        }
       }
     } finally {
       setGeneratingSceneIds((prev) => {
+        if (sceneRequestTokens.current.get(sceneId) !== requestToken) return prev;
         const copy = new Set(prev);
         copy.delete(sceneId);
         return copy;
@@ -325,12 +395,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         mode: clusterMode,
         target_duration: clusterTargetDuration,
       });
-      setScenes(res.scenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: res.scenes });
-      }
+      applySceneCollection(res.scenes, true);
       setClusteringModalOpen(false);
-      setSelectedSceneIds(new Set());
     } catch (err: any) {
       setError(err.message || "Failed to cluster scenes");
     } finally {
@@ -345,11 +411,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       setMergingInProgress(true);
       setError(null);
       const res = await api.mergeScenes(project.id, Array.from(selectedSceneIds));
-      setScenes(res.scenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: res.scenes });
-      }
-      setSelectedSceneIds(new Set());
+      applySceneCollection(res.scenes, true);
     } catch (err: any) {
       setError(err.message || "Failed to merge selected scenes");
     } finally {
@@ -380,11 +442,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     try {
       const updated = await api.updateSceneTimeline(project.id, sceneId, {
         image_url: varItem.image_url,
+        image_status: "completed",
+        image_metadata: varItem.metadata || undefined,
       });
-      setScenes(updated.scenes);
-      if (onProjectUpdated) {
-        onProjectUpdated(updated);
-      }
+      applySceneCollection(updated.scenes);
       setVariationsModalScene(null);
     } catch (err: any) {
       setError(err.message || "Failed to apply variation");
@@ -411,11 +472,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         subtext: graphicSubtext.trim() || undefined,
         accent_color: graphicAccent,
       });
-      const nextScenes = scenes.map((s) => (s.id === graphicModalScene.id ? updatedScene : s));
-      setScenes(nextScenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: nextScenes });
-      }
+      applySingleScene(graphicModalScene.id, updatedScene);
       setGraphicModalScene(null);
     } catch (err: any) {
       setError(err.message || "Failed to apply graphic template");
@@ -470,14 +527,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         suggested_transition: editTransition,
       });
 
-      const nextScenes = scenes.map((s) => (s.id === sceneId ? updated : s));
-      setScenes(nextScenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: nextScenes });
-      }
+      applySingleScene(sceneId, updated);
       setEditingSceneId(null);
     } catch (err: any) {
-      alert(`Failed to save edits: ${err.message || "Unknown error"}`);
+      setError(`Scene changes could not be saved: ${err.message || "Unknown error"}`);
     } finally {
       setSavingEdit(false);
     }
@@ -498,14 +551,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         regenInstructions.trim()
       );
 
-      const nextScenes = scenes.map((s) => (s.id === regenModalScene.id ? updated : s));
-      setScenes(nextScenes);
-      if (onProjectUpdated) {
-        onProjectUpdated({ ...project, scenes: nextScenes });
-      }
+      applySingleScene(regenModalScene.id, updated);
       setRegenModalScene(null);
     } catch (err: any) {
-      alert(`Regeneration failed: ${err.message || "Unknown error"}`);
+      setError(`Prompt regeneration failed: ${err.message || "Unknown error"}`);
     } finally {
       setRegeneratingPrompt(false);
     }
@@ -522,7 +571,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 storyboard-header-controls">
               <span className="badge badge-info text-[10px] font-semibold uppercase tracking-wider">
                 <Clapperboard size={12} />
                 Stage 3: Storyboard & AI Frames
@@ -532,6 +581,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 <span className="badge badge-neutral text-[10px] font-mono">
                   <Cpu size={11} />
                   {capabilities.provider.toUpperCase()} ({capabilities.model})
+                </span>
+              )}
+
+              {providerHealth && (
+                <span className={`badge ${providerHealth.status === "ready" ? "badge-success" : "badge-danger"} text-[10px]`}>
+                  {providerHealth.message}
                 </span>
               )}
 
@@ -549,11 +604,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             </div>
 
             <h2 className="text-lg sm:text-xl font-bold font-display" style={{ color: "var(--text-primary)" }}>
-              Visual Storyboard & AI Scene Images
+              Visual Storyboard
             </h2>
             <p className="text-xs max-w-2xl leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-              Synthesize cinematic prompt descriptors and generate visual frames for every scene.
-              Supports fault-tolerant batch generation, isolated scene regeneration, and Video Bible consistency.
+              Turn your narration into visuals. Review a scene, generate its visual, and refine it when needed.
             </p>
           </div>
 
@@ -561,53 +615,51 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             {/* AI Model Selector */}
             {models.length > 0 && (
 
-              <div
-                className="flex items-center gap-1.5 px-2 py-1 rounded-xl border text-xs"
-                style={{ background: "var(--bg-card-subtle)", borderColor: "var(--border-subtle)" }}
-              >
-                <Cpu size={13} style={{ color: "var(--accent-primary)" }} />
-                <select
-                  value={selectedModelId}
-                  onChange={(e) => {
-                    const mid = e.target.value;
-                    setSelectedModelId(mid);
-                    const found = models.find((m) => m.model_id === mid);
-                    if (found) setSelectedProvider(found.provider);
-                  }}
-                  className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer py-0.5"
-                  style={{ color: "var(--text-primary)" }}
-                  title="Choose active AI image model"
-                >
-                  {models.map((m) => (
-                    <option key={m.id} value={m.model_id} className="bg-zinc-900 text-white">
-                      {m.name} {m.is_free ? "(Free)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <details className="storyboard-advanced-controls">
+                <summary className="btn-secondary text-xs py-2 px-3 cursor-pointer flex items-center gap-1.5">
+                  <Cpu size={13} />
+                  <span>Advanced</span>
+                </summary>
+                {models.length > 0 && (
+                  <div className="storyboard-advanced-popover">
+                    <label className="block text-[11px] font-semibold mb-1" htmlFor="storyboard-model">
+                      Image model
+                    </label>
+                    <select
+                      id="storyboard-model"
+                      value={selectedModelId}
+                      onChange={(e) => {
+                        const mid = e.target.value;
+                        setSelectedModelId(mid);
+                        const found = models.find((m) => m.model_id === mid);
+                        if (found) setSelectedProvider(found.provider);
+                      }}
+                      className="w-full bg-transparent text-xs font-semibold focus:outline-none cursor-pointer py-1"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {models.map((m) => (
+                        <option key={m.id} value={m.model_id} className="bg-zinc-900 text-white">
+                          {m.name} {m.is_free ? "(Free)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="block mt-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      Provider: {selectedProvider}
+                    </span>
+                  </div>
+                )}
+              </details>
             )}
 
             {/* Art Style Mode Selector */}
-            <div
-              className="flex items-center gap-1.5 p-1 rounded-xl border"
-              style={{ background: "var(--bg-card-subtle)", borderColor: "var(--border-subtle)" }}
-            >
-              {STYLE_MODES.map((mode) => (
-                <button
-                  key={mode.id}
-                  onClick={() => setStyleMode(mode.id)}
-                  title={`Art style: ${mode.label}`}
-                  className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-all"
-                  style={{
-                    background: styleMode === mode.id ? "var(--accent-primary)" : "transparent",
-                    color: styleMode === mode.id ? "#fff" : "var(--text-muted)",
-                    border: styleMode === mode.id ? "1px solid var(--accent-primary)" : "1px solid transparent",
-                  }}
-                >
-                  {mode.emoji} {mode.label}
-                </button>
-              ))}
-            </div>
+            <label className="storyboard-style-select text-xs">
+              <span>Style</span>
+              <select value={styleMode} onChange={(e) => setStyleMode(e.target.value)} aria-label="Visual style">
+                {STYLE_MODES.map((mode) => (
+                  <option key={mode.id} value={mode.id}>{mode.label}</option>
+                ))}
+              </select>
+            </label>
 
             {/* Progress metrics */}
             <div
@@ -630,12 +682,17 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                   {imagesCompletedCount} / {scenes.length}
                 </span>
               </div>
+              {(imagesGeneratingCount > 0 || imagesFailedCount > 0) && (
+                <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
+                  {imagesGeneratingCount} active / {imagesFailedCount} failed / {imagesRemainingCount} remaining
+                </span>
+              )}
             </div>
 
             {/* Smart Cluster Button */}
             <button
               onClick={() => setClusteringModalOpen(true)}
-              disabled={clusteringInProgress || scenes.length === 0}
+              disabled={clusteringInProgress || generatingAllImages || retryingFailed || mergingInProgress || scenes.length === 0}
               className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
               title="Intelligently group fast captions into 15-25s visual scenes"
             >
@@ -646,7 +703,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             {/* Prompt Synthesis Button */}
             <button
               onClick={handleGenerateAllStoryboard}
-              disabled={generatingAllStoryboard || generatingAllImages || scenes.length === 0}
+              disabled={generatingAllStoryboard || generatingAllImages || retryingFailed || mergingInProgress || scenes.length === 0}
               className="btn-secondary text-xs py-2 px-3"
               title="Generate or update visual storyboard prompts"
             >
@@ -666,7 +723,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             {/* Generate All Scene Images Button */}
             <button
               onClick={() => handleGenerateAllImages(isAllImagesCompleted)}
-              disabled={generatingAllImages || generatingAllStoryboard || scenes.length === 0}
+              disabled={generatingAllImages || generatingAllStoryboard || retryingFailed || mergingInProgress || scenes.length === 0}
               className="btn-primary text-xs py-2 px-4"
               title="Generate images for all scenes without clicking individually"
             >
@@ -689,7 +746,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             {imagesFailedCount > 0 && (
               <button
                 onClick={handleRetryFailedImages}
-                disabled={retryingFailed || generatingAllImages}
+                disabled={retryingFailed || generatingAllImages || generatingAllStoryboard || mergingInProgress}
                 className="btn-danger text-xs py-2 px-3"
                 title="Retry image generation only for failed scenes, preserving successful images"
               >
@@ -843,6 +900,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 placeholder="Search captions or prompts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search storyboard scenes"
                 className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border bg-transparent focus:outline-none"
                 style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
               />
@@ -850,6 +908,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 <button
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
+                  aria-label="Clear scene search"
                 >
                   <X size={12} />
                 </button>
@@ -889,7 +948,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                   {selectedSceneIds.size >= 2 && (
                     <button
                       onClick={handleMergeSelected}
-                      disabled={mergingInProgress}
+                      disabled={mergingInProgress || generatingAllImages || retryingFailed || clusteringInProgress}
                       className="btn-primary text-xs py-0.5 px-2.5 flex items-center gap-1"
                       title="Merge selected scenes into 1 continuous visual scene"
                     >
@@ -945,10 +1004,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
           {/* Render Filtered Scenes */}
           {filteredScenes.length === 0 ? (
             <div className="text-center py-12 studio-card p-8 text-xs" style={{ color: "var(--text-secondary)" }}>
-              No scenes match the filter criteria.
+              {searchQuery.trim() ? "No scenes match your search." : "No scenes match the selected filter."}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className={`storyboard-scene-grid ${viewLayout === "compact" ? "is-compact" : ""}`}>
               {filteredScenes.map((scene) => {
                 const index = scenes.findIndex((s) => s.id === scene.id);
                 const isSelected = selectedSceneIds.has(scene.id);
@@ -964,7 +1023,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 return (
                   <div
                     key={scene.id}
-                    className="studio-card p-5 sm:p-6 space-y-4 relative overflow-hidden transition-all"
+                    className={`studio-card storyboard-scene-card p-4 sm:p-5 space-y-4 relative overflow-hidden transition-all ${viewLayout === "compact" ? "is-compact" : ""} ${inspectorSceneId === scene.id || isEditing ? "inspector-open" : ""}`}
                     style={{
                       borderLeft: isSelected ? "4px solid var(--accent-primary)" : undefined,
                     }}
@@ -1003,6 +1062,24 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
                   {/* Status, Motion & Transition Badges */}
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => startEditing(scene)}
+                      className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
+                      title="Edit this scene"
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => setInspectorSceneId(inspectorSceneId === scene.id ? null : scene.id)}
+                      className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
+                      aria-expanded={inspectorSceneId === scene.id}
+                      title={inspectorSceneId === scene.id ? "Hide scene details" : "Show scene details"}
+                    >
+                      <PanelRight size={12} />
+                      <span>{inspectorSceneId === scene.id ? "Hide details" : "Details"}</span>
+                      {inspectorSceneId === scene.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
                     {/* Image Status Badge */}
                     {isCompleted && (
                       <span className="badge badge-success text-[11px]">
@@ -1054,9 +1131,9 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 </div>
 
                 {/* Two-Column Responsive Layout: Metadata & Prompt on Left, Image Visual on Right */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                <div className="storyboard-card-body gap-5 items-start">
                   {/* Left Column: Descriptions, Prompts, Editors */}
-                  <div className="lg:col-span-7 space-y-3.5">
+                  <div className="storyboard-card-inspector space-y-3.5">
                     {!isEditing ? (
                       <>
                         {/* Visual Description */}
@@ -1083,7 +1160,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--accent-primary)" }}>
                               <Sparkles size={12} />
-                              Image Prompt (16:9 Midjourney / Flux Ready)
+                              Image Prompt ({projectAspectRatio})
                             </span>
 
                             <div className="flex items-center gap-1.5">
@@ -1253,11 +1330,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                   </div>
 
                   {/* Right Column: Scene AI Image Visual Panel (Phase 5) */}
-                  <div className="lg:col-span-5 space-y-2">
+                  <div className="storyboard-card-visual space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                         <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
-                        Generated Visual (16:9)
+                        Generated Visual ({projectAspectRatio})
                       </span>
 
                       {/* Single Scene Image Actions */}
@@ -1298,10 +1375,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
                     {/* Image Viewport Container */}
                     <div
-                      className="relative aspect-video rounded-xl border overflow-hidden group shadow-sm"
+                      className="relative rounded-xl border overflow-hidden group shadow-sm storyboard-thumbnail"
                       style={{
                         background: "var(--bg-card-subtle)",
                         borderColor: "var(--border-subtle)",
+                        aspectRatio: projectAspectRatio.replace(":", " / "),
                       }}
                     >
                       {isCompleted && scene.image_url ? (
@@ -1385,7 +1463,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                               Synthesizing Scene Visual
                             </span>
                             <span className="text-[11px] text-zinc-400 block mt-0.5 font-mono">
-                              {capabilities?.provider?.toUpperCase() || "AI ENGINE"} • 16:9 Widescreen
+                              {capabilities?.provider?.toUpperCase() || "AI ENGINE"} • {projectAspectRatio}
                             </span>
                           </div>
                           <div className="w-3/4 h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -1731,21 +1809,25 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {variations.map((v, i) => (
-                  <div
+                  <button
                     key={v.id}
+                    type="button"
                     onClick={() => handleApplyVariation(variationsModalScene.id, v)}
-                    className="group border border-zinc-800 hover:border-purple-500 rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] bg-black/40 p-2 space-y-2"
+                    className="group border border-zinc-800 hover:border-purple-500 rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] bg-black/40 p-2 space-y-2 text-left"
                   >
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-950">
+                    <div
+                      className="relative rounded-lg overflow-hidden bg-zinc-950"
+                      style={{ aspectRatio: projectAspectRatio.replace(":", " / ") }}
+                    >
                       <img src={api.getMediaUrl(v.image_url)} alt={`Variation ${i + 1}`} className="w-full h-full object-cover" />
                       <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-black/70 text-[10px] font-mono text-zinc-300">
                         Option {i + 1}
                       </span>
                     </div>
-                    <button className="w-full btn-secondary text-xs py-1 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    <span className="w-full btn-secondary text-xs py-1 group-hover:bg-purple-600 group-hover:text-white transition-colors block text-center">
                       Select Option {i + 1}
-                    </button>
-                  </div>
+                    </span>
+                  </button>
                 ))}
               </div>
             )}

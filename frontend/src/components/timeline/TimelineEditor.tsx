@@ -32,9 +32,11 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   const [deleteTargetSceneId, setDeleteTargetSceneId] = useState<string | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
-  // Undo / Redo History Stack
-  const [history, setHistory] = useState<Scene[][]>([project.scenes || []]);
-  const [historyIndex, setHistoryIndex] = useState(0);
+  // Undo / Redo History Stack with synchronous Ref to eliminate stale closures
+  const historyRef = useRef<Scene[][]>([]);
+  const historyIndexRef = useRef<number>(0);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -51,21 +53,43 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     project.scenes?.[0] ||
     null;
 
+  // Initialize history when project scenes first become available
+  useEffect(() => {
+    if (project.scenes && project.scenes.length > 0 && historyRef.current.length === 0) {
+      historyRef.current = [JSON.parse(JSON.stringify(project.scenes))];
+      historyIndexRef.current = 0;
+      setCanUndo(false);
+      setCanRedo(false);
+    }
+  }, [project.scenes]);
+
   // Push new state snapshot to undo/redo history
   const pushHistorySnapshot = useCallback((newScenes: Scene[]) => {
-    setHistory((prev) => {
-      const upToCurrent = prev.slice(0, historyIndex + 1);
-      return [...upToCurrent, newScenes];
-    });
-    setHistoryIndex((prev) => prev + 1);
-  }, [historyIndex]);
+    if (!newScenes || newScenes.length === 0) return;
+    const snapshot = JSON.parse(JSON.stringify(newScenes));
+    const current = historyRef.current[historyIndexRef.current];
+    if (current && JSON.stringify(current) === JSON.stringify(snapshot)) {
+      return;
+    }
+    const nextHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
+    nextHistory.push(snapshot);
+    if (nextHistory.length > 50) {
+      nextHistory.shift();
+    }
+    historyRef.current = nextHistory;
+    historyIndexRef.current = nextHistory.length - 1;
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+  }, []);
 
   // Undo
   const handleUndo = useCallback(async () => {
-    if (historyIndex > 0) {
-      const targetIndex = historyIndex - 1;
-      const targetScenes = history[targetIndex];
-      setHistoryIndex(targetIndex);
+    if (historyIndexRef.current > 0) {
+      const targetIndex = historyIndexRef.current - 1;
+      const targetScenes = historyRef.current[targetIndex];
+      historyIndexRef.current = targetIndex;
+      setCanUndo(targetIndex > 0);
+      setCanRedo(targetIndex < historyRef.current.length - 1);
 
       try {
         const updated = await api.restoreTimelineScenes(
@@ -77,14 +101,16 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         console.error("Undo failed:", err);
       }
     }
-  }, [historyIndex, history, project.id, onProjectUpdated]);
+  }, [project.id, onProjectUpdated]);
 
   // Redo
   const handleRedo = useCallback(async () => {
-    if (historyIndex < history.length - 1) {
-      const targetIndex = historyIndex + 1;
-      const targetScenes = history[targetIndex];
-      setHistoryIndex(targetIndex);
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      const targetIndex = historyIndexRef.current + 1;
+      const targetScenes = historyRef.current[targetIndex];
+      historyIndexRef.current = targetIndex;
+      setCanUndo(targetIndex > 0);
+      setCanRedo(targetIndex < historyRef.current.length - 1);
 
       try {
         const updated = await api.restoreTimelineScenes(
@@ -96,74 +122,28 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         console.error("Redo failed:", err);
       }
     }
-  }, [historyIndex, history, project.id, onProjectUpdated]);
+  }, [project.id, onProjectUpdated]);
 
-  // Global Keyboard shortcuts: Space (Play/Pause), Ctrl+Z (Undo), Ctrl+Y (Redo)
+  // Synchronized Ref for keyboard and playback state to prevent 60fps event listener thrashing
+  const playbackStateRef = useRef({
+    currentTime,
+    totalDuration,
+    isPlaying,
+    selectedSceneId,
+    scenes: project.scenes || [],
+  });
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in text inputs or textareas
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        handleTogglePlay();
-      } else if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key.toLowerCase() === "z" &&
-        !e.shiftKey
-      ) {
-        e.preventDefault();
-        handleUndo();
-      } else if (
-        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") ||
-        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "z")
-      ) {
-        e.preventDefault();
-        handleRedo();
-      } else if (e.code === "ArrowLeft") {
-        e.preventDefault();
-        const step = e.shiftKey ? 5 : 1;
-        handleSeek(Math.max(0, currentTime - step));
-      } else if (e.code === "ArrowRight") {
-        e.preventDefault();
-        const step = e.shiftKey ? 5 : 1;
-        handleSeek(Math.min(totalDuration, currentTime + step));
-      } else if (e.code === "KeyS" && !e.ctrlKey && !e.metaKey) {
-        // Split current active scene at playhead
-        const activeScene = (project.scenes || []).find(
-          (s) => currentTime >= s.start && currentTime <= s.end
-        );
-        if (
-          activeScene &&
-          currentTime > activeScene.start + 0.2 &&
-          currentTime < activeScene.end - 0.2
-        ) {
-          e.preventDefault();
-          handleSplitScene(activeScene.id, Number(currentTime.toFixed(3)));
-        }
-      } else if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedSceneId && (project.scenes || []).length > 1) {
-          e.preventDefault();
-          setDeleteTargetSceneId(selectedSceneId);
-        }
-      } else if (e.key === "?") {
-        e.preventDefault();
-        setIsShortcutsModalOpen(true);
-      }
+    playbackStateRef.current = {
+      currentTime,
+      totalDuration,
+      isPlaying,
+      selectedSceneId,
+      scenes: project.scenes || [],
     };
+  });
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleUndo, handleRedo, currentTime, totalDuration, selectedSceneId, project.scenes]);
-
-  // Playhead update loop
+  // Playhead update loop with audio clock synchronization
   const updatePlayhead = (timestamp: number) => {
     if (!lastTimestampRef.current) {
       lastTimestampRef.current = timestamp;
@@ -172,14 +152,25 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     lastTimestampRef.current = timestamp;
 
     setCurrentTime((prevTime) => {
-      const nextTime = prevTime + delta;
-      if (nextTime >= totalDuration) {
+      let nextTime = prevTime + delta;
+      // Synchronize strictly with audio element when narration is playing to prevent clock drift
+      if (
+        audioRef.current &&
+        !audioRef.current.paused &&
+        audioRef.current.readyState >= 2
+      ) {
+        const audioClock = audioRef.current.currentTime;
+        if (Math.abs(audioClock - nextTime) > 0.04) {
+          nextTime = audioClock;
+        }
+      }
+      if (nextTime >= playbackStateRef.current.totalDuration) {
         setIsPlaying(false);
         if (audioRef.current) {
           audioRef.current.pause();
           audioRef.current.currentTime = 0;
         }
-        return totalDuration;
+        return playbackStateRef.current.totalDuration;
       }
       return nextTime;
     });
@@ -187,39 +178,48 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     animationFrameRef.current = requestAnimationFrame(updatePlayhead);
   };
 
-  const handleTogglePlay = () => {
-    setIsPlaying((prev) => {
-      const next = !prev;
-      if (next) {
-        // If at the end, restart from 0
-        if (currentTime >= totalDuration) {
+  const handleTogglePlay = useCallback(() => {
+    setIsPlaying((prevPlaying) => {
+      const willPlay = !prevPlaying;
+      if (willPlay) {
+        let startTime = playbackStateRef.current.currentTime;
+        if (startTime >= playbackStateRef.current.totalDuration - 0.05) {
+          startTime = 0;
           setCurrentTime(0);
-          if (audioRef.current) audioRef.current.currentTime = 0;
         }
         lastTimestampRef.current = null;
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
         animationFrameRef.current = requestAnimationFrame(updatePlayhead);
         if (audioRef.current) {
-          audioRef.current.currentTime = currentTime;
-          audioRef.current.play().catch(() => {});
+          audioRef.current.currentTime = startTime;
+          audioRef.current.play().catch((err) => {
+            console.warn("Autoplay audio handled:", err);
+          });
         }
       } else {
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
         }
         if (audioRef.current) {
           audioRef.current.pause();
         }
       }
-      return next;
+      return willPlay;
     });
-  };
+  }, []);
 
-  const handleSeek = (time: number) => {
-    setCurrentTime(time);
+  const handleSeek = useCallback((time: number) => {
+    const clamped = Math.max(0, Math.min(playbackStateRef.current.totalDuration, time));
+    setCurrentTime(clamped);
+    lastTimestampRef.current = null;
     if (audioRef.current) {
-      audioRef.current.currentTime = time;
+      audioRef.current.currentTime = clamped;
     }
-  };
+  }, []);
+
 
   // Cleanup on unmount
   useEffect(() => {
@@ -232,11 +232,11 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
   // --- Scene Operations ---
 
-  const handleUpdateScene = async (
+  const handleUpdateSceneById = async (
+    sceneId: string,
     updates: Partial<Scene>,
     ripple: boolean = true
   ) => {
-    if (!selectedScene) return;
     try {
       const cleanUpdate: SceneUpdateInput = {
         start: updates.start,
@@ -249,10 +249,18 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         motion: updates.motion,
         transition: updates.transition,
         transition_duration: updates.transition_duration,
+        image_fit: updates.image_fit,
+        image_position: updates.image_position,
+        image_zoom: updates.image_zoom,
+        image_crop: updates.image_crop,
+        brightness: updates.brightness,
+        contrast: updates.contrast,
+        saturation: updates.saturation,
+        color_filter: updates.color_filter,
       };
       const updatedProject = await api.updateSceneTimeline(
         project.id,
-        selectedScene.id,
+        sceneId,
         cleanUpdate,
         ripple
       );
@@ -261,6 +269,14 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     } catch (err: any) {
       alert(err.message || "Failed to update scene timeline");
     }
+  };
+
+  const handleUpdateScene = async (
+    updates: Partial<Scene>,
+    ripple: boolean = true
+  ) => {
+    if (!selectedScene) return;
+    await handleUpdateSceneById(selectedScene.id, updates, ripple);
   };
 
   const handleSplitScene = async (sceneId: string, splitTime: number) => {
@@ -327,6 +343,9 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
   const handleRegenerateImage = async (sceneId: string, promptOverride?: string) => {
     try {
+      if (promptOverride !== undefined) {
+        await api.updateSceneTimeline(project.id, sceneId, { image_prompt: promptOverride }, false);
+      }
       const updatedScene = await api.generateSceneImage(project.id, sceneId, {
         force: true,
         prompt_override: promptOverride,
@@ -353,6 +372,74 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
       alert(err.message || "Failed to upload image");
     }
   };
+
+  // Global Keyboard shortcuts: Space (Play/Pause), Ctrl+Z (Undo), Ctrl+Y (Redo)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in text inputs or textareas
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const { currentTime: curTime, totalDuration: totDur, selectedSceneId: selId, scenes } = playbackStateRef.current;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleTogglePlay();
+      } else if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "z" &&
+        !e.shiftKey
+      ) {
+        e.preventDefault();
+        handleUndo();
+      } else if (
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "z")
+      ) {
+        e.preventDefault();
+        handleRedo();
+      } else if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        handleSeek(Math.max(0, curTime - step));
+      } else if (e.code === "ArrowRight") {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        handleSeek(Math.min(totDur, curTime + step));
+      } else if (e.code === "KeyS" && !e.ctrlKey && !e.metaKey) {
+        // Split current active scene at playhead
+        const activeScene = scenes.find(
+          (s) => curTime >= s.start && curTime <= s.end
+        );
+        if (
+          activeScene &&
+          curTime > activeScene.start + 0.2 &&
+          curTime < activeScene.end - 0.2
+        ) {
+          e.preventDefault();
+          handleSplitScene(activeScene.id, Number(curTime.toFixed(3)));
+        }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selId && scenes.length > 1) {
+          e.preventDefault();
+          setDeleteTargetSceneId(selId);
+        }
+      } else if (e.key === "?") {
+        e.preventDefault();
+        setIsShortcutsModalOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleUndo, handleRedo, handleTogglePlay, handleSeek, handleSplitScene]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -398,20 +485,22 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           <div style={{ display: "flex", gap: "4px" }}>
             <button
               onClick={handleUndo}
-              disabled={historyIndex <= 0}
+              disabled={!canUndo}
               title="Undo (Ctrl+Z)"
               style={{
                 padding: "6px 12px",
                 fontSize: "0.82rem",
                 fontWeight: 600,
-                background: historyIndex > 0 ? "var(--bg-surface)" : "transparent",
-                color: historyIndex > 0 ? "var(--text-primary)" : "var(--text-muted)",
+                background: canUndo ? "var(--bg-surface)" : "transparent",
+                color: canUndo ? "var(--text-primary)" : "var(--text-muted)",
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "var(--radius-sm)",
-                cursor: historyIndex > 0 ? "pointer" : "not-allowed",
+                cursor: canUndo ? "pointer" : "not-allowed",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
+                opacity: canUndo ? 1 : 0.45,
+                transition: "all 0.15s ease",
               }}
             >
               ⤺ Undo
@@ -419,22 +508,22 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
             <button
               onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
+              disabled={!canRedo}
               title="Redo (Ctrl+Y)"
               style={{
                 padding: "6px 12px",
                 fontSize: "0.82rem",
                 fontWeight: 600,
-                background:
-                  historyIndex < history.length - 1 ? "var(--bg-surface)" : "transparent",
-                color:
-                  historyIndex < history.length - 1 ? "var(--text-primary)" : "var(--text-muted)",
+                background: canRedo ? "var(--bg-surface)" : "transparent",
+                color: canRedo ? "var(--text-primary)" : "var(--text-muted)",
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "var(--radius-sm)",
-                cursor: historyIndex < history.length - 1 ? "pointer" : "not-allowed",
+                cursor: canRedo ? "pointer" : "not-allowed",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
+                opacity: canRedo ? 1 : 0.45,
+                transition: "all 0.15s ease",
               }}
             >
               ⤻ Redo
@@ -452,17 +541,20 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
           {/* Zoom Controls */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Zoom:</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>Zoom:</span>
             <button
               onClick={() => setPixelsPerSecond((prev) => Math.max(30, prev - 15))}
+              disabled={pixelsPerSecond <= 30}
+              title="Zoom Out (-15px)"
               style={{
                 background: "var(--bg-surface)",
                 border: "1px solid var(--border-subtle)",
-                color: "var(--text-secondary)",
+                color: pixelsPerSecond <= 30 ? "var(--text-muted)" : "var(--text-secondary)",
                 borderRadius: "var(--radius-sm)",
-                padding: "4px 8px",
-                cursor: "pointer",
-                fontSize: "0.8rem",
+                padding: "4px 9px",
+                cursor: pixelsPerSecond <= 30 ? "not-allowed" : "pointer",
+                fontSize: "0.82rem",
+                fontWeight: 700,
               }}
             >
               -
@@ -470,24 +562,28 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             <span
               style={{
                 fontFamily: "var(--font-mono)",
-                fontSize: "0.75rem",
+                fontSize: "0.78rem",
+                fontWeight: 600,
                 color: "var(--text-secondary)",
-                minWidth: "36px",
+                minWidth: "40px",
                 textAlign: "center",
               }}
             >
               {pixelsPerSecond}px
             </span>
             <button
-              onClick={() => setPixelsPerSecond((prev) => Math.min(140, prev + 15))}
+              onClick={() => setPixelsPerSecond((prev) => Math.min(150, prev + 15))}
+              disabled={pixelsPerSecond >= 150}
+              title="Zoom In (+15px)"
               style={{
                 background: "var(--bg-surface)",
                 border: "1px solid var(--border-subtle)",
-                color: "var(--text-secondary)",
+                color: pixelsPerSecond >= 150 ? "var(--text-muted)" : "var(--text-secondary)",
                 borderRadius: "var(--radius-sm)",
-                padding: "4px 8px",
-                cursor: "pointer",
-                fontSize: "0.8rem",
+                padding: "4px 9px",
+                cursor: pixelsPerSecond >= 150 ? "not-allowed" : "pointer",
+                fontSize: "0.82rem",
+                fontWeight: 700,
               }}
             >
               +
@@ -541,6 +637,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
               setSelectedSceneId(id);
               setActiveTab("scene");
             }}
+            onUploadImage={handleUploadImage}
             audioRef={audioRef}
           />
         </div>
@@ -653,10 +750,12 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             alignItems: "center",
             justifyContent: "space-between",
             padding: "0 4px",
+            flexWrap: "wrap",
+            gap: "8px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)" }}>
+            <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 700, margin: 0 }}>
               Interactive Visual Timeline
             </h3>
             <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
@@ -664,14 +763,113 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             </span>
           </div>
 
-          <button
-            onClick={() => setIsShortcutsModalOpen(true)}
-            className="px-2.5 py-1 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 hover:text-white text-xs flex items-center gap-1.5 transition-colors font-mono"
-            title="View keyboard shortcuts"
-          >
-            <Keyboard size={13} />
-            <span>Shortcuts (?)</span>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {/* Quick Undo / Redo */}
+            <div style={{ display: "flex", gap: "4px" }}>
+              <button
+                onClick={handleUndo}
+                disabled={!canUndo}
+                title="Undo (Ctrl+Z)"
+                style={{
+                  padding: "4px 9px",
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  background: canUndo ? "var(--bg-surface)" : "transparent",
+                  color: canUndo ? "var(--text-primary)" : "var(--text-muted)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: canUndo ? "pointer" : "not-allowed",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "2px",
+                  opacity: canUndo ? 1 : 0.4,
+                }}
+              >
+                ⤺ Undo
+              </button>
+              <button
+                onClick={handleRedo}
+                disabled={!canRedo}
+                title="Redo (Ctrl+Y)"
+                style={{
+                  padding: "4px 9px",
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  background: canRedo ? "var(--bg-surface)" : "transparent",
+                  color: canRedo ? "var(--text-primary)" : "var(--text-muted)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: canRedo ? "pointer" : "not-allowed",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "2px",
+                  opacity: canRedo ? 1 : 0.4,
+                }}
+              >
+                ⤻ Redo
+              </button>
+            </div>
+
+            {/* Quick Zoom */}
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>Zoom:</span>
+              <button
+                onClick={() => setPixelsPerSecond((prev) => Math.max(30, prev - 15))}
+                disabled={pixelsPerSecond <= 30}
+                title="Zoom Out"
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-subtle)",
+                  color: pixelsPerSecond <= 30 ? "var(--text-muted)" : "var(--text-secondary)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "2px 7px",
+                  cursor: pixelsPerSecond <= 30 ? "not-allowed" : "pointer",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                }}
+              >
+                -
+              </button>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.74rem",
+                  fontWeight: 600,
+                  color: "var(--text-secondary)",
+                  minWidth: "34px",
+                  textAlign: "center",
+                }}
+              >
+                {pixelsPerSecond}px
+              </span>
+              <button
+                onClick={() => setPixelsPerSecond((prev) => Math.min(150, prev + 15))}
+                disabled={pixelsPerSecond >= 150}
+                title="Zoom In"
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-subtle)",
+                  color: pixelsPerSecond >= 150 ? "var(--text-muted)" : "var(--text-secondary)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "2px 7px",
+                  cursor: pixelsPerSecond >= 150 ? "not-allowed" : "pointer",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                }}
+              >
+                +
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsShortcutsModalOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 hover:text-white text-xs flex items-center gap-1.5 transition-colors font-mono"
+              title="View keyboard shortcuts"
+            >
+              <Keyboard size={13} />
+              <span>Shortcuts (?)</span>
+            </button>
+          </div>
         </div>
 
         <TimelineTracks
@@ -682,6 +880,10 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           selectedSceneId={selectedSceneId}
           onSelectScene={(id) => setSelectedSceneId(id)}
           onSeek={handleSeek}
+          onUpdateSceneTimes={async (sceneId, newStart, newEnd, ripple) => {
+            await handleUpdateSceneById(sceneId, { start: newStart, end: newEnd }, ripple);
+          }}
+          onUploadImage={handleUploadImage}
         />
       </div>
 
