@@ -155,6 +155,8 @@ export interface ImageGeneratorCapabilities {
 export interface GenerateImageInput {
   force?: boolean;
   prompt_override?: string;
+  /** Art style mode: photorealistic | cinematic | anime | manga | 3d | cartoon | flat | sketch | lineart | stickfigure | documentary | watercolor */
+  style_mode?: string;
 }
 
 export interface GenerateAllImagesResponse {

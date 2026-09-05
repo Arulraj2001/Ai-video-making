@@ -55,13 +55,15 @@ async def generate_scene_image(
 
     force = request.force if request else False
     prompt_override = request.prompt_override if request else None
+    style_mode = request.style_mode if request else None
 
     try:
         updated_scene = await scene_image_service.generate_scene_image(
             project=project,
             scene_id=scene_id,
             force=force,
-            prompt_override=prompt_override
+            prompt_override=prompt_override,
+            style_mode=style_mode,
         )
         return SceneSchema.model_validate(updated_scene)
     except Exception as e:
@@ -91,11 +93,13 @@ async def generate_all_scene_images(
         )
 
     force = request.force if request else False
+    style_mode = request.style_mode if request else None
 
     try:
         updated_scenes = await scene_image_service.generate_all_scene_images(
             project=project,
-            force=force
+            force=force,
+            style_mode=style_mode,
         )
 
         completed_count = sum(1 for s in updated_scenes if s.image_status == "completed")

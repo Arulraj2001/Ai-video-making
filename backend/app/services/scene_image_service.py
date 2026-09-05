@@ -1,5 +1,6 @@
 import os
 import time
+import hashlib
 from pathlib import Path
 from typing import List, Optional, Tuple
 from datetime import datetime, timezone
@@ -40,6 +41,15 @@ class SceneImageService:
     def get_capabilities(self, provider_name: Optional[str] = None) -> ProviderCapabilities:
         generator = get_image_generator(provider_name)
         return generator.capabilities
+
+    def _derive_character_seed(self, character_name: str) -> int:
+        """
+        Derives a stable integer seed from a character name.
+        Same name always produces the same seed, giving facial/style consistency
+        across scenes when using Pollinations' ?seed= parameter.
+        """
+        digest = hashlib.md5(character_name.lower().strip().encode()).hexdigest()
+        return int(digest[:8], 16) % 999983  # prime modulo for better distribution
 
     def _resolve_scene_references(self, project: ProjectModel, prompt: str, caption: str) -> List[ImageReference]:
         """
@@ -112,11 +122,13 @@ class SceneImageService:
         scene_id: str,
         force: bool = False,
         prompt_override: Optional[str] = None,
+        style_mode: Optional[str] = None,
         generator: Optional[BaseImageGenerator] = None
     ) -> SceneModel:
         """
         Generates or regenerates an image for a single scene.
         Updates scene image status, saves image asset to disk, and persists project.
+        Supports style_mode for art style selection and character seed locking for consistency.
         """
         target_scene = next((s for s in project.scenes if s.id == scene_id), None)
         if not target_scene:
@@ -125,7 +137,7 @@ class SceneImageService:
         if not force and target_scene.image_status == "completed" and target_scene.image_url:
             return target_scene
 
-        active_generator = generator or get_image_generator()
+        active_generator = generator or get_image_generator(style_mode=style_mode)
         capabilities = active_generator.capabilities
 
         # 1. Update status to 'generating'
@@ -158,6 +170,14 @@ class SceneImageService:
                 caption=target_scene.caption
             )
 
+            # 4b. Derive character seed for consistency (Pollinations seed locking)
+            seed: Optional[int] = None
+            if references:
+                # Use the first matched character's seed for facial consistency
+                char_refs = [r for r in references if r.entity_type == "character"]
+                if char_refs:
+                    seed = self._derive_character_seed(char_refs[0].entity_name)
+
             # 5. Call ImageGenerator adapter
             if references and capabilities.supports_reference_images:
                 result = await active_generator.generate_image_with_references(
@@ -166,10 +186,29 @@ class SceneImageService:
                     options=options
                 )
             else:
-                result = await active_generator.generate_image(
-                    prompt=effective_prompt,
-                    options=options
-                )
+                # For Pollinations (no img2img), pass references as prompt enrichment via generate_image_with_references
+                if references:
+                    result = await active_generator.generate_image_with_references(
+                        prompt=effective_prompt,
+                        references=references,
+                        options=options,
+                        style_mode=style_mode,
+                        seed=seed,
+                    )
+                else:
+                    # Check if generator accepts style_mode / seed kwargs
+                    import inspect
+                    sig = inspect.signature(active_generator.generate_image)
+                    extra_kwargs = {}
+                    if "style_mode" in sig.parameters:
+                        extra_kwargs["style_mode"] = style_mode
+                    if "seed" in sig.parameters:
+                        extra_kwargs["seed"] = seed
+                    result = await active_generator.generate_image(
+                        prompt=effective_prompt,
+                        options=options,
+                        **extra_kwargs
+                    )
 
             # 6. Save image bytes to project storage
             images_dir = STORAGE_DIR / "projects" / project.id / "images"
@@ -220,13 +259,14 @@ class SceneImageService:
         self,
         project: ProjectModel,
         force: bool = False,
+        style_mode: Optional[str] = None,
         generator: Optional[BaseImageGenerator] = None
     ) -> List[SceneModel]:
         """
         Batch generates images for all scenes in a project.
         Fault-Tolerant: If one scene fails, the remaining scenes continue processing.
         """
-        active_generator = generator or get_image_generator()
+        active_generator = generator or get_image_generator(style_mode=style_mode)
         results: List[SceneModel] = []
 
         for scene in project.scenes:
@@ -235,6 +275,7 @@ class SceneImageService:
                     project=project,
                     scene_id=scene.id,
                     force=force,
+                    style_mode=style_mode,
                     generator=active_generator
                 )
                 results.append(updated)

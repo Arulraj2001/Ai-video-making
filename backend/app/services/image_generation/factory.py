@@ -4,18 +4,34 @@ from app.services.image_generation.base import BaseImageGenerator
 from app.services.image_generation.mock_generator import MockImageGenerator
 from app.services.image_generation.cloudflare_generator import CloudflareImageGenerator
 from app.services.image_generation.huggingface_generator import HuggingFaceImageGenerator
+from app.services.image_generation.pollinations_generator import PollinationsImageGenerator
 
 _cached_mock_generator: Optional[MockImageGenerator] = None
+_cached_pollinations_generator: Optional[PollinationsImageGenerator] = None
 
-def get_image_generator(provider_name: Optional[str] = None) -> BaseImageGenerator:
+def get_image_generator(
+    provider_name: Optional[str] = None,
+    style_mode: Optional[str] = None,
+) -> BaseImageGenerator:
     """
     Factory creating configured ImageGenerator instance based on environment settings or explicit override.
     Never exposes API credentials to callers.
-    """
-    global _cached_mock_generator
-    chosen_provider = (provider_name or settings.IMAGE_GENERATOR_PROVIDER or "mock").strip().lower()
 
-    if chosen_provider == "cloudflare":
+    Providers:
+      - "pollinations" : Free, no API key, FLUX.1-based (recommended default)
+      - "cloudflare"   : Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN
+      - "huggingface"  : Requires HUGGINGFACE_API_KEY
+      - "mock"         : Offline Pillow-based test cards
+    """
+    global _cached_mock_generator, _cached_pollinations_generator
+    chosen_provider = (provider_name or settings.IMAGE_GENERATOR_PROVIDER or "pollinations").strip().lower()
+
+    if chosen_provider == "pollinations":
+        # Always create fresh instance when style_mode is provided (different model per style)
+        mode = style_mode or "photorealistic"
+        return PollinationsImageGenerator(style_mode=mode)
+
+    elif chosen_provider == "cloudflare":
         account_id = settings.CLOUDFLARE_ACCOUNT_ID
         api_token = settings.CLOUDFLARE_API_TOKEN
         if not account_id or not api_token:
@@ -42,8 +58,9 @@ def get_image_generator(provider_name: Optional[str] = None) -> BaseImageGenerat
 
     else:
         raise ValueError(
-            f"Unsupported image generator provider '{chosen_provider}'. Supported: 'mock', 'cloudflare', 'huggingface'."
+            f"Unsupported image generator provider '{chosen_provider}'. Supported: 'pollinations', 'mock', 'cloudflare', 'huggingface'."
         )
 
 def get_available_providers() -> List[str]:
-    return ["mock", "cloudflare", "huggingface"]
+    return ["pollinations", "mock", "cloudflare", "huggingface"]
+

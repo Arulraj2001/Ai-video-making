@@ -45,6 +45,19 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   // Provider capabilities
   const [capabilities, setCapabilities] = useState<ImageGeneratorCapabilities | null>(null);
 
+  // Art style mode for image generation
+  const [styleMode, setStyleMode] = useState<string>("photorealistic");
+
+  const STYLE_MODES = [
+    { id: "photorealistic", label: "Photo", emoji: "📷" },
+    { id: "cinematic",      label: "Cinema", emoji: "🎬" },
+    { id: "anime",         label: "Anime", emoji: "✨" },
+    { id: "3d",            label: "3D", emoji: "🎲" },
+    { id: "cartoon",       label: "Cartoon", emoji: "🎨" },
+    { id: "stickfigure",   label: "Stick", emoji: "🖊️" },
+    { id: "sketch",        label: "Sketch", emoji: "✏️" },
+    { id: "watercolor",    label: "Watercolor", emoji: "🖌️" },
+  ];
 
   // Inline editing state
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
@@ -127,7 +140,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         )
       );
 
-      const res = await api.generateAllSceneImages(project.id, { force });
+      const res = await api.generateAllSceneImages(project.id, { force, style_mode: styleMode });
       setScenes(res.scenes);
       if (onProjectUpdated) {
         onProjectUpdated({ ...project, scenes: res.scenes });
@@ -176,7 +189,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         prev.map((s) => (s.id === sceneId ? { ...s, image_status: "generating", image_error: null } : s))
       );
 
-      const updated = await api.generateSceneImage(project.id, sceneId, { force });
+      const updated = await api.generateSceneImage(project.id, sceneId, {
+        force,
+        // Fix: send the current edited prompt to the image generator
+        prompt_override: scenes.find((s) => s.id === sceneId)?.image_prompt || undefined,
+        style_mode: styleMode,
+      });
       const nextScenes = scenes.map((s) => (s.id === sceneId ? updated : s));
       setScenes(nextScenes);
       if (onProjectUpdated) {
@@ -318,6 +336,28 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Art Style Mode Selector */}
+            <div
+              className="flex items-center gap-1.5 p-1 rounded-xl border"
+              style={{ background: "var(--bg-card-subtle)", borderColor: "var(--border-subtle)" }}
+            >
+              {STYLE_MODES.map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setStyleMode(mode.id)}
+                  title={`Art style: ${mode.label}`}
+                  className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-all"
+                  style={{
+                    background: styleMode === mode.id ? "var(--accent-primary)" : "transparent",
+                    color: styleMode === mode.id ? "#fff" : "var(--text-muted)",
+                    border: styleMode === mode.id ? "1px solid var(--accent-primary)" : "1px solid transparent",
+                  }}
+                >
+                  {mode.emoji} {mode.label}
+                </button>
+              ))}
+            </div>
+
             {/* Progress metrics */}
             <div
               className="flex items-center gap-3 px-3 py-1.5 rounded-xl border text-xs font-mono"

@@ -67,6 +67,13 @@ class RegenerateSceneRequest(BaseModel):
 class GenerateImageRequest(BaseModel):
     force: bool = Field(default=False, description="Force regenerate even if already completed")
     prompt_override: Optional[str] = Field(default=None, description="Optional custom image prompt override")
+    style_mode: Optional[str] = Field(
+        default=None,
+        description=(
+            "Art style mode for image generation. "
+            "Options: photorealistic, anime, manga, 3d, cartoon, flat, sketch, lineart, stickfigure, documentary, cinematic, watercolor"
+        )
+    )
 
 class GenerateAllImagesResponse(BaseModel):
     project_id: str
