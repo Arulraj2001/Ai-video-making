@@ -108,9 +108,9 @@ def test_mock_provider_rules_and_generation(sample_project_with_bible):
     ]
 
     for aspect_ratio, guidance in (
-        ("16:9", "landscape composition"),
-        ("9:16", "vertical mobile composition"),
-        ("1:1", "balanced square composition"),
+        ("16:9", "16:9 horizontal video frame"),
+        ("9:16", "9:16 vertical video frame"),
+        ("1:1", "1:1 square video frame"),
     ):
         visual_context = build_visual_context(
             sample_project_with_bible.video_bible,
@@ -171,17 +171,17 @@ def test_visual_style_engine_resolves_relevant_entities_and_composition(sample_p
     assert normalize_style_id("Stickman") == "stickfigure"
     assert context["style_id"] == "stickfigure"
     assert {entity["id"] for entity in context["entities"]} == {"char-001", "loc-001", "obj-001"}
-    assert "vertical mobile composition" in context["composition"]
+    assert "9:16 vertical video frame" in context["composition"]
     assert "canonical character identity: Kaelen" in prompt
     assert "canonical location identity: The Spire Underbelly" in prompt
 
     sample_project_with_bible.canvas_settings.aspect_ratio = "16:9"
     landscape_context = resolve_scene_context(sample_project_with_bible, scene, style_id="stickman")
-    assert "landscape composition" in landscape_context["composition"]
+    assert "16:9 horizontal video frame" in landscape_context["composition"]
 
     sample_project_with_bible.canvas_settings.aspect_ratio = "1:1"
     square_context = resolve_scene_context(sample_project_with_bible, scene, style_id="stickman")
-    assert "balanced square composition" in square_context["composition"]
+    assert "1:1 square video frame" in square_context["composition"]
 
     unrelated_scene = sample_project_with_bible.scenes[1]
     unrelated_scene.caption = "A quiet empty street with no named entities."

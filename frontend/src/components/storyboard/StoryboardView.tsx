@@ -345,7 +345,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     sceneId: string,
     force: boolean = false,
     overrideProvider?: string,
-    overrideModel?: string
+    overrideModel?: string,
+    promptOverride?: string
   ) => {
     const requestToken = (sceneRequestTokens.current.get(sceneId) || 0) + 1;
     sceneRequestTokens.current.set(sceneId, requestToken);
@@ -360,7 +361,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
       const updated = await api.generateSceneImage(project.id, sceneId, {
         force,
-        prompt_override: scenes.find((s) => s.id === sceneId)?.image_prompt || undefined,
+        prompt_override: promptOverride || undefined,
         style_mode: styleMode,
         provider: overrideProvider || selectedProvider,
         model_id: overrideModel || selectedModelId,

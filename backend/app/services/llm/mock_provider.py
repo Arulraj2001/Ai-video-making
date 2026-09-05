@@ -77,19 +77,15 @@ class MockLLMProvider(BaseLLMProvider):
 
         clean_caption = re.sub(r'["\']', '', caption)
         visual_description = (
-            f"Cinematic shot visualizing '{clean_caption}'. "
-            f"{char_desc.capitalize() if char_desc else 'An atmospheric narrative composition'} "
-            f"{loc_desc}{obj_desc}. The framing captures the mood and narrative tension of the moment."
+            f"Scene visualizing '{clean_caption}'. "
+            f"{char_desc.capitalize() if char_desc else 'A clear narrative composition'} "
+            f"{loc_desc}{obj_desc}. The framing captures the primary subject and key action."
         )
         if instructions:
             visual_description += f" Directed alteration: {instructions}."
 
-        # 2. Synthesize Image Prompt (10 Strict Prompt Rules Enforced)
-        prompt_parts = []
-        if style_fragment:
-            prompt_parts.append(style_fragment)
-
-        prompt_parts.append(f"Cinematic wide establishing shot: {clean_caption}")
+        # 2. Synthesize Image Prompt (Scene Action FIRST!)
+        prompt_parts = [f"Scene: {clean_caption}"]
 
         # Continuity: Characters
         if chars:
@@ -105,6 +101,9 @@ class MockLLMProvider(BaseLLMProvider):
         if objs:
             o = objs[0]
             prompt_parts.append(o.get("prompt_descriptor") or f"featuring detailed {o['name']}")
+
+        if style_fragment:
+            prompt_parts.append(style_fragment)
 
         if instructions:
             prompt_parts.append(f"stylistic modification: {instructions}")

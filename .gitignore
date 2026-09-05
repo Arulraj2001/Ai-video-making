@@ -16,6 +16,9 @@ venv/
 # Storage & Uploads
 backend/storage/projects/
 storage/
+backend/phase*_verified_images/
+backend/phase5_evaluation_report.json
+backend/scratch_*
 
 # Environment secrets
 .env
@@ -24,3 +27,4 @@ storage/
 # OS
 .DS_Store
 Thumbs.db
+

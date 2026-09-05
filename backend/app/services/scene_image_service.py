@@ -19,6 +19,17 @@ from app.services.image_generation.base import (
 )
 from app.services.image_generation.factory import get_image_generator, get_available_providers
 
+def _derive_scene_seed(project_id: str, scene_id: str, scene_text: str, iteration: int = 0) -> int:
+    """
+    Derives a deterministic, scene-specific integer seed from project ID, scene ID,
+    normalized scene meaning, and optional regeneration iteration count.
+    Ensures distinct scenes and regenerations naturally vary in pose and framing.
+    """
+    raw = f"{project_id}:{scene_id}:{scene_text.strip().lower()}:{iteration}"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) % 999983
+
+
 class SceneImageService:
     """
     Orchestrates AI image generation for storyboard scenes.
@@ -102,12 +113,17 @@ class SceneImageService:
 
     def _derive_character_seed(self, character_name: str) -> int:
         """
-        Derives a stable integer seed from a character name.
-        Same name always produces the same seed, giving facial/style consistency
-        across scenes when using Pollinations' ?seed= parameter.
+        Derives a stable integer seed from a character name (kept for backwards compatibility).
         """
         digest = hashlib.md5(character_name.lower().strip().encode()).hexdigest()
         return int(digest[:8], 16) % 999983  # prime modulo for better distribution
+
+    def _derive_scene_seed(self, project_id: str, scene_id: str, scene_text: str, iteration: int = 0) -> int:
+        """
+        Derives a deterministic, scene-specific integer seed from project ID, scene ID,
+        normalized scene meaning, and optional regeneration iteration count.
+        """
+        return _derive_scene_seed(project_id, scene_id, scene_text, iteration=iteration)
 
     def _resolve_scene_references(self, project: ProjectModel, prompt: str, caption: str) -> List[ImageReference]:
         """
@@ -240,13 +256,21 @@ class SceneImageService:
             # 4. Resolve references from the same canonical scene context.
             references = context["references"]
 
-            # 4b. Derive character seed for consistency (Pollinations seed locking)
-            seed: Optional[int] = None
-            if references and capabilities.supports_seed:
-                # Use the first matched character's seed for facial consistency
-                char_refs = [r for r in references if r.entity_type == "character"]
-                if char_refs:
-                    seed = self._derive_character_seed(char_refs[0].entity_name)
+            # 4b. Derive deterministic scene-level seed (with regeneration variation)
+            regeneration_count = 0
+            if target_scene.image_metadata and isinstance(target_scene.image_metadata, dict):
+                regeneration_count = target_scene.image_metadata.get("regeneration_count", 0)
+            if force:
+                regeneration_count += 1
+
+            seed = self._derive_scene_seed(
+                project_id=project.id,
+                scene_id=scene_id,
+                scene_text=target_scene.caption or target_scene.visual_description or scene_id,
+                iteration=regeneration_count,
+            )
+            if capabilities.supports_seed:
+                options.seed = seed
 
             # 5. Call the provider through the capability-aware context path.
             result = await self._generate_with_context(
@@ -288,6 +312,12 @@ class SceneImageService:
             metadata["reference_mode"] = "image" if references and capabilities.supports_reference_images else ("text" if references else "none")
             metadata["continuity_scene_id"] = context.get("previous_scene_id")
             metadata["prompt_hash"] = hashlib.sha256(effective_prompt.encode("utf-8")).hexdigest()[:16]
+            metadata["raw_caption"] = target_scene.caption
+            metadata["resolved_scene_meaning"] = context.get("visual_description") or target_scene.caption
+            metadata["final_prompt"] = effective_prompt
+            metadata["regeneration_count"] = regeneration_count
+            if seed is not None:
+                metadata["seed"] = seed
 
             # 7. Update scene to 'completed'
             updated_scene = project_service.update_scene_image_state(
@@ -427,17 +457,26 @@ class SceneImageService:
             aspect_ratio=aspect_ratio,
             width=width,
             height=height,
-            negative_prompt="text, watermark, logo, bad quality, blurry"
+            negative_prompt="text, watermark, logo, bad quality, blurry, artifact"
         )
 
-        variations = []
-        base_seed = random.randint(1000, 999999)
+        variation_directives = [
+            ("A", "Medium framing focusing on the primary subject and key action at eye level while preserving identity and style"),
+            ("B", "Dynamic wide establishing framing showing the complete subject within the environment while preserving identity and style"),
+            ("C", "Expressive close-up detail framing highlighting the subject's expression, hands, and focal objects while preserving identity and style"),
+        ]
 
-        for i in range(count):
-            var_seed = base_seed + i * 137
+        variations = []
+        scene_text = target_scene.caption or target_scene.visual_description or scene_id
+
+        for i in range(min(count, len(variation_directives))):
+            var_label, framing_directive = variation_directives[i]
+            var_seed = self._derive_scene_seed(project.id, scene_id, scene_text, iteration=i + 1)
+            var_prompt = f"{effective_prompt} Composition: {framing_directive}."
+
             gen_result = await self._generate_with_context(
                 generator=active_generator,
-                prompt=f"{effective_prompt} Variation {i + 1}: use a distinct shot size or camera angle while preserving identity.",
+                prompt=var_prompt,
                 references=references,
                 options=options,
                 style_mode=style_mode,
@@ -446,9 +485,9 @@ class SceneImageService:
             img_bytes = gen_result.image_bytes
 
             # Save variation
-            timestamp = int(time.time())
+            timestamp = int(time.time() * 1000)
             extension = "png" if "png" in gen_result.content_type else "jpg"
-            filename = f"{scene_id}_var_{i+1}_{timestamp}.{extension}"
+            filename = f"{scene_id}_var_{var_label}_{timestamp}.{extension}"
             storage_path, image_url = project_service.save_scene_image_asset(
                 project_id=project.id,
                 scene_id=scene_id,
@@ -458,6 +497,8 @@ class SceneImageService:
 
             variation_metadata = dict(gen_result.metadata or {})
             variation_metadata.update({
+                "variation_label": f"Variation {var_label}",
+                "framing": framing_directive,
                 "style_id": context["style_id"],
                 "aspect_ratio": aspect_ratio,
                 "width": width,
@@ -467,9 +508,9 @@ class SceneImageService:
                 "reference_mode": "image" if references and active_generator.capabilities.supports_reference_images else ("text" if references else "none"),
             })
             variations.append({
-                "id": f"var-{i+1}",
+                "id": f"var-{var_label}",
                 "image_url": image_url,
-                "prompt": effective_prompt,
+                "prompt": var_prompt,
                 "seed": var_seed,
                 "metadata": variation_metadata,
             })

@@ -16,19 +16,41 @@ def build_visual_context(
     rules_str = ", ".join(video_bible.rules) if video_bible.rules else "None"
 
     # 1. Synthesize style prompt fragment
+    label = style.visual_style if (preset.id == "custom" and style.visual_style) else preset.label
     style_fragments = [
-        f"Visual Style: {style.visual_style}",
-        f"Realism: {style.realism_level}",
-        f"Lighting: {style.lighting}",
-        f"Color Treatment: {style.color_treatment}",
-        f"Camera: {style.camera_style}",
-        f"Lens & Cinematography: {style.lens_cinematography}",
-        f"Mood: {style.mood}",
-        f"Normalized Style Preset: {preset.label}",
+        f"Visual Style: {label}",
         f"Style Language: {preset.visual_language}; Rendering: {preset.rendering}; Texture: {preset.texture}; Background: {preset.background}",
-        f"Composition Guidance ({aspect_ratio}): {composition_guidance(aspect_ratio)}",
-        f"Visual Directives: {rules_str}"
     ]
+    # Only include photographic camera/lens details if the style is photographic
+    if preset.id not in ("stickfigure", "whiteboard", "cartoon", "flat", "sketch", "anime", "3d"):
+        if style.realism_level:
+            style_fragments.append(f"Realism: {style.realism_level}")
+        if style.lighting:
+            style_fragments.append(f"Lighting: {style.lighting}")
+        if style.color_treatment:
+            style_fragments.append(f"Color Treatment: {style.color_treatment}")
+        if style.camera_style:
+            style_fragments.append(f"Camera: {style.camera_style}")
+        if style.lens_cinematography:
+            style_fragments.append(f"Lens & Cinematography: {style.lens_cinematography}")
+        if style.mood:
+            style_fragments.append(f"Mood: {style.mood}")
+    else:
+        style_fragments.append(f"Lighting: {preset.lighting}")
+        style_fragments.append(f"Camera: {preset.camera}")
+        style_fragments.append(f"Color Treatment: {preset.color_treatment}")
+
+    style_fragments.append(f"Composition Guidance ({aspect_ratio}): {composition_guidance(aspect_ratio)}")
+
+    # Filter contradictory rules for non-photographic styles
+    raw_rules = list(video_bible.rules or [])
+    if preset.id in ("stickfigure", "whiteboard", "cartoon", "flat", "sketch", "anime", "3d"):
+        from app.services.visual_style_engine import _PHOTOGRAPHIC_CONFLICT_RULES
+        filtered_rules = [r for r in raw_rules if r.strip().lower() not in _PHOTOGRAPHIC_CONFLICT_RULES]
+    else:
+        filtered_rules = raw_rules
+    rules_str = ", ".join(filtered_rules) if filtered_rules else "None"
+    style_fragments.append(f"Visual Directives: {rules_str}")
     style_prompt_fragment = ". ".join(style_fragments) + "."
 
     # 2. Build characters catalog
