@@ -429,6 +429,9 @@ class RenderService:
         job = self._jobs.get(job_id)
         if not job:
             return
+        if job.status in ("processing", "completed"):
+            return
+        job.status = "processing"
 
         project = project_service.get_project(job.project_id)
         if not project:

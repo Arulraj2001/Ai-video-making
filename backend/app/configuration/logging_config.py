@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from app.utils.security import sanitize_secrets
 
 class SensitiveDataFilter(logging.Filter):
     """
@@ -17,6 +18,9 @@ class SensitiveDataFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.msg, str):
+            # 1. Regex scrubbing for unknown keys, Bearer tokens, headers
+            record.msg = sanitize_secrets(record.msg)
+            # 2. Known static environment secret replacement
             for secret in self._secrets:
                 if secret in record.msg:
                     record.msg = record.msg.replace(secret, "[REDACTED_SECRET]")
@@ -25,6 +29,7 @@ class SensitiveDataFilter(logging.Filter):
                 cleaned = {}
                 for k, v in record.args.items():
                     if isinstance(v, str):
+                        v = sanitize_secrets(v)
                         for secret in self._secrets:
                             v = v.replace(secret, "[REDACTED_SECRET]")
                     cleaned[k] = v
@@ -33,6 +38,7 @@ class SensitiveDataFilter(logging.Filter):
                 cleaned_args = []
                 for arg in record.args:
                     if isinstance(arg, str):
+                        arg = sanitize_secrets(arg)
                         for secret in self._secrets:
                             arg = arg.replace(secret, "[REDACTED_SECRET]")
                     cleaned_args.append(arg)

@@ -34,7 +34,7 @@ class StoryboardService:
         if not project.scenes:
             raise ValidationError("Cannot generate storyboard: Project has no parsed scenes.")
 
-        provider = llm_provider or get_llm_provider()
+        provider = llm_provider or get_llm_provider(user_id=project.owner_id)
         ratio = aspect_ratio or project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO
 
         # 1. Build normalized visual context from project Video Bible
@@ -70,12 +70,17 @@ class StoryboardService:
             f"using provider '{provider.provider_name}'."
         )
 
-        # 3. Call LLM provider
-        generated_scenes_meta = await provider.generate_storyboard_scenes(
-            scenes=scenes_input,
-            visual_context=visual_context,
-            aspect_ratio=ratio
-        )
+        # 3. Call LLM provider with server-side usage reservation
+        from app.services.usage import get_usage_service
+        usage_svc = get_usage_service()
+        uid = project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
+
+        async with usage_svc.reserve(uid=uid, provider=provider.provider_name):
+            generated_scenes_meta = await provider.generate_storyboard_scenes(
+                scenes=scenes_input,
+                visual_context=visual_context,
+                aspect_ratio=ratio
+            )
 
         # 4. Map generated metadata back to project scenes
         meta_by_id = {item["id"]: item for item in generated_scenes_meta if "id" in item}

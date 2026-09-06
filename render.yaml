@@ -1,24 +1,43 @@
 services:
   - type: web
-    name: ai-video-maker-backend
+    name: scenoraedits-backend
     runtime: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend
-    healthCheckPath: /healthz
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: ENVIRONMENT
         value: production
+      - key: HOST
+        value: 0.0.0.0
       - key: LOG_LEVEL
         value: INFO
       - key: CORS_ORIGINS
-        value: https://ai-video-maker.netlify.app,http://localhost:5173
-      - key: CORS_ORIGIN_REGEX
-        value: https://.*\.netlify\.app
+        value: '["https://scenoraedits.web.app","https://scenoraedits.firebaseapp.com"]'
+      - key: ADMIN_EMAILS
+        value: '["sridharparthasarathy2002@gmail.com","samuelarul2001@gmail.com"]'
       - key: DEFAULT_ASPECT_RATIO
         value: 16:9
       - key: LLM_PROVIDER
-        value: mock
+        value: openrouter
       - key: IMAGE_GENERATOR_PROVIDER
-        value: mock
+        value: pollinations
+      - key: CREDENTIAL_VAULT_BACKEND
+        value: firestore
+      - key: PAYMENTS_STORAGE_BACKEND
+        value: firestore
+      - key: USAGE_STORAGE_BACKEND
+        value: firestore
+      - key: FIREBASE_PROJECT_ID
+        value: scenoraedits
+      - key: FIREBASE_STORAGE_BUCKET
+        value: scenoraedits.firebasestorage.app
+      - key: SCENORA_CREDENTIAL_ENCRYPTION_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false

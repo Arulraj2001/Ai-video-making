@@ -6,11 +6,13 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
 from app.configuration.config import settings
 from app.models.project import ProjectModel
 from app.models.scene import SceneModel
 from app.services.project_service import project_service, STORAGE_DIR
 from app.services.visual_style_engine import build_scene_prompt, resolve_scene_context
+from app.services.usage import get_usage_service, UsageLimitExceededError
 from app.services.image_generation.base import (
     BaseImageGenerator,
     ImageGenerationOptions,
@@ -199,7 +201,8 @@ class SceneImageService:
         style_mode: Optional[str] = None,
         provider_name: Optional[str] = None,
         model_name: Optional[str] = None,
-        generator: Optional[BaseImageGenerator] = None
+        generator: Optional[BaseImageGenerator] = None,
+        user_id: Optional[str] = None,
     ) -> SceneModel:
         """
         Generates or regenerates an image for a single scene.
@@ -213,150 +216,159 @@ class SceneImageService:
         if not force and target_scene.image_status == "completed" and target_scene.image_url:
             return target_scene
 
+        effective_uid = user_id or project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
         active_generator = generator or get_image_generator(
             provider_name=provider_name,
             model_name=model_name,
-            style_mode=style_mode
+            style_mode=style_mode,
+            user_id=effective_uid,
         )
         capabilities = active_generator.capabilities
 
-
         request_started_at = time.time()
+        usage_svc = get_usage_service()
 
-        # 1. Update status to 'generating'
-        project_service.update_scene_image_state(
-            project_id=project.id,
-            scene_id=scene_id,
-            status="generating",
-            error=None
-        )
-
-        try:
-            # 2. Resolve canonical style, relevant entities, and continuity context.
-            context = resolve_scene_context(
-                project=project,
-                scene=target_scene,
-                style_id=style_mode,
-                custom_instructions=prompt_override,
-                previous_scene=self._previous_scene(project, scene_id),
-            )
-            source_prompt = prompt_override or target_scene.image_prompt or target_scene.caption or "Cinematic scene"
-            effective_prompt = build_scene_prompt(context, source_prompt)
-
-            # 3. Determine aspect ratio and dimensions
-            aspect_ratio = project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO or "16:9"
-            self._validate_aspect_ratio(aspect_ratio, capabilities)
-            width, height = self.get_dimensions_for_aspect_ratio(aspect_ratio)
-
-            options = ImageGenerationOptions(
-                aspect_ratio=aspect_ratio,
-                width=width,
-                height=height,
-                negative_prompt="text, watermark, logo, bad quality, blurry, artifact"
-            )
-
-            # 4. Resolve references from the same canonical scene context.
-            references = context["references"]
-
-            # 4b. Derive deterministic scene-level seed (with regeneration variation)
-            regeneration_count = 0
-            if target_scene.image_metadata and isinstance(target_scene.image_metadata, dict):
-                regeneration_count = target_scene.image_metadata.get("regeneration_count", 0)
-            if force:
-                regeneration_count += 1
-
-            seed = self._derive_scene_seed(
+        # 1. Server-side usage quota reservation (Atomic check & pre-reserve)
+        async with usage_svc.reserve(uid=effective_uid, provider=capabilities.provider_name):
+            # 2. Update status to 'generating'
+            project_service.update_scene_image_state(
                 project_id=project.id,
                 scene_id=scene_id,
-                scene_text=target_scene.caption or target_scene.visual_description or scene_id,
-                iteration=regeneration_count,
-            )
-            if capabilities.supports_seed:
-                options.seed = seed
-
-            # 5. Call the provider through the capability-aware context path.
-            result = await self._generate_with_context(
-                generator=active_generator,
-                prompt=effective_prompt,
-                references=references,
-                options=options,
-                style_mode=style_mode,
-                seed=seed,
+                status="generating",
+                error=None
             )
 
-            # 6. Save image bytes to project storage
-            images_dir = STORAGE_DIR / "projects" / project.id / "images"
-            images_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                # 3. Resolve canonical style, relevant entities, and continuity context.
+                context = resolve_scene_context(
+                    project=project,
+                    scene=target_scene,
+                    style_id=style_mode,
+                    custom_instructions=prompt_override,
+                    previous_scene=self._previous_scene(project, scene_id),
+                )
+                source_prompt = prompt_override or target_scene.image_prompt or target_scene.caption or "Cinematic scene"
+                effective_prompt = build_scene_prompt(context, source_prompt)
 
-            timestamp = int(time.time() * 1000)
-            ext = "png" if "png" in result.content_type else "jpg"
-            filename = f"scene_{scene_id}_{timestamp}.{ext}"
-            file_path = images_dir / filename
+                # 4. Determine aspect ratio and dimensions
+                aspect_ratio = project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO or "16:9"
+                self._validate_aspect_ratio(aspect_ratio, capabilities)
+                width, height = self.get_dimensions_for_aspect_ratio(aspect_ratio)
 
-            with open(file_path, "wb") as f:
-                f.write(result.image_bytes)
+                options = ImageGenerationOptions(
+                    aspect_ratio=aspect_ratio,
+                    width=width,
+                    height=height,
+                    negative_prompt="text, watermark, logo, bad quality, blurry, artifact"
+                )
 
-            relative_path = f"storage/projects/{project.id}/images/{filename}"
-            public_url = f"/media/{project.id}/images/{filename}"
+                # 5. Resolve references from the same canonical scene context.
+                references = context["references"]
 
-            metadata = result.metadata or {}
-            metadata = dict(metadata)
-            metadata["filename"] = filename
-            metadata["file_size"] = len(result.image_bytes)
-            metadata["aspect_ratio"] = aspect_ratio
-            metadata["width"] = width
-            metadata["height"] = height
-            metadata["generated_at"] = datetime.now(timezone.utc).isoformat()
-            metadata["style_id"] = context["style_id"]
-            metadata["style_label"] = context["style"].label
-            metadata["reference_entities"] = [entity["id"] for entity in context["entities"]]
-            metadata["references_used"] = [reference.entity_name for reference in references]
-            metadata["reference_mode"] = "image" if references and capabilities.supports_reference_images else ("text" if references else "none")
-            metadata["continuity_scene_id"] = context.get("previous_scene_id")
-            metadata["prompt_hash"] = hashlib.sha256(effective_prompt.encode("utf-8")).hexdigest()[:16]
-            metadata["raw_caption"] = target_scene.caption
-            metadata["resolved_scene_meaning"] = context.get("visual_description") or target_scene.caption
-            metadata["final_prompt"] = effective_prompt
-            metadata["regeneration_count"] = regeneration_count
-            metadata["gen_started_at"] = request_started_at
-            metadata["gen_completed_at"] = time.time()
-            if seed is not None:
-                metadata["seed"] = seed
+                # 5b. Derive deterministic scene-level seed (with regeneration variation)
+                regeneration_count = 0
+                if target_scene.image_metadata and isinstance(target_scene.image_metadata, dict):
+                    regeneration_count = target_scene.image_metadata.get("regeneration_count", 0)
+                if force:
+                    regeneration_count += 1
 
-            # 7. Update scene to 'completed'
-            updated_scene = project_service.update_scene_image_state(
-                project_id=project.id,
-                scene_id=scene_id,
-                status="completed",
-                url=public_url,
-                path=relative_path,
-                error=None,
-                metadata=metadata
-            )
-            return updated_scene
+                seed = self._derive_scene_seed(
+                    project_id=project.id,
+                    scene_id=scene_id,
+                    scene_text=target_scene.caption or target_scene.visual_description or scene_id,
+                    iteration=regeneration_count,
+                )
+                if capabilities.supports_seed:
+                    options.seed = seed
 
-        except Exception as e:
-            err_msg = str(e) or "Unknown image generation failure"
-            updated_scene = project_service.update_scene_image_state(
-                project_id=project.id,
-                scene_id=scene_id,
-                status="failed",
-                error=err_msg
-            )
-            raise RuntimeError(f"Scene {scene_id} image generation failed: {err_msg}")
+                # 6. Call the provider through the capability-aware context path
+                result = await self._generate_with_context(
+                    generator=active_generator,
+                    prompt=effective_prompt,
+                    references=references,
+                    options=options,
+                    style_mode=style_mode,
+                    seed=seed,
+                )
+
+                # 7. Save image bytes to project storage
+                images_dir = STORAGE_DIR / "projects" / project.id / "images"
+                images_dir.mkdir(parents=True, exist_ok=True)
+
+                timestamp = int(time.time() * 1000)
+                ext = "png" if "png" in result.content_type else "jpg"
+                filename = f"scene_{scene_id}_{timestamp}.{ext}"
+                file_path = images_dir / filename
+
+                with open(file_path, "wb") as f:
+                    f.write(result.image_bytes)
+
+                relative_path = f"storage/projects/{project.id}/images/{filename}"
+                public_url = f"/media/{project.id}/images/{filename}"
+
+                metadata = result.metadata or {}
+                metadata = dict(metadata)
+                metadata["filename"] = filename
+                metadata["file_size"] = len(result.image_bytes)
+                metadata["aspect_ratio"] = aspect_ratio
+                metadata["width"] = width
+                metadata["height"] = height
+                metadata["generated_at"] = datetime.now(timezone.utc).isoformat()
+                metadata["style_id"] = context["style_id"]
+                metadata["style_label"] = context["style"].label
+                metadata["reference_entities"] = [entity["id"] for entity in context["entities"]]
+                metadata["references_used"] = [reference.entity_name for reference in references]
+                metadata["reference_mode"] = "image" if references and capabilities.supports_reference_images else ("text" if references else "none")
+                metadata["continuity_scene_id"] = context.get("previous_scene_id")
+                metadata["prompt_hash"] = hashlib.sha256(effective_prompt.encode("utf-8")).hexdigest()[:16]
+                metadata["raw_caption"] = target_scene.caption
+                metadata["resolved_scene_meaning"] = context.get("visual_description") or target_scene.caption
+                metadata["final_prompt"] = effective_prompt
+                metadata["regeneration_count"] = regeneration_count
+                metadata["gen_started_at"] = request_started_at
+                metadata["gen_completed_at"] = time.time()
+                if seed is not None:
+                    metadata["seed"] = seed
+
+                # 8. Update scene to 'completed'
+                updated_scene = project_service.update_scene_image_state(
+                    project_id=project.id,
+                    scene_id=scene_id,
+                    status="completed",
+                    url=public_url,
+                    path=relative_path,
+                    error=None,
+                    metadata=metadata
+                )
+                return updated_scene
+
+            except (UsageLimitExceededError, HTTPException):
+                raise
+            except Exception as e:
+                from app.utils.security import sanitize_secrets
+                err_msg = sanitize_secrets(str(e)) or "Unknown image generation failure"
+                updated_scene = project_service.update_scene_image_state(
+                    project_id=project.id,
+                    scene_id=scene_id,
+                    status="failed",
+                    error=err_msg
+                )
+                raise RuntimeError(f"Scene {scene_id} image generation failed: {err_msg}")
 
     async def generate_all_scene_images(
         self,
         project: ProjectModel,
         force: bool = False,
         style_mode: Optional[str] = None,
-        generator: Optional[BaseImageGenerator] = None
+        generator: Optional[BaseImageGenerator] = None,
+        user_id: Optional[str] = None,
     ) -> List[SceneModel]:
         """
         Batch generates images for all scenes in a project.
         Fault-Tolerant: If one scene fails, the remaining scenes continue processing.
         """
-        active_generator = generator or get_image_generator(style_mode=style_mode)
+        effective_uid = user_id or project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
+        active_generator = generator or get_image_generator(style_mode=style_mode, user_id=effective_uid)
         results: List[SceneModel] = []
 
         for scene in project.scenes:
@@ -366,7 +378,8 @@ class SceneImageService:
                     scene_id=scene.id,
                     force=force,
                     style_mode=style_mode,
-                    generator=active_generator
+                    generator=active_generator,
+                    user_id=effective_uid,
                 )
                 results.append(updated)
             except Exception as e:
@@ -383,15 +396,18 @@ class SceneImageService:
         style_mode: Optional[str] = None,
         provider_name: Optional[str] = None,
         model_name: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> List[SceneModel]:
         """
         Retries generation only for scenes that previously failed or are missing images,
         strictly preserving all already-successful scene images.
         """
+        effective_uid = user_id or project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
         active_generator = generator or get_image_generator(
             provider_name=provider_name,
             model_name=model_name,
             style_mode=style_mode,
+            user_id=effective_uid,
         )
         results: List[SceneModel] = []
 
@@ -409,7 +425,8 @@ class SceneImageService:
                     style_mode=style_mode,
                     provider_name=provider_name,
                     model_name=model_name,
-                    generator=active_generator
+                    generator=active_generator,
+                    user_id=effective_uid,
                 )
                 results.append(updated)
             except Exception:
@@ -425,7 +442,8 @@ class SceneImageService:
         count: int = 3,
         style_mode: Optional[str] = None,
         provider_name: Optional[str] = None,
-        model_name: Optional[str] = None
+        model_name: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> List[dict]:
         """
         Generates N candidate image variations with varying seeds for creator A/B selection.
@@ -436,10 +454,12 @@ class SceneImageService:
         if not target_scene:
             raise ValueError(f"Scene '{scene_id}' not found in project '{project.id}'")
 
+        effective_uid = user_id or project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
         active_generator = get_image_generator(
             provider_name=provider_name,
             model_name=model_name,
-            style_mode=style_mode
+            style_mode=style_mode,
+            user_id=effective_uid,
         )
 
         context = resolve_scene_context(
@@ -473,51 +493,53 @@ class SceneImageService:
         variations = []
         scene_text = target_scene.caption or target_scene.visual_description or scene_id
 
-        for i in range(min(count, len(variation_directives))):
-            var_label, framing_directive = variation_directives[i]
-            var_seed = self._derive_scene_seed(project.id, scene_id, scene_text, iteration=i + 1)
-            var_prompt = f"{effective_prompt} Composition: {framing_directive}."
+        usage_svc = get_usage_service()
+        async with usage_svc.reserve(uid=effective_uid, provider=active_generator.capabilities.provider_name):
+            for i in range(min(count, len(variation_directives))):
+                var_label, framing_directive = variation_directives[i]
+                var_seed = self._derive_scene_seed(project.id, scene_id, scene_text, iteration=i + 1)
+                var_prompt = f"{effective_prompt} Composition: {framing_directive}."
 
-            gen_result = await self._generate_with_context(
-                generator=active_generator,
-                prompt=var_prompt,
-                references=references,
-                options=options,
-                style_mode=style_mode,
-                seed=var_seed,
-            )
-            img_bytes = gen_result.image_bytes
+                gen_result = await self._generate_with_context(
+                    generator=active_generator,
+                    prompt=var_prompt,
+                    references=references,
+                    options=options,
+                    style_mode=style_mode,
+                    seed=var_seed,
+                )
+                img_bytes = gen_result.image_bytes
 
-            # Save variation
-            timestamp = int(time.time() * 1000)
-            extension = "png" if "png" in gen_result.content_type else "jpg"
-            filename = f"{scene_id}_var_{var_label}_{timestamp}.{extension}"
-            storage_path, image_url = project_service.save_scene_image_asset(
-                project_id=project.id,
-                scene_id=scene_id,
-                image_bytes=img_bytes,
-                filename=filename
-            )
+                # Save variation
+                timestamp = int(time.time() * 1000)
+                extension = "png" if "png" in gen_result.content_type else "jpg"
+                filename = f"{scene_id}_var_{var_label}_{timestamp}.{extension}"
+                storage_path, image_url = project_service.save_scene_image_asset(
+                    project_id=project.id,
+                    scene_id=scene_id,
+                    image_bytes=img_bytes,
+                    filename=filename
+                )
 
-            variation_metadata = dict(gen_result.metadata or {})
-            variation_metadata.update({
-                "variation_label": f"Variation {var_label}",
-                "framing": framing_directive,
-                "style_id": context["style_id"],
-                "aspect_ratio": aspect_ratio,
-                "width": width,
-                "height": height,
-                "seed": var_seed,
-                "reference_entities": [entity["id"] for entity in context["entities"]],
-                "reference_mode": "image" if references and active_generator.capabilities.supports_reference_images else ("text" if references else "none"),
-            })
-            variations.append({
-                "id": f"var-{var_label}",
-                "image_url": image_url,
-                "prompt": var_prompt,
-                "seed": var_seed,
-                "metadata": variation_metadata,
-            })
+                variation_metadata = dict(gen_result.metadata or {})
+                variation_metadata.update({
+                    "variation_label": f"Variation {var_label}",
+                    "framing": framing_directive,
+                    "style_id": context["style_id"],
+                    "aspect_ratio": aspect_ratio,
+                    "width": width,
+                    "height": height,
+                    "seed": var_seed,
+                    "reference_entities": [entity["id"] for entity in context["entities"]],
+                    "reference_mode": "image" if references and active_generator.capabilities.supports_reference_images else ("text" if references else "none"),
+                })
+                variations.append({
+                    "id": f"var-{var_label}",
+                    "image_url": image_url,
+                    "prompt": var_prompt,
+                    "seed": var_seed,
+                    "metadata": variation_metadata,
+                })
 
         return variations
 

@@ -243,5 +243,6 @@ class ProjectResponse(BaseModel):
     caption_settings: Optional[CaptionSettingsSchema] = None
     audio_settings: Optional[AudioSettingsSchema] = None
     canvas_settings: Optional[CanvasSettingsSchema] = None
+    owner_id: Optional[str] = None
     created_at: str
     updated_at: str

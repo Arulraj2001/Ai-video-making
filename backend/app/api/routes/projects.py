@@ -1,6 +1,6 @@
 import json
 from typing import List, Optional
-from fastapi import APIRouter, UploadFile, File, Form, Body, Request, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Form, Body, Request, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from app.schemas.project import (
     ProjectCreate,
@@ -19,6 +19,7 @@ from app.services.project_service import project_service
 from app.services.caption_parser import parse_and_validate_captions
 from app.utils.errors import NotFoundException
 from app.api.routes.video_bible import _serialize_bible
+from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -84,6 +85,7 @@ def _to_project_response(p) -> ProjectResponse:
         id=p.id,
         name=p.name,
         description=p.description,
+        owner_id=getattr(p, "owner_id", None),
         audio_file=audio,
         raw_captions=p.raw_captions,
         scenes=scenes,
@@ -96,15 +98,15 @@ def _to_project_response(p) -> ProjectResponse:
     )
 
 @router.get("", response_model=List[ProjectResponse])
-def list_projects():
-    """Returns list of active projects."""
-    projects = project_service.list_projects()
+def list_projects(current_user: AuthenticatedUser = Depends(get_current_user)):
+    """Returns list of active projects for the current creator."""
+    projects = project_service.list_projects(owner_id=current_user.uid)
     return [_to_project_response(p) for p in projects]
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-def create_project(data: ProjectCreate):
-    """Creates a new project in the workspace."""
-    p = project_service.create_project(data)
+def create_project(data: ProjectCreate, current_user: AuthenticatedUser = Depends(get_current_user)):
+    """Creates a new project owned by the current creator."""
+    p = project_service.create_project(data, owner_id=current_user.uid)
     return _to_project_response(p)
 
 @router.post("/parse-captions", response_model=ParseCaptionsResponse)
@@ -135,7 +137,8 @@ async def import_project(
     name: str = Form(...),
     description: Optional[str] = Form(""),
     raw_captions: str = Form(...),
-    audio_file: Optional[UploadFile] = File(None)
+    audio_file: Optional[UploadFile] = File(None),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Creates a new project by parsing Clipchamp captions into Master Timeline scenes
@@ -148,8 +151,8 @@ async def import_project(
             detail={"message": "Caption validation failed", "errors": parse_result.errors}
         )
 
-    # Create project
-    proj = project_service.create_project(ProjectCreate(name=name, description=description or ""))
+    # Create project owned by current creator
+    proj = project_service.create_project(ProjectCreate(name=name, description=description or ""), owner_id=current_user.uid)
     
     # Save audio if uploaded
     if audio_file:
@@ -159,10 +162,11 @@ async def import_project(
                 project_id=proj.id,
                 filename=audio_file.filename or "audio.mp3",
                 content=content,
-                content_type=audio_file.content_type or "audio/mpeg"
+                content_type=audio_file.content_type or "audio/mpeg",
+                owner_id=current_user.uid
             )
         except ValueError as e:
-            project_service.delete_project(proj.id)
+            project_service.delete_project(proj.id, owner_id=current_user.uid)
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Set parsed scenes
@@ -170,17 +174,21 @@ async def import_project(
     return _to_project_response(proj)
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-def get_project(project_id: str):
-    """Retrieves single project by ID."""
-    p = project_service.get_project(project_id)
+def get_project(project_id: str, current_user: AuthenticatedUser = Depends(get_current_user)):
+    """Retrieves single project by ID with creator isolation."""
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
     return _to_project_response(p)
 
 @router.post("/{project_id}/audio", response_model=ProjectResponse)
-async def upload_project_audio(project_id: str, audio_file: UploadFile = File(...)):
+async def upload_project_audio(
+    project_id: str,
+    audio_file: UploadFile = File(...),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Uploads or replaces audio file for an existing project."""
-    p = project_service.get_project(project_id)
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
 
@@ -190,17 +198,18 @@ async def upload_project_audio(project_id: str, audio_file: UploadFile = File(..
             project_id=project_id,
             filename=audio_file.filename or "audio.mp3",
             content=content,
-            content_type=audio_file.content_type or "audio/mpeg"
+            content_type=audio_file.content_type or "audio/mpeg",
+            owner_id=current_user.uid
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    return _to_project_response(project_service.get_project(project_id))
+    return _to_project_response(project_service.get_project(project_id, owner_id=current_user.uid))
 
 @router.delete("/{project_id}/audio", response_model=ProjectResponse)
-def delete_project_audio(project_id: str):
+def delete_project_audio(project_id: str, current_user: AuthenticatedUser = Depends(get_current_user)):
     """Removes narration audio file from the project."""
-    p = project_service.get_project(project_id)
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
 
@@ -208,9 +217,13 @@ def delete_project_audio(project_id: str):
     return _to_project_response(updated)
 
 @router.post("/{project_id}/captions", response_model=ProjectResponse)
-def update_project_captions(project_id: str, req: ParseCaptionsRequest):
+def update_project_captions(
+    project_id: str,
+    req: ParseCaptionsRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Parses and updates scenes from raw captions for an existing project."""
-    p = project_service.get_project(project_id)
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
 
@@ -225,8 +238,17 @@ def update_project_captions(project_id: str, req: ParseCaptionsRequest):
     return _to_project_response(updated)
 
 @router.put("/{project_id}/scenes/{scene_id}", response_model=SceneSchema)
-def update_scene(project_id: str, scene_id: str, update: SceneUpdate):
+def update_scene(
+    project_id: str,
+    scene_id: str,
+    update: SceneUpdate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Updates a single scene's start, end, or caption with timeline validation."""
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not p:
+        raise NotFoundException("Project", project_id)
+
     try:
         scene = project_service.update_scene(project_id, scene_id, update)
         return SceneSchema.model_validate(scene)
@@ -234,21 +256,33 @@ def update_scene(project_id: str, scene_id: str, update: SceneUpdate):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_id: str):
-    """Deletes project by ID."""
-    deleted = project_service.delete_project(project_id)
+def delete_project(project_id: str, current_user: AuthenticatedUser = Depends(get_current_user)):
+    """Deletes project by ID with creator ownership verification."""
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not p:
+        raise NotFoundException("Project", project_id)
+
+    deleted = project_service.delete_project(project_id, owner_id=current_user.uid)
     if not deleted:
         raise NotFoundException("Project", project_id)
     return None
 
 @router.put("/{project_id}/settings", response_model=ProjectResponse)
-def update_project_settings(project_id: str, settings: ProjectSettingsUpdate):
+def update_project_settings(
+    project_id: str,
+    settings: ProjectSettingsUpdate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """
     Updates pre-export editing configurations:
     - Caption Settings (enabled, font, size, position, alignment, background, outline/shadow, safe area, color)
     - Audio Settings (narration volume/mute, music volume/fade in/fade out/mute)
     - Canvas Settings (aspect ratio, resolution, fps)
     """
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not p:
+        raise NotFoundException("Project", project_id)
+
     try:
         updated = project_service.update_project_settings(project_id, settings)
         return _to_project_response(updated)
@@ -263,13 +297,14 @@ async def upload_background_music(
     project_id: str,
     music_file: Optional[UploadFile] = File(None),
     file: Optional[UploadFile] = File(None),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Uploads background music audio file for the project."""
     actual_file = music_file or file
     if not actual_file:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No audio file provided.")
 
-    p = project_service.get_project(project_id)
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
 
@@ -284,13 +319,13 @@ async def upload_background_music(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    return _to_project_response(project_service.get_project(project_id))
+    return _to_project_response(project_service.get_project(project_id, owner_id=current_user.uid))
 
 @router.delete("/{project_id}/music", response_model=ProjectResponse)
 @router.delete("/{project_id}/audio/background-music", response_model=ProjectResponse)
-def delete_background_music(project_id: str):
+def delete_background_music(project_id: str, current_user: AuthenticatedUser = Depends(get_current_user)):
     """Removes background music from the project."""
-    p = project_service.get_project(project_id)
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
 
@@ -298,9 +333,9 @@ def delete_background_music(project_id: str):
     return _to_project_response(updated)
 
 @router.get("/{project_id}/export")
-def export_project_backup(project_id: str):
+def export_project_backup(project_id: str, current_user: AuthenticatedUser = Depends(get_current_user)):
     """Exports complete project as a downloadable JSON backup."""
-    p = project_service.get_project(project_id)
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
     data = project_service.export_project_json(project_id)
@@ -311,7 +346,7 @@ def export_project_backup(project_id: str):
     )
 
 @router.post("/import-backup", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-async def import_project_backup(request: Request):
+async def import_project_backup(request: Request, current_user: AuthenticatedUser = Depends(get_current_user)):
     """Restores a project from an uploaded JSON backup file or raw JSON payload."""
     content_type = request.headers.get("content-type", "")
     data = None
@@ -339,17 +374,21 @@ async def import_project_backup(request: Request):
 
     try:
         restored = project_service.import_project_json(data)
+        if restored:
+            restored.owner_id = current_user.uid
+            project_service.repository.save_project(restored, current_user.uid)
         return _to_project_response(restored)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{project_id}/cleanup")
-def cleanup_project_temp_files(project_id: str):
+def cleanup_project_temp_files(project_id: str, current_user: AuthenticatedUser = Depends(get_current_user)):
     """Cleans up temporary render directories and stale files for a project."""
-    p = project_service.get_project(project_id)
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
     if not p:
         raise NotFoundException("Project", project_id)
     res = project_service.cleanup_temp_files(project_id)
+    return {"message": "Cleanup complete", **res}
     return {"message": "Cleanup complete", **res}
 
 @router.post("/cleanup")

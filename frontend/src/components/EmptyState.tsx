@@ -32,12 +32,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <Film size={32} />
       </div>
 
-      <span className="badge badge-info mb-3">AI Video Studio</span>
+      <span className="badge badge-info mb-3">ScenoraEdits Studio</span>
       <h2 className="text-2xl font-bold mb-2 font-display" style={{ color: "var(--text-primary)" }}>
-        Welcome to AI Video Maker
+        Welcome to ScenoraEdits
       </h2>
       <p className="text-sm max-w-lg mx-auto mb-8 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-        No video projects found in this workspace. Import your voiceover narration and Clipchamp captions to automatically start the 5-stage production pipeline.
+        No video projects found in this workspace. Create a new project or import your voiceover narration and timestamped captions to launch the automated 5-stage production studio.
       </p>
 
       {/* Feature summary blocks */}

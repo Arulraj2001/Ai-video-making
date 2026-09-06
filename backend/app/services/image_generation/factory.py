@@ -37,15 +37,19 @@ def get_image_generator(
     provider_name: Optional[str] = None,
     model_name: Optional[str] = None,
     style_mode: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> BaseImageGenerator:
     """
-    Factory creating configured ImageGenerator instance based on environment settings or explicit override.
+    Factory creating configured ImageGenerator instance based on environment settings,
+    user vault credentials (if user_id provided), or explicit override.
     Never exposes API credentials to callers.
 
     Providers:
       - "pollinations" : Free, no API key, FLUX.1-based (recommended default)
       - "cloudflare"   : Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN
       - "huggingface"  : Requires HUGGINGFACE_API_KEY
+      - "gemini"       : Requires GEMINI_API_KEY
+      - "sana_local"   : Local GPU port 8001
       - "mock"         : Offline Pillow-based test cards
     """
     global _cached_mock_generator, _cached_pollinations_generator
@@ -55,25 +59,34 @@ def get_image_generator(
         chosen_provider = "huggingface"
     _validate_model(chosen_provider, model_name)
 
+    user_cred = None
+    if user_id:
+        try:
+            from app.services.vault import get_credential_vault
+            vault = get_credential_vault()
+            user_cred = vault.get_credential(user_id, chosen_provider)
+        except Exception:
+            user_cred = None
+
     if chosen_provider == "pollinations":
         mode = style_mode or "photorealistic"
         return PollinationsImageGenerator(style_mode=mode, model_name=model_name)
 
     elif chosen_provider == "cloudflare":
-        account_id = settings.CLOUDFLARE_ACCOUNT_ID
-        api_token = settings.CLOUDFLARE_API_TOKEN
+        account_id = (user_cred.get("account_id") if user_cred else None) or settings.CLOUDFLARE_ACCOUNT_ID
+        api_token = (user_cred.get("api_key") if user_cred else None) or settings.CLOUDFLARE_API_TOKEN
         if not account_id or not api_token:
             raise ValueError(
-                "Cloudflare credentials missing. Set CF_ACCOUNT_ID and CF_API_TOKEN in backend environment."
+                "Cloudflare credentials missing. Set CF_ACCOUNT_ID and CF_API_TOKEN in Vault or backend environment."
             )
         model = model_name or settings.IMAGE_GENERATOR_MODEL or settings.CLOUDFLARE_IMAGE_MODEL
         return CloudflareImageGenerator(account_id=account_id, api_token=api_token, model_name=model)
 
     elif chosen_provider in ("huggingface", "hf"):
-        api_key = settings.HUGGINGFACE_API_KEY
+        api_key = (user_cred.get("api_key") if user_cred else None) or settings.HUGGINGFACE_API_KEY
         if not api_key:
             raise ValueError(
-                "Hugging Face credentials missing. Set HF_API_KEY in backend environment."
+                "Hugging Face credentials missing. Set HF_API_KEY in Vault or backend environment."
             )
         model = model_name or settings.IMAGE_GENERATOR_MODEL or settings.HUGGINGFACE_IMAGE_MODEL
         return HuggingFaceImageGenerator(api_key=api_key, model_name=model)
@@ -90,10 +103,11 @@ def get_image_generator(
         return _cached_sana_generator
 
     elif chosen_provider == "gemini":
-        if not settings.GEMINI_API_KEY:
-            raise ValueError("Gemini API key missing. Set GEMINI_API_KEY in the backend environment.")
+        gemini_key = (user_cred.get("api_key") if user_cred else None) or settings.GEMINI_API_KEY
+        if not gemini_key:
+            raise ValueError("Gemini API key missing. Set GEMINI_API_KEY in Vault or backend environment.")
         model = model_name or GeminiImageGenerator.DEFAULT_MODEL
-        return GeminiImageGenerator(api_key=settings.GEMINI_API_KEY, model_name=model)
+        return GeminiImageGenerator(api_key=gemini_key, model_name=model)
 
     else:
         raise ValueError(

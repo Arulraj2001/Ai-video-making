@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../utils/constants";
+import { auth } from "../lib/firebase";
 import type {
   HealthResponse,
   Project,
@@ -27,6 +28,10 @@ import type {
   RenderJob,
   RenderRequestInput,
   RenderJobListResponse,
+  ApiKeyMetadata,
+  ApiKeyListResponse,
+  SaveApiKeyPayload,
+  TestApiKeyResponse,
 } from "../types";
 
 class ApiService {
@@ -39,11 +44,25 @@ class ApiService {
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    let authHeader: Record<string, string> = {};
+    try {
+      const currentUser = auth ? auth.currentUser : null;
+      if (currentUser) {
+        const token = await currentUser.getIdToken();
+        if (token) {
+          authHeader = { Authorization: `Bearer ${token}` };
+        }
+      }
+    } catch {
+      // Unauthenticated / offline
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
         headers: {
           ...(options?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+          ...authHeader,
           ...options?.headers,
         },
       });
@@ -639,6 +658,137 @@ class ApiService {
     });
   }
 
+  // API Key Vault methods
+  async listApiKeys(): Promise<ApiKeyListResponse> {
+    return this.request<ApiKeyListResponse>("/api/api-keys");
+  }
+
+  async saveApiKey(payload: SaveApiKeyPayload): Promise<ApiKeyMetadata> {
+    return this.request<ApiKeyMetadata>("/api/api-keys", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteApiKey(provider: string): Promise<{ provider: string; deleted: boolean; message: string }> {
+    return this.request<{ provider: string; deleted: boolean; message: string }>(`/api/api-keys/${encodeURIComponent(provider)}`, {
+      method: "DELETE",
+    });
+  }
+
+  async testApiKey(provider: string): Promise<TestApiKeyResponse> {
+    return this.request<TestApiKeyResponse>(`/api/api-keys/${encodeURIComponent(provider)}/test`, {
+      method: "POST",
+    });
+  }
+
+  // Usage and Quota methods (Phase 16)
+  async getUsage(): Promise<UsageResponse> {
+    return this.request<UsageResponse>("/api/usage");
+  }
+
+  // Payments and Entitlements methods (Phase 17)
+  async getYearlyPlan(): Promise<PlanConfigResponse> {
+    return this.request<PlanConfigResponse>("/api/plans/yearly");
+  }
+
+  async submitPayment(input: PaymentSubmitRequest): Promise<PaymentResponse> {
+    return this.request<PaymentResponse>("/api/payments", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async uploadPaymentProof(
+    paymentId: string,
+    file: File
+  ): Promise<{ payment_id: string; proof_storage_path: string; message: string }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.request<{ payment_id: string; proof_storage_path: string; message: string }>(
+      `/api/payments/${encodeURIComponent(paymentId)}/proof`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+  }
+
+  async getUserPayments(): Promise<PaymentResponse[]> {
+    return this.request<PaymentResponse[]>("/api/payments");
+  }
+
+  async getCurrentEntitlement(): Promise<EntitlementResponse | null> {
+    try {
+      return await this.request<EntitlementResponse>("/api/entitlements/current");
+    } catch {
+      return null;
+    }
+  }
+
+  // Admin Portal & Central Control methods (Phase 18)
+  async getAdminDashboard(): Promise<AdminDashboardStats> {
+    return this.request<AdminDashboardStats>("/api/admin/dashboard");
+  }
+
+  async getAdminUsers(): Promise<AdminUserSummary[]> {
+    return this.request<AdminUserSummary[]>("/api/admin/users");
+  }
+
+  async getAdminPayments(status?: string): Promise<PaymentResponse[]> {
+    const url = status && status !== "all"
+      ? `/api/admin/payments?status=${encodeURIComponent(status)}`
+      : "/api/admin/payments";
+    return this.request<PaymentResponse[]>(url);
+  }
+
+  async getAdminProofUrl(paymentId: string): Promise<{ payment_id: string; proof_url: string; storage_path?: string }> {
+    return this.request<{ payment_id: string; proof_url: string; storage_path?: string }>(
+      `/api/admin/payments/${encodeURIComponent(paymentId)}/proof-url`
+    );
+  }
+
+  async approveAdminPayment(
+    paymentId: string
+  ): Promise<{ message: string; payment: PaymentResponse; entitlement: EntitlementResponse }> {
+    return this.request<{ message: string; payment: PaymentResponse; entitlement: EntitlementResponse }>(
+      `/api/admin/payments/${encodeURIComponent(paymentId)}/approve`,
+      { method: "POST" }
+    );
+  }
+
+  async rejectAdminPayment(
+    paymentId: string,
+    reason: string
+  ): Promise<{ message: string; payment: PaymentResponse }> {
+    return this.request<{ message: string; payment: PaymentResponse }>(
+      `/api/admin/payments/${encodeURIComponent(paymentId)}/reject`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }
+    );
+  }
+
+  async getAdminConfig(): Promise<PlatformConfig> {
+    return this.request<PlatformConfig>("/api/admin/config");
+  }
+
+  async updateAdminConfig(config: Partial<PlatformConfig>): Promise<PlatformConfig> {
+    return this.request<PlatformConfig>("/api/admin/config", {
+      method: "PUT",
+      body: JSON.stringify(config),
+    });
+  }
+
+  async getAdminUsage(): Promise<AdminUsageStats> {
+    return this.request<AdminUsageStats>("/api/admin/usage");
+  }
+
+  async getAdminAuditLogs(limit: number = 50): Promise<AuditLogEntry[]> {
+    return this.request<AuditLogEntry[]>(`/api/admin/audit-logs?limit=${limit}`);
+  }
+
   getMediaUrl(urlPath?: string): string {
     if (!urlPath) return "";
     if (urlPath.startsWith("http://") || urlPath.startsWith("https://")) {
@@ -649,4 +799,136 @@ class ApiService {
   }
 }
 
+export interface UsageResponse {
+  uid: string;
+  period: string;
+  current_usage: number;
+  limit: number;
+  remaining: number;
+  reset_date: string;
+  status: "active" | "limit_reached" | string;
+  has_byok: boolean;
+  free_tier_generations?: number;
+  byok_generations?: number;
+  has_active_entitlement?: boolean;
+  tier?: "free" | "byok" | "pro_yearly";
+  entitlement_expires_at?: string;
+  plan_name?: string;
+}
+
+export interface PlanConfigResponse {
+  plan_id: string;
+  name: string;
+  price_inr: number;
+  price_usd: number;
+  duration_days: number;
+  enabled: boolean;
+  description: string;
+  upi_id: string;
+  upi_qr_url: string;
+  bmc_url: string;
+  features: string[];
+}
+
+export interface PaymentSubmitRequest {
+  plan_id: string;
+  amount: number;
+  currency: string;
+  payment_method: string;
+  reference: string;
+}
+
+export interface PaymentResponse {
+  payment_id: string;
+  uid: string;
+  plan_id: string;
+  amount: number;
+  currency: string;
+  payment_method: string;
+  reference: string;
+  proof_storage_path?: string;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason?: string;
+  submitted_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}
+
+export interface EntitlementResponse {
+  entitlement_id: string;
+  uid: string;
+  plan_id: string;
+  status: string;
+  is_active: boolean;
+  started_at: string;
+  expires_at: string;
+  payment_id: string;
+  days_remaining: number;
+}
+
+export interface AdminDashboardStats {
+  total_users: number;
+  pending_payments: number;
+  active_paid_users: number;
+  total_generations: number;
+  free_tier_generations: number;
+  byok_generations: number;
+  yearly_price_inr: number;
+  yearly_price_usd: number;
+  free_generation_limit: number;
+}
+
+export interface AdminUserSummary {
+  uid: string;
+  email?: string;
+  created_at?: string;
+  tier: "free" | "byok" | "pro_yearly" | string;
+  has_active_entitlement: boolean;
+  entitlement_expires_at?: string;
+  current_usage: number;
+  total_generations: number;
+  project_count: number;
+}
+
+export interface AdminUsageStats {
+  total_generations: number;
+  free_tier_generations: number;
+  byok_generations: number;
+  successful_generations: number;
+  failed_generations: number;
+  active_paid_users: number;
+  users_approaching_limit: number;
+  free_generation_limit: number;
+}
+
+export interface PlatformConfig {
+  yearly_plan_id: string;
+  yearly_plan_name: string;
+  yearly_plan_price_inr: number;
+  yearly_plan_price_usd: number;
+  yearly_plan_duration_days: number;
+  yearly_plan_enabled: boolean;
+  yearly_plan_description: string;
+  free_generation_limit: number;
+  payment_upi_id: string;
+  payment_upi_qr_url: string;
+  payment_bmc_url: string;
+  allow_registration: boolean;
+  maintenance_mode: boolean;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+export interface AuditLogEntry {
+  log_id: string;
+  admin_uid: string;
+  admin_email: string;
+  action: string;
+  timestamp: string;
+  details: Record<string, any>;
+}
+
 export const api = new ApiService();
+
+
+
