@@ -55,10 +55,13 @@ def get_current_user(
     2. Authorization: Bearer test-token-<uid> (for local tests/mocking)
     3. Fallback to default local creator if unauthenticated and auth is not strictly required.
     """
+    req_host = (request.headers.get("host") or (request.url.hostname or "")).lower()
     is_prod = (
         settings.ENVIRONMENT.lower() == "production"
         or os.getenv("SCENORA_ENV", "").lower() == "production"
-        or os.getenv("RENDER", "").lower() == "true"
+        or any(k in os.environ for k in ("RENDER", "RENDER_SERVICE_ID", "RENDER_INSTANCE_ID", "RENDER_SERVICE_NAME"))
+        or "onrender.com" in req_host
+        or "render.com" in req_host
     )
 
     if authorization:

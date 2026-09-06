@@ -136,6 +136,7 @@ def validate_security_configuration(current_settings: Optional[Settings] = None)
     is_prod = (
         s.ENVIRONMENT.lower() == "production"
         or os.getenv("SCENORA_ENV", "").lower() == "production"
+        or any(k in os.environ for k in ("RENDER", "RENDER_SERVICE_ID", "RENDER_INSTANCE_ID", "RENDER_SERVICE_NAME"))
     )
 
     # 1. Validate Vault Backend in production
