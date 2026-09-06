@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSEO, PAGE_SEO } from "../../utils/seo";
 import { Button } from "../../components/ui/Button";
 import { SiteContainer } from "../../components/public/SiteContainer";
 import { SectionHeader } from "../../components/public/SectionHeader";
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 export const ContactPage: React.FC = () => {
+  useSEO(PAGE_SEO.contact);
   const [submitted, setSubmitted] = useState(false);
   const [inquiryType, setInquiryType] = useState<string>("technical");
   const [name, setName] = useState("");

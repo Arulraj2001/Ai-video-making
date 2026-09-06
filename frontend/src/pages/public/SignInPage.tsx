@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useRouter } from "../../router/Router";
+import { useSEO, PAGE_SEO } from "../../utils/seo";
 import { ScenoraLogo } from "../../components/brand/ScenoraLogo";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
@@ -11,6 +12,7 @@ import { ArrowRight, Mail, Lock } from "lucide-react";
 
 export const SignInPage: React.FC = () => {
   const { navigate, searchParams } = useRouter();
+  useSEO(PAGE_SEO.signIn);
   const { signInWithEmail, signInWithGoogle, isAuthenticated, isConfigured, error: authError, clearError } = useAuth();
 
   const [email, setEmail] = useState("");

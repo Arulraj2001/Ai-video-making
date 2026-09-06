@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   LogOut,
   ExternalLink,
+  Mail,
+  CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 
 export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -24,6 +27,8 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
   const { preference, setPreference } = useTheme();
   const { user, isAuthenticated, isAdmin, signOutUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
   const navLinks = [
     { label: "Features", to: "/features" },
@@ -291,37 +296,133 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
       {/* Main Page Content */}
       <main className="flex-1">{children}</main>
 
-      {/* Editorial Footer (Centered & Restrained) */}
-      <footer className="bg-[var(--color-surface)] border-t border-[var(--color-border)] pt-14 pb-10 transition-colors">
+      {/* World-Class Creative Software Footer */}
+      <footer className="bg-[var(--color-surface)] border-t border-[var(--color-border)] pt-16 pb-12 transition-colors relative overflow-hidden">
+        {/* Subtle decorative glow */}
+        <div className="absolute top-0 right-1/3 w-96 h-40 bg-[var(--color-primary)]/5 blur-3xl pointer-events-none rounded-full" />
+
         <SiteContainer>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-            {/* Col 1: Brand & Tagline */}
-            <div className="space-y-3">
-              <ScenoraLogo size="sm" />
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed max-w-xs">
-                {BRAND.tagline}. An automated AI video production software suite for modern storytellers.
+          {/* 1. Newsletter & Creator Dispatch Strip */}
+          <div className="p-6 sm:p-8 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border-subtle)] mb-14 flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10 shadow-xs">
+            <div className="space-y-1.5 text-center lg:text-left max-w-xl">
+              <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-[var(--color-primary)] uppercase tracking-wider">
+                <Sparkles size={13} />
+                <span>The Creator Dispatch</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold font-display text-[var(--color-text)]">
+                Master AI video production workflows
+              </h3>
+              <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                Join 2,400+ creators receiving weekly Video Bible character prompts, SANA diffusion benchmarks, and multi-track NLE techniques.
               </p>
-              <div className="text-[11px] font-mono text-[var(--color-text-muted)] pt-1">
-                Version {BRAND.version} • Open Source
+            </div>
+
+            <div className="w-full lg:w-auto shrink-0">
+              {newsletterSubscribed ? (
+                <div className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-success-subtle)] text-[var(--color-success)] text-xs font-semibold border border-[var(--color-success)]/30">
+                  <CheckCircle2 size={16} />
+                  <span>You're on the list! Welcome to the ScenoraEdits creator circle.</span>
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (newsletterEmail.trim()) setNewsletterSubscribed(true);
+                  }}
+                  className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto"
+                >
+                  <div className="relative w-full sm:w-72">
+                    <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="Enter your creator email..."
+                      value={newsletterEmail}
+                      onChange={(e) => setNewsletterEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    className="w-full sm:w-auto font-semibold px-5 py-2.5"
+                  >
+                    Subscribe Free
+                  </Button>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Multi-Column Navigation Hierarchy */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-10 pb-12 border-b border-[var(--color-border-subtle)]">
+            {/* Col 1: Brand & Purpose (2 cols on mobile, 1.5 on desktop) */}
+            <div className="col-span-2 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <ScenoraLogo size="sm" />
+                <span className="pill-tag-mono bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] text-[10px]">
+                  v{BRAND.version}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed max-w-sm font-sans">
+                {BRAND.tagline}. An automated AI video production software suite coordinating voiceover audio, character consistency, and local GPU diffusion.
+              </p>
+
+              {/* Real-time System Status Pill */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] text-[11px] font-mono text-[var(--color-text-secondary)]">
+                <span className="w-2 h-2 rounded-full bg-[var(--color-success)] pulse-indicator" />
+                <span>All Systems Operational</span>
+                <span className="text-[var(--color-border-strong)]">•</span>
+                <span className="text-[var(--color-text-muted)]">GPU Engine Ready</span>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-[var(--color-text-muted)]">
+                <span>SANA-Sprint 1.6B</span>
+                <span>•</span>
+                <span>FFmpeg 7.0</span>
+                <span>•</span>
+                <span>RTX Accelerated</span>
               </div>
             </div>
 
             {/* Col 2: Product */}
-            <div>
-              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)] mb-3">
+            <div className="space-y-3">
+              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)]">
                 Product
               </h4>
               <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
                 <li><Link to="/features" className="hover:text-[var(--color-text)] transition-colors">Features</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">How It Works</Link></li>
-                <li><Link to="/pricing" className="hover:text-[var(--color-text)] transition-colors">Pricing</Link></li>
-                <li><Link to="/app" className="text-[var(--color-primary)] font-semibold hover:underline">Scenora Studio</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">5-Stage Pipeline</Link></li>
+                <li><Link to="/pricing" className="hover:text-[var(--color-text)] transition-colors">Pricing &amp; Plans</Link></li>
+                <li><Link to="/features" className="hover:text-[var(--color-text)] transition-colors">Video Bible Registry</Link></li>
+                <li><Link to="/features" className="hover:text-[var(--color-text)] transition-colors">Timeline Editor</Link></li>
+                <li>
+                  <Link to="/app" className="text-[var(--color-primary)] font-semibold hover:underline inline-flex items-center gap-1">
+                    <span>Scenora Studio</span>
+                    <ArrowRight size={10} />
+                  </Link>
+                </li>
               </ul>
             </div>
 
-            {/* Col 3: Resources */}
-            <div>
-              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)] mb-3">
+            {/* Col 3: Workflows */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)]">
+                Workflows
+              </h4>
+              <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
+                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">YouTube Documentaries</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">9:16 Shorts &amp; Reels</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">Character Consistency</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">Local RTX Inference</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">FFmpeg Auto-Ducking</Link></li>
+              </ul>
+            </div>
+
+            {/* Col 4: Resources & Legal */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)]">
                 Resources
               </h4>
               <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
@@ -334,39 +435,48 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
                     rel="noreferrer"
                     className="hover:text-[var(--color-text)] transition-colors inline-flex items-center gap-1"
                   >
-                    <span>GitHub</span>
+                    <span>GitHub Repository</span>
                     <ExternalLink size={10} />
                   </a>
                 </li>
+                <li><Link to="/contact" className="hover:text-[var(--color-text)] transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/contact" className="hover:text-[var(--color-text)] transition-colors">Terms of Service</Link></li>
               </ul>
-            </div>
-
-            {/* Col 4: Platform */}
-            <div>
-              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)] mb-3">
-                Platform
-              </h4>
-              <p className="text-xs text-[var(--color-text-muted)] leading-relaxed mb-2">
-                Video Bible persistence engine with offline SANA-Sprint 1.6B GPU inference and multi-track FFmpeg assembly.
-              </p>
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-success)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)]" />
-                <span>All Systems Operational</span>
-              </div>
             </div>
           </div>
 
-          {/* Bottom Copyright Strip */}
-          <div className="pt-6 border-t border-[var(--color-border-subtle)] flex flex-col sm:flex-row items-center justify-between text-xs text-[var(--color-text-muted)] gap-3">
-            <p>{BRAND.copyright}</p>
-            <div className="flex items-center gap-4">
-              <Link to="/contact" className="hover:text-[var(--color-text)] transition-colors">Privacy</Link>
-              <Link to="/contact" className="hover:text-[var(--color-text)] transition-colors">Terms</Link>
+          {/* 3. Bottom Operational & Legal Strip */}
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[var(--color-text-muted)] gap-4">
+            <div className="flex flex-wrap items-center gap-4 text-center sm:text-left">
+              <p>{BRAND.copyright}</p>
+              <span className="hidden sm:inline text-[var(--color-border-subtle)]">•</span>
+              <span className="text-[11px] font-mono">Built for modern creators</span>
+            </div>
+
+            <div className="flex items-center gap-5">
+              <Link to="/contact" className="hover:text-[var(--color-text)] transition-colors text-[11px]">
+                Privacy
+              </Link>
+              <Link to="/contact" className="hover:text-[var(--color-text)] transition-colors text-[11px]">
+                Terms
+              </Link>
               {isAdmin && (
-                <Link to="/admin" className="text-[var(--color-primary)] font-semibold hover:underline">
+                <Link to="/admin" className="text-[var(--color-primary)] font-semibold hover:underline text-[11px]">
                   Admin Shell
                 </Link>
               )}
+              <a
+                href={BRAND.links.github}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 rounded-lg hover:text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)] transition-colors inline-flex items-center justify-center"
+                title="View GitHub Repository"
+                aria-label="GitHub Repository"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                </svg>
+              </a>
             </div>
           </div>
         </SiteContainer>
@@ -374,3 +484,4 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
     </div>
   );
 };
+

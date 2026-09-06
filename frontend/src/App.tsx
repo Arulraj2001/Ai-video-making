@@ -19,6 +19,7 @@ import { BlogPage } from "./pages/public/BlogPage";
 import { ContactPage } from "./pages/public/ContactPage";
 import { SignInPage } from "./pages/public/SignInPage";
 import { SignUpPage } from "./pages/public/SignUpPage";
+import { NotFoundPage } from "./pages/public/NotFoundPage";
 
 // Authenticated App Pages
 import { AppDashboardPage } from "./pages/app/AppDashboardPage";
@@ -147,6 +148,7 @@ function AppContent() {
   else if (path === "/contact") publicContent = <ContactPage />;
   else if (path === "/sign-in") publicContent = <SignInPage />;
   else if (path === "/sign-up") publicContent = <SignUpPage />;
+  else if (path !== "/") publicContent = <NotFoundPage />;
 
   return <PublicLayout>{publicContent}</PublicLayout>;
 }

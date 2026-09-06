@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#131F24"/>
+      <stop offset="50%" style="stop-color:#182C34"/>
+      <stop offset="100%" style="stop-color:#244855"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#E64833"/>
+      <stop offset="100%" style="stop-color:#FF6B4A"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Ambient glow orbs -->
+  <circle cx="200" cy="150" r="300" fill="#E64833" opacity="0.08" filter="url(#glow)"/>
+  <circle cx="1050" cy="480" r="280" fill="#90AEAD" opacity="0.06" filter="url(#glow)"/>
+
+  <!-- Top accent line -->
+  <rect x="0" y="0" width="1200" height="3" fill="url(#coral)"/>
+
+  <!-- Logo mark — simplified S shape / clapperboard icon -->
+  <rect x="80" y="72" width="48" height="36" rx="6" fill="#E64833"/>
+  <rect x="80" y="64" width="12" height="10" rx="2" fill="#E64833"/>
+  <rect x="100" y="64" width="12" height="10" rx="2" fill="#E64833"/>
+  <rect x="88" y="80" width="32" height="3" rx="1.5" fill="white" opacity="0.9"/>
+  <rect x="88" y="88" width="22" height="2" rx="1" fill="white" opacity="0.5"/>
+  <rect x="88" y="94" width="28" height="2" rx="1" fill="white" opacity="0.5"/>
+
+  <!-- Brand name -->
+  <text x="146" y="106" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="32" fill="white" letter-spacing="-0.5">ScenoraEdits</text>
+
+  <!-- Version badge -->
+  <rect x="146" y="116" width="96" height="20" rx="4" fill="#E64833" opacity="0.2"/>
+  <rect x="146" y="116" width="96" height="20" rx="4" fill="none" stroke="#E64833" stroke-width="1" opacity="0.4"/>
+  <text x="194" y="130" font-family="monospace" font-size="10" fill="#E64833" font-weight="700" text-anchor="middle" letter-spacing="1">AI VIDEO MAKER</text>
+
+  <!-- Main headline -->
+  <text x="80" y="270" font-family="system-ui, -apple-system, Georgia, serif" font-weight="700" font-size="68" fill="white" letter-spacing="-2">Create YouTube Videos</text>
+  <text x="80" y="350" font-family="system-ui, -apple-system, Georgia, serif" font-weight="700" font-size="68" fill="white" letter-spacing="-2">Faster with <tspan fill="#E64833">AI.</tspan></text>
+
+  <!-- Subline -->
+  <text x="80" y="418" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#8BA4AE" font-weight="400">Scripts ? Storyboards ? Visuals ? Timeline ? Export</text>
+
+  <!-- Feature pills -->
+  <rect x="80" y="472" width="180" height="36" rx="18" fill="#E64833" opacity="0.15"/>
+  <rect x="80" y="472" width="180" height="36" rx="18" fill="none" stroke="#E64833" stroke-width="1" opacity="0.4"/>
+  <text x="170" y="494" font-family="monospace" font-size="13" fill="#E64833" font-weight="600" text-anchor="middle">Free to Start</text>
+
+  <rect x="276" y="472" width="218" height="36" rx="18" fill="#90AEAD" opacity="0.1"/>
+  <rect x="276" y="472" width="218" height="36" rx="18" fill="none" stroke="#90AEAD" stroke-width="1" opacity="0.3"/>
+  <text x="385" y="494" font-family="monospace" font-size="13" fill="#90AEAD" font-weight="600" text-anchor="middle">Local GPU Inference</text>
+
+  <rect x="510" y="472" width="188" height="36" rx="18" fill="#4ADE80" opacity="0.1"/>
+  <rect x="510" y="472" width="188" height="36" rx="18" fill="none" stroke="#4ADE80" stroke-width="1" opacity="0.25"/>
+  <text x="604" y="494" font-family="monospace" font-size="13" fill="#4ADE80" font-weight="600" text-anchor="middle">Full HD 1080p</text>
+
+  <!-- Right decorative panel -->
+  <rect x="820" y="180" width="320" height="220" rx="16" fill="white" opacity="0.04"/>
+  <rect x="820" y="180" width="320" height="220" rx="16" fill="none" stroke="white" stroke-width="1" opacity="0.08"/>
+  <text x="980" y="218" font-family="monospace" font-size="11" fill="#8BA4AE" text-anchor="middle" letter-spacing="2">PIPELINE STAGE</text>
+  <rect x="852" y="232" width="256" height="28" rx="6" fill="#E64833" opacity="0.12"/>
+  <text x="852" y="251" font-family="monospace" font-size="12" fill="#E64833" font-weight="600">01  Script &amp; Audio Ingestion</text>
+  <rect x="852" y="268" width="256" height="28" rx="6" fill="white" opacity="0.04"/>
+  <text x="852" y="287" font-family="monospace" font-size="12" fill="#8BA4AE">02  Video Bible Registration</text>
+  <rect x="852" y="304" width="256" height="28" rx="6" fill="white" opacity="0.04"/>
+  <text x="852" y="323" font-family="monospace" font-size="12" fill="#8BA4AE">03  AI Storyboard Generation</text>
+  <rect x="852" y="340" width="256" height="28" rx="6" fill="white" opacity="0.04"/>
+  <text x="852" y="359" font-family="monospace" font-size="12" fill="#8BA4AE">04  Timeline Assembly</text>
+
+  <!-- Bottom domain -->
+  <text x="80" y="590" font-family="monospace" font-size="18" fill="#4A6572" font-weight="500">scenoraedits.web.app</text>
+</svg>

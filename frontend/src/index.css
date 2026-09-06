@@ -1595,19 +1595,70 @@ a {
 /* Vertical Section Rhythm */
 .site-section {
   position: relative;
-  padding-block: clamp(4rem, 7vw, 7rem);
+  padding-block: clamp(4.5rem, 7.5vw, 6.5rem);
 }
 
 .site-section-hero {
   position: relative;
-  padding-top: clamp(3rem, 6vw, 5.5rem);
-  padding-bottom: clamp(3.5rem, 6vw, 6rem);
+  padding-top: clamp(3rem, 5vw, 4.5rem);
+  padding-bottom: clamp(3.5rem, 5vw, 5rem);
 }
 
 .site-section-compact {
   position: relative;
-  padding-block: clamp(2.5rem, 4.5vw, 4rem);
+  padding-block: clamp(3rem, 4.5vw, 4.5rem);
 }
+
+/* Gradient Text Utilities */
+.text-gradient-coral {
+  background: linear-gradient(135deg, #E64833 0%, #FF7A66 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-subtle {
+  background: linear-gradient(135deg, var(--color-text) 30%, var(--color-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glass-stat-card {
+  position: relative;
+  border-radius: 16px;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease;
+}
+
+[data-theme="dark"] .glass-stat-card {
+  background: rgba(23, 37, 44, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(144, 174, 173, 0.16);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .glass-stat-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(36, 72, 85, 0.1);
+  box-shadow: 0 6px 20px -3px rgba(36, 72, 85, 0.06);
+}
+
+.glass-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+[data-theme="dark"] .glass-stat-card:hover {
+  border-color: rgba(230, 72, 51, 0.35);
+}
+
+[data-theme="light"] .glass-stat-card:hover {
+  border-color: rgba(230, 72, 51, 0.3);
+}
+
 
 /* Typography Hierarchy Scale */
 .hero-headline {
@@ -1810,11 +1861,11 @@ a {
    Provides deliberate contrast against warm background with creative software telemetry
    ========================================================================== */
 .panel-dark-technical {
-  background: #111B20;
+  background: #0E171B;
   color: #FBE9D0;
   border: 1px solid rgba(144, 174, 173, 0.22);
-  border-radius: 18px;
-  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* Creative Software Timeline Visualizer */

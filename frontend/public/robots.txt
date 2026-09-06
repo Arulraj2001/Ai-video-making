@@ -1,0 +1,20 @@
+# robots.txt — ScenoraEdits
+# https://scenoraedits.web.app/
+
+User-agent: *
+
+# Allow all public marketing pages
+Allow: /
+Allow: /features
+Allow: /how-it-works
+Allow: /pricing
+Allow: /blog
+Allow: /contact
+
+# Disallow private authenticated application areas
+Disallow: /app/
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://scenoraedits.web.app/sitemap.xml

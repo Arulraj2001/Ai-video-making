@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useRouter } from "../../router/Router";
+import { useSEO, PAGE_SEO } from "../../utils/seo";
 import { ScenoraLogo } from "../../components/brand/ScenoraLogo";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
@@ -10,6 +11,7 @@ import { ArrowRight, Mail, Lock, User as UserIcon } from "lucide-react";
 
 export const SignUpPage: React.FC = () => {
   const { navigate, searchParams } = useRouter();
+  useSEO(PAGE_SEO.signUp);
   const { signUpWithEmail, signInWithGoogle, isAuthenticated, isConfigured, error: authError, clearError } = useAuth();
 
   const [name, setName] = useState("");

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useRouter } from "../../router/Router";
+import { useSEO, PAGE_SEO } from "../../utils/seo";
 import { Button } from "../../components/ui/Button";
 import { SiteContainer } from "../../components/public/SiteContainer";
 import { SectionHeader } from "../../components/public/SectionHeader";
@@ -15,6 +16,7 @@ import {
 
 export const FeaturesPage: React.FC = () => {
   const { navigate } = useRouter();
+  useSEO(PAGE_SEO.features);
   const [activeModule, setActiveModule] = useState<number>(0);
 
   const modules = [

@@ -2,11 +2,129 @@
 <html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ScenoraEdits | AI Video Studio & Visual Production Pipeline</title>
-    <meta name="description" content="Turn voiceover audio and timestamped captions into AI-directed storyboards and Full HD videos with ScenoraEdits." />
-    <!-- Prevent theme flash on initial render -->
+
+    <!-- ═══════════════════════════════════════════════════
+         GOOGLE SEARCH CONSOLE VERIFICATION
+    ═══════════════════════════════════════════════════ -->
+    <meta name="google-site-verification" content="pkEqWFra12m6ieukyc8_NtdZvfWqSE-jwRVgintHuK8" />
+
+    <!-- ═══════════════════════════════════════════════════
+         PRIMARY SEO: TITLE & DESCRIPTION
+    ═══════════════════════════════════════════════════ -->
+    <title>ScenoraEdits — AI Video Maker for YouTube Creators</title>
+    <meta name="description" content="Create YouTube videos faster with ScenoraEdits. Turn scripts, voiceovers and captions into AI-powered storyboards, visuals, timelines and ready-to-export videos." />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="ScenoraEdits" />
+
+    <!-- ═══════════════════════════════════════════════════
+         CANONICAL URL
+    ═══════════════════════════════════════════════════ -->
+    <link rel="canonical" href="https://scenoraedits.web.app/" />
+
+    <!-- ═══════════════════════════════════════════════════
+         FAVICON & ICONS
+    ═══════════════════════════════════════════════════ -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- ═══════════════════════════════════════════════════
+         OPEN GRAPH (Facebook, LinkedIn, Slack, Discord)
+    ═══════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ScenoraEdits" />
+    <meta property="og:title" content="ScenoraEdits — AI Video Maker for YouTube Creators" />
+    <meta property="og:description" content="Create YouTube videos faster with ScenoraEdits. Turn scripts, voiceovers and captions into AI-powered storyboards, visuals, timelines and ready-to-export videos." />
+    <meta property="og:url" content="https://scenoraedits.web.app/" />
+    <meta property="og:image" content="https://scenoraedits.web.app/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ScenoraEdits — AI Video Maker for YouTube Creators" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ═══════════════════════════════════════════════════
+         TWITTER / X CARD
+    ═══════════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ScenoraEdits — AI Video Maker for YouTube Creators" />
+    <meta name="twitter:description" content="Create YouTube videos faster with ScenoraEdits. Turn scripts, voiceovers and captions into AI-powered storyboards, visuals, timelines and ready-to-export videos." />
+    <meta name="twitter:image" content="https://scenoraedits.web.app/og-image.svg" />
+    <meta name="twitter:image:alt" content="ScenoraEdits — AI Video Maker for YouTube Creators" />
+
+    <!-- ═══════════════════════════════════════════════════
+         JSON-LD STRUCTURED DATA
+    ═══════════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://scenoraedits.web.app/#organization",
+          "name": "ScenoraEdits",
+          "url": "https://scenoraedits.web.app/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://scenoraedits.web.app/favicon.svg"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "url": "https://scenoraedits.web.app/contact"
+          },
+          "sameAs": [
+            "https://github.com/Arulraj2001/Ai-video-making"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://scenoraedits.web.app/#website",
+          "name": "ScenoraEdits",
+          "url": "https://scenoraedits.web.app/",
+          "publisher": {
+            "@id": "https://scenoraedits.web.app/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://scenoraedits.web.app/blog?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://scenoraedits.web.app/#app",
+          "name": "ScenoraEdits",
+          "url": "https://scenoraedits.web.app/",
+          "applicationCategory": "MultimediaApplication",
+          "operatingSystem": "Web Browser",
+          "description": "AI-powered video creation software for YouTube creators. Turn voiceover scripts and captions into storyboards, AI-generated visuals, multi-track timelines and Full HD 1080p exports.",
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Starter",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Free tier with local GPU generation and cloud fallback"
+            },
+            {
+              "@type": "Offer",
+              "name": "Creator Pro",
+              "price": "15",
+              "priceCurrency": "USD",
+              "description": "Monthly plan with priority cloud GPUs and advanced features"
+            }
+          ],
+          "publisher": {
+            "@id": "https://scenoraedits.web.app/#organization"
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════
+         THEME FLASH PREVENTION (must be inline, before body)
+    ═══════════════════════════════════════════════════ -->
     <script>
       (function() {
         try {
@@ -19,10 +137,14 @@
         } catch (e) {}
       })();
     </script>
-    <!-- Google Fonts: Outfit, Plus Jakarta Sans & JetBrains Mono -->
+
+    <!-- ═══════════════════════════════════════════════════
+         GOOGLE FONTS — Only required weights
+         Outfit: 400,600,700,800 | Plus Jakarta Sans: 400,500,600,700 | JetBrains Mono: 400,500
+    ═══════════════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

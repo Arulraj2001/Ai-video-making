@@ -50,64 +50,64 @@ export const ExportShowcase: React.FC = () => {
   const currentFormat = formats.find((f) => f.id === selectedFormat)!;
 
   return (
-    <div className="bg-white border border-[#244855]/15 rounded-lg overflow-hidden shadow-sm">
+    <div className="card-feature overflow-hidden border border-[var(--color-border)] shadow-md">
       {/* Top Header Bar */}
-      <div className="bg-[#182C34] text-white px-5 py-3.5 flex items-center justify-between border-b border-[#244855]/40">
+      <div className="bg-[var(--color-surface-sunken)] px-5 py-3.5 flex items-center justify-between border-b border-[var(--color-border-subtle)]">
         <div className="flex items-center gap-2.5">
-          <Film className="w-4 h-4 text-[#E64833]" />
-          <span className="text-sm font-semibold tracking-tight font-serif">
-            Export Composer & Multi-Platform Mastering
+          <Film className="w-4 h-4 text-[var(--color-primary)]" />
+          <span className="text-sm font-semibold tracking-tight font-serif text-[var(--color-text)]">
+            Export Composer &amp; Multi-Platform Mastering
           </span>
-          <span className="text-[11px] font-mono bg-[#244855] text-[#8BA4AE] px-2 py-0.5 rounded">
+          <span className="text-[11px] font-mono bg-[var(--color-primary-subtle)] text-[var(--color-primary)] px-2 py-0.5 rounded font-bold">
             v2.4 Core
           </span>
         </div>
-        <div className="flex items-center gap-2 text-xs font-mono text-[#8BA4AE]">
+        <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-text-muted)]">
           <span>RENDER ENGINE: FFMPEG NVENC HARDWARE</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12">
         {/* Left Interactive Config Controls (40%) */}
-        <div className="lg:col-span-5 p-6 border-b lg:border-b-0 lg:border-r border-[#244855]/10 flex flex-col justify-between space-y-6">
+        <div className="lg:col-span-5 p-6 border-b lg:border-b-0 lg:border-r border-[var(--color-border-subtle)] bg-[var(--color-surface)] flex flex-col justify-between space-y-6">
           <div>
-            <div className="text-xs font-mono uppercase tracking-wider text-[#244855]/70 font-semibold mb-3">
-              1. Delivery Format & Framing
+            <div className="text-xs font-mono uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold mb-3">
+              1. Delivery Format &amp; Framing
             </div>
             <div className="space-y-2">
               {formats.map((fmt) => (
                 <button
                   key={fmt.id}
                   onClick={() => setSelectedFormat(fmt.id)}
-                  className={`w-full text-left p-3 rounded-md border transition-all flex items-center justify-between ${
+                  className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
                     selectedFormat === fmt.id
-                      ? 'border-[#E64833] bg-[#E64833]/5 shadow-xs'
-                      : 'border-[#244855]/15 hover:border-[#244855]/30 bg-white'
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary-subtle)] shadow-xs'
+                      : 'border-[var(--color-border-subtle)] hover:border-[var(--color-border)] bg-[var(--color-surface)]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`p-1.5 rounded ${
+                      className={`p-1.5 rounded-lg ${
                         selectedFormat === fmt.id
-                          ? 'bg-[#E64833] text-white'
-                          : 'bg-[#F8F4ED] text-[#244855]'
+                          ? 'bg-[var(--color-primary)] text-white'
+                          : 'bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]'
                       }`}
                     >
                       {fmt.icon}
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-[#182C34]">{fmt.name}</div>
-                      <div className="text-[11px] text-[#244855]/70 font-mono">{fmt.resolution}</div>
+                      <div className="text-xs font-semibold text-[var(--color-text)]">{fmt.name}</div>
+                      <div className="text-[11px] text-[var(--color-text-muted)] font-mono">{fmt.resolution}</div>
                     </div>
                   </div>
-                  <div className="text-[11px] font-mono text-[#244855]/60 bg-[#F8F4ED] px-2 py-1 rounded">
+                  <div className="text-[11px] font-mono text-[var(--color-text-secondary)] bg-[var(--color-surface-sunken)] px-2 py-1 rounded">
                     {fmt.ratio}
                   </div>
                 </button>
               ))}
             </div>
 
-            <div className="text-xs font-mono uppercase tracking-wider text-[#244855]/70 font-semibold mt-6 mb-3">
+            <div className="text-xs font-mono uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold mt-6 mb-3">
               2. Compression Codec
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -119,16 +119,16 @@ export const ExportShowcase: React.FC = () => {
                 <button
                   key={c.id}
                   onClick={() => setCodec(c.id as any)}
-                  className={`p-2.5 rounded border text-left transition-colors ${
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
                     codec === c.id
-                      ? 'border-[#182C34] bg-[#182C34] text-white'
-                      : 'border-[#244855]/15 hover:border-[#244855]/30 bg-white text-[#182C34]'
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary-subtle)] text-[var(--color-primary)] font-bold'
+                      : 'border-[var(--color-border-subtle)] hover:border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]'
                   }`}
                 >
                   <div className="text-xs font-mono font-semibold">{c.label}</div>
                   <div
                     className={`text-[10px] ${
-                      codec === c.id ? 'text-[#8BA4AE]' : 'text-[#244855]/60'
+                      codec === c.id ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'
                     }`}
                   >
                     {c.sub}
@@ -137,26 +137,26 @@ export const ExportShowcase: React.FC = () => {
               ))}
             </div>
 
-            <div className="text-xs font-mono uppercase tracking-wider text-[#244855]/70 font-semibold mt-6 mb-3">
+            <div className="text-xs font-mono uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold mt-6 mb-3">
               3. Production Automation
             </div>
             <div className="space-y-2.5">
               <label
-                className="flex items-center justify-between p-3 rounded-md border border-[#244855]/15 cursor-pointer hover:bg-[#F8F4ED]/50 transition-colors"
+                className="flex items-center justify-between p-3 rounded-xl border border-[var(--color-border-subtle)] cursor-pointer hover:bg-[var(--color-surface-sunken)] transition-colors"
                 onClick={() => setBurnCaptions(!burnCaptions)}
               >
                 <div className="flex items-center gap-2.5">
-                  <Subtitles className="w-4 h-4 text-[#244855]" />
+                  <Subtitles className="w-4 h-4 text-[var(--color-primary)]" />
                   <div>
-                    <div className="text-xs font-semibold text-[#182C34]">Burn-in Kinetic Captions</div>
-                    <div className="text-[11px] text-[#244855]/70">Word-synced typography with auto-highlight</div>
+                    <div className="text-xs font-semibold text-[var(--color-text)]">Burn-in Kinetic Captions</div>
+                    <div className="text-[11px] text-[var(--color-text-secondary)]">Word-synced typography with auto-highlight</div>
                   </div>
                 </div>
                 <div
                   className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                     burnCaptions
-                      ? 'bg-[#E64833] border-[#E64833] text-white'
-                      : 'border-[#244855]/30 bg-white'
+                      ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
+                      : 'border-[var(--color-border-strong)] bg-[var(--color-surface)]'
                   }`}
                 >
                   {burnCaptions && <Check className="w-3.5 h-3.5" />}
@@ -164,21 +164,21 @@ export const ExportShowcase: React.FC = () => {
               </label>
 
               <label
-                className="flex items-center justify-between p-3 rounded-md border border-[#244855]/15 cursor-pointer hover:bg-[#F8F4ED]/50 transition-colors"
+                className="flex items-center justify-between p-3 rounded-xl border border-[var(--color-border-subtle)] cursor-pointer hover:bg-[var(--color-surface-sunken)] transition-colors"
                 onClick={() => setDuckAudio(!duckAudio)}
               >
                 <div className="flex items-center gap-2.5">
-                  <Music className="w-4 h-4 text-[#244855]" />
+                  <Music className="w-4 h-4 text-[var(--color-primary)]" />
                   <div>
-                    <div className="text-xs font-semibold text-[#182C34]">Intelligent Audio Ducking</div>
-                    <div className="text-[11px] text-[#244855]/70">Automatically ducks BGM by -14dB during voiceover</div>
+                    <div className="text-xs font-semibold text-[var(--color-text)]">Intelligent Audio Ducking</div>
+                    <div className="text-[11px] text-[var(--color-text-secondary)]">Automatically ducks BGM by -14dB during voiceover</div>
                   </div>
                 </div>
                 <div
                   className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                     duckAudio
-                      ? 'bg-[#E64833] border-[#E64833] text-white'
-                      : 'border-[#244855]/30 bg-white'
+                      ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
+                      : 'border-[var(--color-border-strong)] bg-[var(--color-surface)]'
                   }`}
                 >
                   {duckAudio && <Check className="w-3.5 h-3.5" />}
@@ -187,16 +187,16 @@ export const ExportShowcase: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#244855]/10">
-            <div className="flex items-center justify-between text-xs font-mono text-[#244855]/70 mb-2">
+          <div className="pt-4 border-t border-[var(--color-border-subtle)]">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-text-secondary)] mb-2">
               <span>Estimated Render Time:</span>
-              <span className="text-[#182C34] font-bold">14.2 seconds</span>
+              <span className="text-[var(--color-text)] font-bold">14.2 seconds</span>
             </div>
-            <div className="flex items-center justify-between text-xs font-mono text-[#244855]/70 mb-3">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-text-secondary)] mb-3">
               <span>Output File Size:</span>
-              <span className="text-[#182C34] font-bold">~42.8 MB</span>
+              <span className="text-[var(--color-text)] font-bold">~42.8 MB</span>
             </div>
-            <button className="w-full py-2.5 px-4 rounded-md bg-[#E64833] hover:bg-[#d03d29] text-white font-medium text-xs font-sans flex items-center justify-center gap-2 transition-colors shadow-sm">
+            <button className="w-full py-2.5 px-4 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-semibold text-xs font-sans flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer">
               <Sparkles className="w-4 h-4" />
               <span>Compile Master 1080p Export</span>
             </button>

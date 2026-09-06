@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSEO, PAGE_SEO } from "../../utils/seo";
 import { Button } from "../../components/ui/Button";
 import { SiteContainer } from "../../components/public/SiteContainer";
 import { SectionHeader } from "../../components/public/SectionHeader";
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 export const BlogPage: React.FC = () => {
+  useSEO(PAGE_SEO.blog);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
