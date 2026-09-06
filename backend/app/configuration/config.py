@@ -7,16 +7,18 @@ load_dotenv()
 class Settings:
     PROJECT_NAME: str = "AI Video Maker Backend"
     VERSION: str = "0.1.0"
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production" if os.getenv("RENDER") else "development")
     
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
     
     # CORS Configuration - supports local development, JSON lists, and Firebase Hosting
-    raw_cors: str = os.getenv(
-        "CORS_ORIGINS",
-        "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
-    ).strip()
+    default_cors = (
+        "https://scenoraedits.web.app,https://scenoraedits.firebaseapp.com"
+        if os.getenv("RENDER")
+        else "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+    )
+    raw_cors: str = os.getenv("CORS_ORIGINS", default_cors).strip()
     if raw_cors.startswith("[") and raw_cors.endswith("]"):
         import json
         try:
@@ -37,7 +39,7 @@ class Settings:
 
     # LLM Provider Configuration for Storyboard Generation
     # Supported: "mock", "openai", "gemini", "anthropic", "openrouter"
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "mock").lower()
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openrouter" if os.getenv("RENDER") else "mock").lower()
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
     LLM_BASE_URL: Optional[str] = os.getenv("LLM_BASE_URL", None)

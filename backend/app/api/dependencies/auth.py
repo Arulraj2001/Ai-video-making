@@ -58,6 +58,7 @@ def get_current_user(
     is_prod = (
         settings.ENVIRONMENT.lower() == "production"
         or os.getenv("SCENORA_ENV", "").lower() == "production"
+        or os.getenv("RENDER", "").lower() == "true"
     )
 
     if authorization:
