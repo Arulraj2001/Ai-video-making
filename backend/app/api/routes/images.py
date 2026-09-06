@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, status, Body
+from fastapi import APIRouter, HTTPException, Query, status, Body, Depends
 from typing import Optional
 
 from app.schemas.project import (
@@ -18,6 +18,7 @@ from app.services.scene_image_service import scene_image_service
 from app.services.image_generation.factory import get_available_providers, get_model_catalog
 from app.services.image_generation.gemini_generator import GeminiImageGenerator
 from app.configuration.config import settings
+from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 
 router = APIRouter(tags=["images"])
 
@@ -80,6 +81,15 @@ def get_available_models():
             detail=f"Failed to fetch model catalog: {str(e)}"
         )
 
+@router.get("/images/usage-stats")
+def get_provider_usage_stats():
+    """
+    Returns today's usage statistics and estimated quota limits for AI image providers.
+    Includes Cloudflare daily usage counter, remaining quota, and UTC reset timestamp.
+    """
+    from app.services.usage_tracker_service import usage_tracker
+    return usage_tracker.get_all_usage()
+
 @router.get("/images/capabilities", response_model=ImageCapabilitiesResponse)
 def get_image_capabilities(
     provider: Optional[str] = Query(None, description="Optional provider override"),
@@ -120,13 +130,14 @@ def get_image_capabilities(
 async def generate_scene_image(
     project_id: str,
     scene_id: str,
-    request: Optional[GenerateImageRequest] = None
+    request: Optional[GenerateImageRequest] = None,
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Generates or regenerates an AI visual for a single storyboard scene.
     Respects prompt, Video Bible context, and aspect ratio.
     """
-    project = project_service.get_project(project_id)
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -148,8 +159,11 @@ async def generate_scene_image(
             style_mode=style_mode,
             provider_name=provider,
             model_name=model_id,
+            user_id=current_user.uid,
         )
         return SceneSchema.model_validate(updated_scene)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -166,12 +180,13 @@ async def generate_scene_image(
 async def generate_scene_variations(
     project_id: str,
     scene_id: str,
-    request: Optional[GenerateImageRequest] = None
+    request: Optional[GenerateImageRequest] = None,
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Generates 3 candidate image variations for A/B testing and picking the best visual.
     """
-    project = project_service.get_project(project_id)
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -189,13 +204,16 @@ async def generate_scene_variations(
             count=3,
             style_mode=style_mode,
             provider_name=provider,
-            model_name=model_id
+            model_name=model_id,
+            user_id=current_user.uid,
         )
         return SceneVariationsResponse(
             project_id=project_id,
             scene_id=scene_id,
             variations=[SceneVariationItem(**v) for v in vars_raw]
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -205,13 +223,14 @@ async def generate_scene_variations(
 @router.post("/projects/{project_id}/scenes/generate-all-images", response_model=GenerateAllImagesResponse)
 async def generate_all_scene_images(
     project_id: str,
-    request: Optional[GenerateImageRequest] = None
+    request: Optional[GenerateImageRequest] = None,
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Batch generates images for all scenes in a project.
     Fault-tolerant: If one scene fails, the remaining scenes continue processing.
     """
-    project = project_service.get_project(project_id)
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -230,7 +249,8 @@ async def generate_all_scene_images(
             active_gen = get_image_generator(
                 provider_name=provider,
                 model_name=model_id,
-                style_mode=style_mode
+                style_mode=style_mode,
+                user_id=current_user.uid,
             )
 
         updated_scenes = await scene_image_service.generate_all_scene_images(
@@ -238,6 +258,7 @@ async def generate_all_scene_images(
             force=force,
             style_mode=style_mode,
             generator=active_gen,
+            user_id=current_user.uid,
         )
 
         completed_count = sum(1 for s in updated_scenes if s.image_status == "completed")
@@ -263,12 +284,13 @@ async def generate_all_scene_images(
 async def retry_failed_scene_images(
     project_id: str,
     request: Optional[GenerateImageRequest] = None,
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Retries generation only for scenes that previously failed or are missing images,
     strictly preserving all already-successful scene images.
     """
-    project = project_service.get_project(project_id)
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -287,6 +309,7 @@ async def retry_failed_scene_images(
                 provider_name=provider,
                 model_name=model_id,
                 style_mode=style_mode,
+                user_id=project.owner_id,
             )
         updated_scenes = await scene_image_service.retry_failed_scene_images(
             project=project,
@@ -317,7 +340,8 @@ async def retry_failed_scene_images(
 def apply_graphic_template(
     project_id: str,
     scene_id: str,
-    body: GraphicTemplateRequest = Body(...)
+    body: GraphicTemplateRequest = Body(...),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Renders a high-resolution graphic card template (title card, quote, stats, step card, split)
@@ -325,7 +349,7 @@ def apply_graphic_template(
     """
     import time
     from datetime import datetime, timezone
-    project = project_service.get_project(project_id)
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
     if not project:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
     target_scene = next((s for s in project.scenes if s.id == scene_id), None)

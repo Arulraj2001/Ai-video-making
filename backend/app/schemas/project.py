@@ -93,6 +93,7 @@ class ModelCatalogItem(BaseModel):
     provider: str
     model_id: str
     description: str
+    category: Optional[str] = "free_cloud"
     quality: int = Field(default=4, ge=1, le=5)
     speed: str = "Fast"
     is_free: bool = True
@@ -242,5 +243,6 @@ class ProjectResponse(BaseModel):
     caption_settings: Optional[CaptionSettingsSchema] = None
     audio_settings: Optional[AudioSettingsSchema] = None
     canvas_settings: Optional[CanvasSettingsSchema] = None
+    owner_id: Optional[str] = None
     created_at: str
     updated_at: str

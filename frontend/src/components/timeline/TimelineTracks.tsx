@@ -450,6 +450,8 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                       <img
                         src={api.getMediaUrl(scene.image_url)}
                         alt={scene.caption}
+                        loading="lazy"
+                        decoding="async"
                         style={{
                           width: "100%",
                           height: "100%",

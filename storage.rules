@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // User project assets: images, audio, renders
+    // Only the authenticated creator matching userId can read and write
+    match /users/{userId}/projects/{projectId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Phase 17: Payment proof uploads
+    // Creator or Admin can read; Creator can write only up to 5MB images
+    match /users/{userId}/payments/{paymentId}/proof/{allPaths=**} {
+      allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Default deny all other paths
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

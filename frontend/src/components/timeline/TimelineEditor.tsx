@@ -445,7 +445,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Top Action & Status Toolbar */}
       <div
-        className="glass-panel"
+        className="glass-panel timeline-toolbar-container"
         style={{
           padding: "12px 20px",
           display: "flex",
@@ -617,9 +617,9 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
       {/* Main Workspace Split: Cinema Preview (Left/Top) & Scene Inspector (Right/Top) */}
       <div
+        className="timeline-workspace-split"
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1.35fr) minmax(360px, 1fr)",
           gap: "24px",
           alignItems: "start",
         }}

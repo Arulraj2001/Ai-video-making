@@ -4,8 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Video Maker | Automated Video Production Pipeline</title>
-    <meta name="description" content="Turn voiceover audio and timestamped captions into AI-driven storyboards and Full HD MP4 videos." />
+    <title>ScenoraEdits | AI Video Studio & Visual Production Pipeline</title>
+    <meta name="description" content="Turn voiceover audio and timestamped captions into AI-directed storyboards and Full HD videos with ScenoraEdits." />
+    <!-- Prevent theme flash on initial render -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('scenora_theme') || localStorage.getItem('ai_video_theme');
+          var theme = saved;
+          if (!theme || theme === 'system') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {}
+      })();
+    </script>
     <!-- Google Fonts: Outfit, Plus Jakarta Sans & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

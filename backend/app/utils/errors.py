@@ -28,8 +28,32 @@ async def app_exception_handler(request: Request, exc: AppException):
         content={"error": True, "message": exc.message, "status_code": exc.status_code}
     )
 
+import logging
+import os
+from app.configuration.config import settings
+from app.utils.security import sanitize_secrets
+
+logger = logging.getLogger("scenora.errors")
+
 async def global_exception_handler(request: Request, exc: Exception):
+    is_prod = (
+        getattr(settings, "ENVIRONMENT", "development").lower() == "production"
+        or os.getenv("SCENORA_ENV", "").lower() == "production"
+    )
+    safe_err = sanitize_secrets(str(exc))
+    logger.error(f"Unhandled Exception on {request.method} {request.url.path}: {safe_err}", exc_info=not is_prod)
+
+    if is_prod:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": True,
+                "message": "An unexpected server error occurred. Please try again later or contact support.",
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            }
+        )
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"error": True, "message": "An unexpected server error occurred", "details": str(exc)}
+        content={"error": True, "message": "An unexpected server error occurred", "details": safe_err}
     )

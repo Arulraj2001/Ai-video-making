@@ -31,6 +31,14 @@ from app.schemas.video_bible import (
     ObjectCreate,
     ObjectUpdate
 )
+from app.services.repository.project_repository import (
+    DualReadProjectRepository,
+    ProjectRepository,
+)
+from app.services.storage.asset_storage import (
+    AssetStorage,
+    default_asset_storage,
+)
 
 import re
 
@@ -43,20 +51,41 @@ ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 MAX_AUDIO_SIZE = 50 * 1024 * 1024  # 50 MB
 MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
 
+PROJECT_ID_REGEX = re.compile(r'^[a-zA-Z0-9_-]+$')
+
 def sanitize_filename(filename: str) -> str:
     """Sanitizes filename and strips any directory path traversal characters."""
     base = Path(filename).name
     clean = re.sub(r'[^a-zA-Z0-9_.-]', '_', base)
     return clean or "file"
 
+def validate_project_id(project_id: str) -> str:
+    """Validates that project_id contains only alphanumeric, dash, or underscore characters and does not attempt directory traversal."""
+    if not project_id or not isinstance(project_id, str):
+        raise ValueError("Project ID cannot be empty")
+    clean_id = project_id.strip()
+    if not PROJECT_ID_REGEX.match(clean_id):
+        raise ValueError(f"Invalid project ID '{project_id}': contains disallowed characters")
+    return clean_id
+
 class ProjectService:
-    def __init__(self):
-        self._projects: dict[str, ProjectModel] = {}
+    def __init__(self, repository: Optional[ProjectRepository] = None, asset_storage: Optional[AssetStorage] = None):
+        self.repository = repository or DualReadProjectRepository()
+        self.asset_storage = asset_storage or default_asset_storage
+        self._projects: dict[str, ProjectModel] = (
+            self.repository.fs_repo._memory_cache
+            if hasattr(self.repository, "fs_repo")
+            else {}
+        )
         PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
-        self._load_from_disk()
 
     def _get_project_dir(self, project_id: str) -> Path:
-        pdir = PROJECTS_DIR / project_id
+        valid_id = validate_project_id(project_id)
+        pdir = (PROJECTS_DIR / valid_id).resolve()
+        try:
+            pdir.relative_to(PROJECTS_DIR.resolve())
+        except ValueError:
+            raise ValueError(f"Directory traversal detected for project ID '{project_id}'")
         pdir.mkdir(parents=True, exist_ok=True)
         return pdir
 
@@ -68,18 +97,18 @@ class ProjectService:
         project_id: str,
         scene_id: str,
         image_bytes: bytes,
-        filename: str
+        filename: str,
+        owner_id: Optional[str] = None
     ) -> tuple[str, str]:
         """Saves raw image bytes for a scene to storage and returns (relative_path, public_url)."""
-        images_dir = STORAGE_DIR / "projects" / project_id / "images"
-        images_dir.mkdir(parents=True, exist_ok=True)
-        safe_filename = sanitize_filename(filename)
-        file_path = images_dir / safe_filename
-        with open(file_path, "wb") as f:
-            f.write(image_bytes)
-        relative_path = f"storage/projects/{project_id}/images/{safe_filename}"
-        public_url = f"/media/{project_id}/images/{safe_filename}"
-        return relative_path, public_url
+        return self.asset_storage.save_asset(
+            project_id=project_id,
+            asset_category="images",
+            filename=filename,
+            content=image_bytes,
+            content_type="image/png",
+            owner_id=owner_id,
+        )
 
     def _serialize_ref_image(self, ref: Optional[ReferenceImageModel]) -> Optional[dict]:
         if not ref:
@@ -102,132 +131,8 @@ class ProjectService:
         )
 
     def _save_to_disk(self, project: ProjectModel) -> None:
-        pfile = self._get_project_file(project.id)
-        vb = project.video_bible
-        style = vb.overall_style
-
-        data = {
-            "id": project.id,
-            "name": project.name,
-            "description": project.description,
-            "raw_captions": project.raw_captions,
-            "created_at": project.created_at,
-            "updated_at": project.updated_at,
-            "audio_file": {
-                "filename": project.audio_file.filename,
-                "storage_path": project.audio_file.storage_path,
-                "file_size": project.audio_file.file_size,
-                "content_type": project.audio_file.content_type
-            } if project.audio_file else None,
-            "scenes": [
-                {
-                    "id": s.id,
-                    "start": s.start,
-                    "end": s.end,
-                    "duration": s.duration,
-                    "caption": s.caption,
-                    "visual_description": getattr(s, "visual_description", None),
-                    "image_prompt": getattr(s, "image_prompt", None),
-                    "suggested_motion": getattr(s, "suggested_motion", None),
-                    "suggested_transition": getattr(s, "suggested_transition", None),
-                    "image_status": getattr(s, "image_status", "pending"),
-                    "image_url": getattr(s, "image_url", None),
-                    "image_path": getattr(s, "image_path", None),
-                    "image_error": getattr(s, "image_error", None),
-                    "image_metadata": getattr(s, "image_metadata", None),
-                    "motion": getattr(s, "motion", "none"),
-                    "transition": getattr(s, "transition", "none"),
-                    "transition_duration": getattr(s, "transition_duration", 0.5),
-                    "image_fit": getattr(s, "image_fit", "cover"),
-                    "image_position": getattr(s, "image_position", "center"),
-                    "image_zoom": getattr(s, "image_zoom", 1.0),
-                    "image_crop": getattr(s, "image_crop", None),
-                    "brightness": getattr(s, "brightness", 0.0),
-                    "contrast": getattr(s, "contrast", 1.0),
-                    "saturation": getattr(s, "saturation", 1.0),
-                    "color_filter": getattr(s, "color_filter", "none"),
-                }
-                for s in project.scenes
-            ],
-            "caption_settings": {
-                "enabled": getattr(project.caption_settings, "enabled", True),
-                "font_family": getattr(project.caption_settings, "font_family", "Inter"),
-                "font_size": getattr(project.caption_settings, "font_size", 42),
-                "position": getattr(project.caption_settings, "position", "bottom"),
-                "alignment": getattr(project.caption_settings, "alignment", "center"),
-                "background": getattr(project.caption_settings, "background", "semi-transparent"),
-                "outline_shadow": getattr(project.caption_settings, "outline_shadow", "subtle"),
-                "safe_area": getattr(project.caption_settings, "safe_area", True),
-                "color": getattr(project.caption_settings, "color", "#FFFFFF"),
-            } if hasattr(project, "caption_settings") and project.caption_settings else None,
-            "audio_settings": {
-                "narration_volume": getattr(project.audio_settings, "narration_volume", 1.0),
-                "narration_muted": getattr(project.audio_settings, "narration_muted", False),
-                "music_file": {
-                    "filename": project.audio_settings.music_file.filename,
-                    "storage_path": project.audio_settings.music_file.storage_path,
-                    "file_size": project.audio_settings.music_file.file_size,
-                    "content_type": project.audio_settings.music_file.content_type,
-                } if project.audio_settings and project.audio_settings.music_file else None,
-                "music_volume": getattr(project.audio_settings, "music_volume", 0.25),
-                "music_fade_in": getattr(project.audio_settings, "music_fade_in", 1.0),
-                "music_fade_out": getattr(project.audio_settings, "music_fade_out", 2.0),
-                "music_muted": getattr(project.audio_settings, "music_muted", False),
-                "ducking_enabled": getattr(project.audio_settings, "ducking_enabled", True),
-            } if hasattr(project, "audio_settings") and project.audio_settings else None,
-            "canvas_settings": {
-                "aspect_ratio": getattr(project.canvas_settings, "aspect_ratio", "9:16"),
-                "resolution": getattr(project.canvas_settings, "resolution", "1080x1920"),
-                "fps": getattr(project.canvas_settings, "fps", 30),
-            } if hasattr(project, "canvas_settings") and project.canvas_settings else None,
-            "video_bible": {
-                "overall_style": {
-                    "visual_style": style.visual_style,
-                    "realism_level": style.realism_level,
-                    "color_treatment": style.color_treatment,
-                    "lighting": style.lighting,
-                    "camera_style": style.camera_style,
-                    "lens_cinematography": style.lens_cinematography,
-                    "mood": style.mood
-                },
-                "characters": [
-                    {
-                        "id": c.id,
-                        "name": c.name,
-                        "description": c.description,
-                        "appearance": c.appearance,
-                        "clothing": c.clothing,
-                        "age_range": c.age_range,
-                        "personality": c.personality,
-                        "reference_image": self._serialize_ref_image(c.reference_image)
-                    }
-                    for c in vb.characters
-                ],
-                "locations": [
-                    {
-                        "id": loc.id,
-                        "name": loc.name,
-                        "description": loc.description,
-                        "environment": loc.environment,
-                        "lighting": loc.lighting,
-                        "reference_image": self._serialize_ref_image(loc.reference_image)
-                    }
-                    for loc in vb.locations
-                ],
-                "objects": [
-                    {
-                        "id": obj.id,
-                        "name": obj.name,
-                        "description": obj.description,
-                        "reference_image": self._serialize_ref_image(obj.reference_image)
-                    }
-                    for obj in vb.objects
-                ],
-                "rules": vb.rules
-            }
-        }
-        with open(pfile, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        self.repository.save_project(project, getattr(project, "owner_id", None))
+        return
 
     def _deserialize_project(self, data: dict, project_id: Optional[str] = None) -> ProjectModel:
         import uuid
@@ -363,6 +268,7 @@ class ProjectService:
             id=project_id or data.get("id") or f"proj_{uuid.uuid4().hex[:8]}",
             name=data.get("name", "Untitled Project"),
             description=data.get("description", ""),
+            owner_id=data.get("owner_id"),
             audio_file=audio,
             raw_captions=data.get("raw_captions", ""),
             scenes=scenes,
@@ -380,49 +286,62 @@ class ProjectService:
         for pdir in PROJECTS_DIR.iterdir():
             if pdir.is_dir():
                 pfile = pdir / "project.json"
+                bak_file = pdir / "project.json.bak"
+                data = None
                 if pfile.exists():
                     try:
                         with open(pfile, "r", encoding="utf-8") as f:
                             data = json.load(f)
+                    except Exception:
+                        # Attempt recovery from backup if main file is corrupted
+                        if bak_file.exists():
+                            try:
+                                with open(bak_file, "r", encoding="utf-8") as bf:
+                                    data = json.load(bf)
+                            except Exception:
+                                pass
+                elif bak_file.exists():
+                    try:
+                        with open(bak_file, "r", encoding="utf-8") as bf:
+                            data = json.load(bf)
+                    except Exception:
+                        pass
+
+                if data:
+                    try:
                         proj = self._deserialize_project(data)
                         self._projects[proj.id] = proj
                     except Exception:
                         continue
 
-    def list_projects(self) -> List[ProjectModel]:
-        return list(self._projects.values())
+    def list_projects(self, owner_id: Optional[str] = None) -> List[ProjectModel]:
+        return self.repository.list_projects(owner_id)
 
-    def get_project(self, project_id: str) -> Optional[ProjectModel]:
-        return self._projects.get(project_id)
+    def get_project(self, project_id: str, owner_id: Optional[str] = None) -> Optional[ProjectModel]:
+        return self.repository.get_project(project_id, owner_id)
 
-    def create_project(self, data: ProjectCreate) -> ProjectModel:
+    def create_project(self, data: ProjectCreate, owner_id: Optional[str] = None) -> ProjectModel:
         project = ProjectModel(
             name=data.name.strip(),
             description=data.description.strip() if data.description else "",
             raw_captions=data.raw_captions or "",
-            video_bible=VideoBibleModel()
+            video_bible=VideoBibleModel(),
+            owner_id=owner_id
         )
-        self._projects[project.id] = project
-        self._save_to_disk(project)
-        return project
+        return self.repository.save_project(project, owner_id)
 
-    def delete_project(self, project_id: str) -> bool:
-        if project_id in self._projects:
-            del self._projects[project_id]
-            pdir = PROJECTS_DIR / project_id
-            if pdir.exists():
-                shutil.rmtree(pdir, ignore_errors=True)
-            return True
-        return False
+    def delete_project(self, project_id: str, owner_id: Optional[str] = None) -> bool:
+        return self.repository.delete_project(project_id, owner_id)
 
     def save_audio(
         self,
         project_id: str,
         filename: str,
         content: bytes,
-        content_type: str
+        content_type: str,
+        owner_id: Optional[str] = None
     ) -> AudioFileModel:
-        project = self.get_project(project_id)
+        project = self.get_project(project_id, owner_id)
         if not project:
             raise ValueError(f"Project '{project_id}' not found")
 
@@ -556,6 +475,22 @@ class ProjectService:
         target = next((s for s in project.scenes if s.id == scene_id), None)
         if not target:
             raise ValueError(f"Scene '{scene_id}' not found in project")
+
+        # Stale state protection:
+        # Never allow an older slow generation request to overwrite a newer successful state
+        if status == "completed" and target.image_status == "completed" and metadata:
+            req_started = metadata.get("gen_started_at")
+            current_completed = (target.image_metadata or {}).get("gen_completed_at")
+            if req_started and current_completed and req_started < current_completed:
+                # Newer image already completed; keep newer image state
+                return target
+
+        if status == "failed" and target.image_status == "completed":
+            # Never erase an already completed image on failure
+            target.image_error = error
+            project.updated_at = datetime.now(timezone.utc).isoformat()
+            self._save_to_disk(project)
+            return target
 
         target.image_status = status
         if url is not None:
@@ -1179,9 +1114,10 @@ class ProjectService:
         project_id: str,
         filename: str,
         content: bytes,
-        content_type: str
+        content_type: str,
+        owner_id: Optional[str] = None
     ) -> AudioFileModel:
-        project = self.get_project(project_id)
+        project = self.get_project(project_id, owner_id)
         if not project:
             raise ValueError(f"Project '{project_id}' not found")
 

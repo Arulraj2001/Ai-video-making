@@ -34,12 +34,17 @@ def check_diagnostics() -> dict:
     except Exception:
         storage_ok = False
 
+    is_prod = (
+        getattr(settings, "ENVIRONMENT", "development").lower() == "production"
+        or os.getenv("SCENORA_ENV", "").lower() == "production"
+    )
+
     return {
         "status": "ok" if (storage_ok and ffmpeg_ok) else "degraded",
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
         "ffmpeg_available": ffmpeg_ok,
-        "ffmpeg_path": ffmpeg_exe if ffmpeg_ok else None,
+        "ffmpeg_path": "[CONFIGURED]" if (ffmpeg_ok and is_prod) else (ffmpeg_exe if ffmpeg_ok else None),
         "storage_writable": storage_ok,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }

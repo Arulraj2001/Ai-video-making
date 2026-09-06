@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User document and nested subcollections
+    match /users/{userId} {
+      // Any authenticated user can read public creator profiles; only owner can write
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Project subcollection: Strictly accessible ONLY by the owning user
+      match /projects/{projectId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // API Key Vault subcollection: NEVER readable or writable directly from client SDKs.
+      // All API key operations must pass through the backend vault service.
+      match /apiKeys/{provider} {
+        allow read, write: if false;
+      }
+
+      // Usage tracking subcollection: Read-only for the owner; server-only writes.
+      // All usage increments and checks are strictly enforced server-side.
+      match /usage/{period} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
+
+      // Phase 17: Payment records subcollection
+      // Owner or Admin can read; writes strictly through server API to ensure integrity
+      match /payments/{paymentId} {
+        allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+        allow write: if false;
+      }
+
+      // Phase 17: Yearly entitlements subcollection
+      // Owner or Admin can read; writes strictly server-side upon verified admin approval
+      match /entitlements/{entitlementId} {
+        allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+        allow write: if false;
+      }
+    }
+
+
+    // Root projects collection (for dual-read / migration compatibility)
+    match /projects/{projectId} {
+      allow read: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Phase 18 & 19: Central platform configuration
+    // Direct client access restricted to verified admins; regular creators consume config via FastAPI /api/plans/yearly
+    match /platform/config {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Backend payment index: server Admin SDK only
+    match /payments_index/{paymentId} {
+      allow read, write: if false;
+    }
+
+    // Phase 18: Administrative audit logs
+    // Strictly accessible ONLY by verified administrators
+    match /admin_audit_logs/{logId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}
+

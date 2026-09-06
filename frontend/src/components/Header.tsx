@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Video,
   Plus,
   UploadCloud,
   RefreshCw,
@@ -16,6 +15,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import type { Project } from "../types";
+import { ScenoraLogo } from "./brand/ScenoraLogo";
 
 export type StudioStage = "script" | "bible" | "storyboard" | "timeline" | "export";
 
@@ -74,36 +74,9 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Left: Brand & Project Selector */}
         <div className="flex items-center gap-3 shrink-0">
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "var(--radius-md)",
-              background: "linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#FFFFFF",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <Video size={20} />
-          </div>
+          <ScenoraLogo subBrand="studio" size="sm" />
 
           <div className="flex flex-col">
-            <span
-              style={{
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                fontSize: "0.95rem",
-                letterSpacing: "-0.02em",
-                color: "var(--text-primary)",
-                lineHeight: 1.2,
-              }}
-            >
-              AI VIDEO MAKER
-            </span>
-
             {/* Project Picker dropdown */}
             {activeProject ? (
               <div className="flex items-center gap-1.5 mt-0.5">

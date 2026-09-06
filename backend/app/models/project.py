@@ -54,5 +54,6 @@ class ProjectModel:
     caption_settings: CaptionSettingsModel = field(default_factory=CaptionSettingsModel)
     audio_settings: AudioSettingsModel = field(default_factory=AudioSettingsModel)
     canvas_settings: CanvasSettingsModel = field(default_factory=CanvasSettingsModel)
+    owner_id: Optional[str] = None
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())

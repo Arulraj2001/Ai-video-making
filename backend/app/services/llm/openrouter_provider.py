@@ -132,3 +132,59 @@ class OpenRouterProvider(BaseLLMProvider):
 
         parsed = json.loads(cleaned)
         return parsed.get("scenes", [])
+
+    async def regenerate_scene(
+        self,
+        scene: Dict[str, Any],
+        visual_context: Dict[str, Any],
+        instructions: str = "",
+        aspect_ratio: str = "16:9"
+    ) -> Dict[str, Any]:
+        user_content = {
+            "aspect_ratio": aspect_ratio,
+            "video_bible_visual_context": visual_context,
+            "target_scene": scene,
+            "user_custom_instructions": instructions or "Make it more cinematic and dramatic."
+        }
+
+        single_prompt = (
+            SYSTEM_PROMPT +
+            "\nYou are regenerating a SINGLE scene. Respond strictly with a JSON object: "
+            '{"visual_description": "...", "image_prompt": "...", "suggested_motion": "...", "suggested_transition": "..."}'
+        )
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://scenoraedits.ai",
+            "X-Title": "ScenoraEdits",
+        }
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": single_prompt},
+                {"role": "user", "content": json.dumps(user_content, ensure_ascii=False)}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.5
+        }
+
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            resp = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        content = data["choices"][0]["message"]["content"].strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        return json.loads(content.strip())
+

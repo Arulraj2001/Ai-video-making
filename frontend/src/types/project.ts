@@ -193,6 +193,7 @@ export interface ModelCatalogItem {
   provider: string;
   model_id: string;
   description: string;
+  category?: "free_cloud" | "quota_cloud" | "local" | "mock" | "paid_cloud" | string;
   quality: number;
   speed: string;
   is_free: boolean;
@@ -210,6 +211,18 @@ export interface ModelCatalogResponse {
   current_provider: string;
   models: ModelCatalogItem[];
 }
+
+export interface ProviderUsageItem {
+  provider: string;
+  date: string;
+  used_today: number;
+  estimated_daily_limit: number | null;
+  remaining_today: number | null;
+  is_exhausted: boolean;
+  resets_at_utc: string;
+}
+
+export type ProviderUsageStats = Record<string, ProviderUsageItem>;
 
 export interface ClusterScenesInput {
   mode?: "fixed_duration" | "smart_llm" | "caption_count";

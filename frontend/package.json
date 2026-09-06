@@ -8,9 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test tests/formatters.test.mjs"
+    "test": "node --test tests/auth.test.mjs tests/formatters.test.mjs"
   },
   "dependencies": {
+    "firebase": "^12.18.0",
     "lucide-react": "^1.41.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
