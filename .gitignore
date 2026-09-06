@@ -19,6 +19,11 @@ storage/
 backend/phase*_verified_images/
 backend/phase5_evaluation_report.json
 backend/scratch_*
+backend/scratch/
+scratch/
+backend/sana_env/
+sana_env/
+
 
 # Environment secrets
 .env

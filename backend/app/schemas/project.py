@@ -93,6 +93,7 @@ class ModelCatalogItem(BaseModel):
     provider: str
     model_id: str
     description: str
+    category: Optional[str] = "free_cloud"
     quality: int = Field(default=4, ge=1, le=5)
     speed: str = "Fast"
     is_free: bool = True

@@ -65,13 +65,17 @@ class CloudflareImageGenerator(BaseImageGenerator):
             "steps": min(options.num_inference_steps or 4, 8),
         }
 
+        from app.services.usage_tracker_service import usage_tracker
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.post(url, json=payload, headers=headers)
             except Exception as e:
+                usage_tracker.record_call("cloudflare", success=False, status_code=503)
                 raise RuntimeError(f"Cloudflare Workers AI network error: {str(e)}")
 
             if response.status_code != 200:
+                usage_tracker.record_call("cloudflare", success=False, status_code=response.status_code)
                 err_msg = f"Cloudflare Workers AI error HTTP {response.status_code}"
                 try:
                     err_json = response.json()
@@ -80,6 +84,8 @@ class CloudflareImageGenerator(BaseImageGenerator):
                 except Exception:
                     pass
                 raise RuntimeError(err_msg)
+
+            usage_tracker.record_call("cloudflare", success=True, status_code=200)
 
             content_type = response.headers.get("content-type", "")
             if "image" in content_type:

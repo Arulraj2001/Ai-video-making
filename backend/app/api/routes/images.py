@@ -80,6 +80,15 @@ def get_available_models():
             detail=f"Failed to fetch model catalog: {str(e)}"
         )
 
+@router.get("/images/usage-stats")
+def get_provider_usage_stats():
+    """
+    Returns today's usage statistics and estimated quota limits for AI image providers.
+    Includes Cloudflare daily usage counter, remaining quota, and UTC reset timestamp.
+    """
+    from app.services.usage_tracker_service import usage_tracker
+    return usage_tracker.get_all_usage()
+
 @router.get("/images/capabilities", response_model=ImageCapabilitiesResponse)
 def get_image_capabilities(
     provider: Optional[str] = Query(None, description="Optional provider override"),

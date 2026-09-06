@@ -63,6 +63,9 @@ class Settings:
     HUGGINGFACE_IMAGE_MODEL: str = os.getenv("HUGGINGFACE_IMAGE_MODEL", "black-forest-labs/FLUX.1-schnell")
     
     DEFAULT_ASPECT_RATIO: str = os.getenv("DEFAULT_ASPECT_RATIO", "16:9")
+    
+    # Root storage directory (supports persistent volume mounts e.g. /var/data on Render)
+    STORAGE_DIR: str = os.getenv("STORAGE_DIR", "storage")
 
 settings = Settings()
 

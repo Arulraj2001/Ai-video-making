@@ -23,6 +23,7 @@ import type {
   ClusterScenesResponse,
   GraphicTemplateInput,
   SceneVariationsResponse,
+  ProviderUsageStats,
   RenderJob,
   RenderRequestInput,
   RenderJobListResponse,
@@ -335,6 +336,10 @@ class ApiService {
     const params = new URLSearchParams({ provider });
     if (model) params.set("model", model);
     return this.request<ImageProviderHealth>(`/api/images/provider-health?${params.toString()}`);
+  }
+
+  async getProviderUsageStats(): Promise<ProviderUsageStats> {
+    return this.request<ProviderUsageStats>("/api/images/usage-stats");
   }
 
   async generateSceneImage(

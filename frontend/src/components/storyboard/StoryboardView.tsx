@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Clapperboard,
   Sparkles,
@@ -38,6 +38,7 @@ import type {
   ImageProviderHealth,
   ModelCatalogItem,
   SceneVariationItem,
+  ProviderUsageStats,
 } from "../../types";
 
 interface StoryboardViewProps {
@@ -60,10 +61,32 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
 
-  // Model catalog
+  // Model catalog & usage stats
   const [models, setModels] = useState<ModelCatalogItem[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>("flux-realism");
   const [selectedProvider, setSelectedProvider] = useState<string>("pollinations");
+  const [usageStats, setUsageStats] = useState<ProviderUsageStats | null>(null);
+
+  const modelCategories = useMemo(() => {
+    const groupDefs: Record<string, { label: string; items: ModelCatalogItem[] }> = {
+      free_cloud: { label: "⚡ Free Cloud (Zero Setup / Unlimited)", items: [] },
+      quota_cloud: { label: "☁️ Cloudflare Workers AI (Daily Quota)", items: [] },
+      local: { label: "💻 Local Machine (Offline / Unlimited)", items: [] },
+      mock: { label: "🧪 Offline Testing / Mock", items: [] },
+      paid_cloud: { label: "🔑 Advanced Cloud (API Keys Required)", items: [] },
+    };
+
+    models.forEach((m) => {
+      const cat = m.category || "free_cloud";
+      if (groupDefs[cat]) {
+        groupDefs[cat].items.push(m);
+      } else {
+        groupDefs.paid_cloud.items.push(m);
+      }
+    });
+
+    return Object.entries(groupDefs).filter(([_, g]) => g.items.length > 0);
+  }, [models]);
 
   // Multi-select & Merge state
   const [selectedSceneIds, setSelectedSceneIds] = useState<Set<string>>(new Set());
@@ -168,11 +191,26 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       } catch (err) {
         console.warn("Could not fetch model catalog:", err);
       }
+      try {
+        const stats = await api.getProviderUsageStats();
+        if (isMounted) setUsageStats(stats);
+      } catch (err) {
+        console.warn("Could not fetch provider usage stats:", err);
+      }
     };
     loadData();
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  const refreshUsageStats = useCallback(async () => {
+    try {
+      const stats = await api.getProviderUsageStats();
+      setUsageStats(stats);
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
@@ -306,6 +344,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         model_id: selectedModelId,
       });
       applySceneCollection(res.scenes);
+      refreshUsageStats();
 
       if (res.failed_count > 0) {
         setError(
@@ -316,6 +355,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       setError(err.message || "Batch image generation failed");
     } finally {
       setGeneratingAllImages(false);
+      refreshUsageStats();
     }
   };
 
@@ -330,6 +370,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         model_id: selectedModelId,
       });
       applySceneCollection(res.scenes);
+      refreshUsageStats();
       if (res.failed_count > 0) {
         setError(`Retry completed: ${res.completed_count} ready, ${res.failed_count} still failing.`);
       }
@@ -337,6 +378,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       setError(err.message || "Retry failed images failed");
     } finally {
       setRetryingFailed(false);
+      refreshUsageStats();
     }
   };
 
@@ -368,6 +410,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       });
       if (sceneRequestTokens.current.get(sceneId) === requestToken) {
         applySingleScene(sceneId, updated);
+        refreshUsageStats();
       }
     } catch (err: any) {
       if (sceneRequestTokens.current.get(sceneId) === requestToken) {
@@ -378,6 +421,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         }
       }
     } finally {
+      refreshUsageStats();
       setGeneratingSceneIds((prev) => {
         if (sceneRequestTokens.current.get(sceneId) !== requestToken) return prev;
         const copy = new Set(prev);
@@ -635,17 +679,105 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                         const found = models.find((m) => m.model_id === mid);
                         if (found) setSelectedProvider(found.provider);
                       }}
-                      className="w-full bg-transparent text-xs font-semibold focus:outline-none cursor-pointer py-1"
+                      className="w-full bg-zinc-900 text-xs font-semibold focus:outline-none cursor-pointer py-1.5 px-2 rounded border border-zinc-700"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      {models.map((m) => (
-                        <option key={m.id} value={m.model_id} className="bg-zinc-900 text-white">
-                          {m.name} {m.is_free ? "(Free)" : ""}
-                        </option>
+                      {modelCategories.map(([key, group]) => (
+                        <optgroup key={key} label={group.label} className="bg-zinc-950 text-zinc-400 font-bold py-1">
+                          {group.items.map((m) => {
+                            let extra = m.is_free ? " • Free" : "";
+                            if (m.provider === "cloudflare" && usageStats?.cloudflare) {
+                              extra = ` • ${usageStats.cloudflare.used_today}/~25 today`;
+                            } else if (m.provider === "sana_local") {
+                              extra = " • Local GPU (1-Step)";
+                            }
+                            return (
+                              <option key={m.id} value={m.model_id} className="bg-zinc-900 text-white font-normal py-1">
+                                {m.name}{extra}
+                              </option>
+                            );
+                          })}
+                        </optgroup>
                       ))}
                     </select>
-                    <span className="block mt-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                      Provider: {selectedProvider}
+
+                    {/* Live Usage / Status Banner */}
+                    {selectedProvider === "cloudflare" && usageStats?.cloudflare && (
+                      <div
+                        className="mt-2 p-2 rounded text-[11px] border"
+                        style={{
+                          backgroundColor: usageStats.cloudflare.is_exhausted
+                            ? "rgba(239, 68, 68, 0.12)"
+                            : "rgba(59, 130, 246, 0.1)",
+                          borderColor: usageStats.cloudflare.is_exhausted
+                            ? "rgba(239, 68, 68, 0.3)"
+                            : "rgba(59, 130, 246, 0.25)",
+                          color: usageStats.cloudflare.is_exhausted ? "#fca5a5" : "#93c5fd",
+                        }}
+                      >
+                        <div className="flex items-center justify-between font-medium">
+                          <span>
+                            {usageStats.cloudflare.is_exhausted
+                              ? "⚠️ Daily Free Quota Exhausted"
+                              : `Cloudflare Quota: ${usageStats.cloudflare.used_today} / ~25 used`}
+                          </span>
+                          <span className="text-[9px] opacity-75">Resets 00:00 UTC</span>
+                        </div>
+                        {usageStats.cloudflare.is_exhausted ? (
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[10px] text-zinc-300">Switch to unlimited:</span>
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedModelId("flux-realism");
+                                  setSelectedProvider("pollinations");
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-blue-600/30 hover:bg-blue-600/50 text-white text-[10px] cursor-pointer"
+                              >
+                                Free Flux
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedModelId("Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers");
+                                  setSelectedProvider("sana_local");
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-white text-[10px] cursor-pointer"
+                              >
+                                Local SANA
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] opacity-80 block mt-0.5">
+                            Remaining today: ~{usageStats.cloudflare.remaining_today} generations
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedProvider === "sana_local" && (
+                      <div
+                        className="mt-2 p-2 rounded text-[11px] border"
+                        style={{
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
+                          borderColor: "rgba(16, 185, 129, 0.25)",
+                          color: "#6ee7b7",
+                        }}
+                      >
+                        <span className="font-semibold block">💻 Local SANA-Sprint Active</span>
+                        <span className="text-[10px] opacity-80 block mt-0.5">
+                          Runs 100% offline on your GPU. Ensure local server is started:
+                          <code className="block mt-0.5 px-1 py-0.5 bg-black/40 rounded text-zinc-200">
+                            python scripts/sana_server.py
+                          </code>
+                        </span>
+                      </div>
+                    )}
+
+                    <span className="block mt-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      Provider: <strong className="text-zinc-200 uppercase">{selectedProvider}</strong>
                     </span>
                   </div>
                 )}
@@ -1388,7 +1520,13 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                           <img
                             src={api.getMediaUrl(scene.image_url || undefined)}
                             alt={`Scene ${index + 1} Visual`}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
+                            onError={(e) => {
+                              // Graceful fallback for missing or corrupted disk assets
+                              e.currentTarget.style.opacity = "0.4";
+                            }}
                             onClick={() =>
                               setPreviewImage({
                                 url: api.getMediaUrl(scene.image_url || undefined),

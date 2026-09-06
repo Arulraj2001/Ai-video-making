@@ -283,6 +283,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
 
       {/* Main Dynamic Stage Enclosure */}
       <div
+        className="cinema-stage-enclosure"
         style={{
           position: "relative",
           width: "100%",
@@ -304,10 +305,12 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           style={{
             position: "relative",
             height: "100%",
+            maxHeight: "100%",
+            margin: "auto",
             aspectRatio:
-              project.canvas_settings?.aspect_ratio === "9:16"
+              project.canvas_settings?.aspect_ratio === "9:16" || project.canvas_settings?.resolution === "1080x1920"
                 ? "9 / 16"
-                : project.canvas_settings?.aspect_ratio === "1:1"
+                : project.canvas_settings?.aspect_ratio === "1:1" || project.canvas_settings?.resolution === "1080x1080"
                 ? "1 / 1"
                 : "16 / 9",
             maxWidth: "100%",
@@ -445,23 +448,39 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
                       }}
                     />
                   )}
-                  <img
-                    key={activeScene.id}
-                    src={api.getMediaUrl(activeScene.image_url)}
-                    alt={activeScene.caption || "Scene image"}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: activeScene.image_fit === "blur" ? "contain" : ((activeScene.image_fit || "cover") as any),
-                      objectPosition: activeScene.image_position || "center",
-                      filter: getCssFilter(activeScene),
-                      transform: `${getMotionTransform(activeScene.motion, sceneProgress)} scale(${activeScene.image_zoom || 1.0})`,
-                      transition: isPlaying ? "none" : "transform 0.2s ease-out",
-                      willChange: "transform",
-                      position: "relative",
-                      zIndex: 2,
-                    }}
-                  />
+                  {(() => {
+                    const crop = activeScene.image_crop;
+                    const cropClipPath =
+                      crop && typeof crop.width === "number" && typeof crop.height === "number" && crop.width > 5 && crop.height > 5
+                        ? `inset(${crop.y}% ${100 - (crop.x + crop.width)}% ${100 - (crop.y + crop.height)}% ${crop.x}%)`
+                        : undefined;
+
+                    return (
+                      <img
+                        key={activeScene.id}
+                        src={api.getMediaUrl(activeScene.image_url)}
+                        alt={activeScene.caption || "Scene image"}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit:
+                            activeScene.image_fit === "blur"
+                              ? "contain"
+                              : activeScene.image_fit === "fill"
+                              ? "cover"
+                              : ((activeScene.image_fit || "cover") as any),
+                          objectPosition: activeScene.image_position || "center",
+                          filter: getCssFilter(activeScene),
+                          transform: `${getMotionTransform(activeScene.motion, sceneProgress)} scale(${activeScene.image_zoom || 1.0})`,
+                          clipPath: cropClipPath,
+                          transition: isPlaying ? "none" : "transform 0.2s ease-out",
+                          willChange: "transform",
+                          position: "relative",
+                          zIndex: 2,
+                        }}
+                      />
+                    );
+                  })()}
                 </>
               ) : (
                 <div

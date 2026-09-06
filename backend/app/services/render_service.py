@@ -2,11 +2,12 @@ import asyncio
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from app.models.render import RenderJobModel
 from app.services.project_service import project_service, STORAGE_DIR
@@ -22,6 +23,12 @@ RESOLUTIONS = {
     "1280x720": {"width": 1280, "height": 720, "aspect_ratio": "16:9", "name": "Landscape 720p"},
 }
 DEFAULT_RESOLUTION = "1080x1920"
+
+ASPECT_TO_RESOLUTION = {
+    "16:9": "1920x1080",
+    "9:16": "1080x1920",
+    "1:1": "1080x1080",
+}
 
 
 def _format_ass_time(seconds: float) -> str:
@@ -167,6 +174,78 @@ def get_ffmpeg_executable() -> str:
     return "ffmpeg"
 
 
+def probe_video_metadata(file_path: Union[str, Path]) -> dict:
+    """Extracts stream properties, codecs, resolution, SAR/DAR, fps, duration, and audio specs using FFmpeg."""
+    p = Path(file_path)
+    if not p.exists():
+        raise FileNotFoundError(f"File not found: {p}")
+
+    ffmpeg_exe = get_ffmpeg_executable()
+    res = subprocess.run([ffmpeg_exe, "-i", str(p)], capture_output=True, text=True)
+    stderr = res.stderr
+
+    meta = {
+        "file_path": str(p),
+        "file_size": p.stat().st_size,
+        "width": None,
+        "height": None,
+        "duration": None,
+        "aspect_ratio": None,
+        "fps": None,
+        "video_codec": None,
+        "pix_fmt": None,
+        "audio_codec": None,
+        "audio_channels": None,
+        "audio_sample_rate": None,
+        "audio_bitrate_kbps": None,
+        "is_valid": False,
+    }
+
+    dur_match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", stderr)
+    if dur_match:
+        h, m, s = dur_match.groups()
+        meta["duration"] = round(int(h) * 3600 + int(m) * 60 + float(s), 3)
+
+    vid_match = re.search(r"Stream #\d+:\d+.*?: Video:\s*([a-zA-Z0-9_\-]+).*?,\s*([a-zA-Z0-9_]+(?:\([^\)]+\))?),?\s*(\d{3,5})x(\d{3,5})", stderr)
+    if vid_match:
+        meta["video_codec"] = vid_match.group(1).lower()
+        meta["pix_fmt"] = vid_match.group(2).split("(")[0].strip()
+        meta["width"] = int(vid_match.group(3))
+        meta["height"] = int(vid_match.group(4))
+
+    dar_match = re.search(r"DAR\s*(\d+:\d+)", stderr)
+    if dar_match:
+        meta["aspect_ratio"] = dar_match.group(1)
+    elif meta["width"] and meta["height"]:
+        w, h = meta["width"], meta["height"]
+        if w == 1920 and h == 1080:
+            meta["aspect_ratio"] = "16:9"
+        elif w == 1080 and h == 1920:
+            meta["aspect_ratio"] = "9:16"
+        elif w == h:
+            meta["aspect_ratio"] = "1:1"
+
+    fps_match = re.search(r"(\d+(?:\.\d+)?)\s*fps", stderr)
+    if fps_match:
+        meta["fps"] = float(fps_match.group(1))
+
+    aud_match = re.search(r"Stream #\d+:\d+.*?: Audio:\s*([a-zA-Z0-9_\-]+).*?,\s*(\d+)\s*Hz,\s*([a-zA-Z0-9_]+)", stderr)
+    if aud_match:
+        meta["audio_codec"] = aud_match.group(1).lower()
+        meta["audio_sample_rate"] = int(aud_match.group(2))
+        ch_str = aud_match.group(3).lower()
+        meta["audio_channels"] = 2 if "stereo" in ch_str else (1 if "mono" in ch_str else 2)
+
+    aud_br_match = re.search(r"Audio:.*?,\s*(\d+)\s*kb/s", stderr)
+    if aud_br_match:
+        meta["audio_bitrate_kbps"] = int(aud_br_match.group(1))
+
+    if meta["width"] and meta["height"] and meta["duration"] and meta["video_codec"]:
+        meta["is_valid"] = True
+
+    return meta
+
+
 class RenderService:
     def __init__(self):
         self._jobs: Dict[str, RenderJobModel] = {}
@@ -289,22 +368,24 @@ class RenderService:
         if not project.scenes or len(project.scenes) == 0:
             raise ValueError("Cannot render a project with no scenes.")
 
-        # Default resolution from canvas_settings if not explicitly provided
-        if not resolution:
-            resolution = getattr(project.canvas_settings, "resolution", DEFAULT_RESOLUTION) if getattr(project, "canvas_settings", None) else DEFAULT_RESOLUTION
-
-        # Normalize resolution
-        if resolution not in RESOLUTIONS:
-            resolution = DEFAULT_RESOLUTION
-
+        # Resolve aspect ratio and resolution
         if aspect_ratio_override:
             aspect_ratio = aspect_ratio_override
-        elif resolution in RESOLUTIONS:
+            if not resolution or resolution == DEFAULT_RESOLUTION or RESOLUTIONS.get(resolution, {}).get("aspect_ratio") != aspect_ratio:
+                resolution = ASPECT_TO_RESOLUTION.get(aspect_ratio, resolution or DEFAULT_RESOLUTION)
+        elif resolution and resolution in RESOLUTIONS:
             aspect_ratio = RESOLUTIONS[resolution]["aspect_ratio"]
         elif getattr(project, "canvas_settings", None) and getattr(project.canvas_settings, "aspect_ratio", None):
             aspect_ratio = project.canvas_settings.aspect_ratio
+            if not resolution:
+                resolution = getattr(project.canvas_settings, "resolution", None) or ASPECT_TO_RESOLUTION.get(aspect_ratio, DEFAULT_RESOLUTION)
         else:
-            aspect_ratio = RESOLUTIONS[resolution]["aspect_ratio"]
+            aspect_ratio = "9:16"
+            resolution = DEFAULT_RESOLUTION
+
+        # Normalize resolution
+        if not resolution or resolution not in RESOLUTIONS:
+            resolution = ASPECT_TO_RESOLUTION.get(aspect_ratio, DEFAULT_RESOLUTION)
 
         job = RenderJobModel(
             project_id=project_id,
@@ -434,6 +515,7 @@ class RenderService:
                     target_width=target_width,
                     target_height=target_height,
                     is_last=(idx == total_scenes - 1),
+                    target_fps=target_fps,
                 )
 
                 # Safe subprocess array
@@ -508,7 +590,8 @@ class RenderService:
             # --- SUBTITLES / CAPTIONS BURNING ---
             video_for_audio = merged_video_path
             caption_settings = getattr(project, "caption_settings", None)
-            if caption_settings and getattr(caption_settings, "enabled", True):
+            has_captions = any(bool((getattr(s, "caption", "") or "").strip()) for s in scenes)
+            if caption_settings and getattr(caption_settings, "enabled", True) and has_captions:
                 job.stage = "Burning captions..."
                 job.progress = 78
                 job.updated_at = datetime.now(timezone.utc).isoformat()
@@ -722,6 +805,7 @@ class RenderService:
         target_width: int,
         target_height: int,
         is_last: bool,
+        target_fps: int = 30,
     ) -> str:
         """Constructs safe FFmpeg filter expressions for scaling, image transforms (fit/crop/zoom/position), motion, and transitions."""
         motion = (getattr(scene, "motion", "none") or "none").lower()
@@ -744,10 +828,10 @@ class RenderService:
         # 1. Bounding Crop (if configured by user in UI)
         if isinstance(image_crop, dict) and "width" in image_crop and "height" in image_crop:
             try:
-                cx = max(0.0, float(image_crop.get("x", 0)))
-                cy = max(0.0, float(image_crop.get("y", 0)))
-                cw = min(100.0, float(image_crop.get("width", 100)))
-                ch = min(100.0, float(image_crop.get("height", 100)))
+                cx = max(0.0, min(95.0, float(image_crop.get("x", 0))))
+                cy = max(0.0, min(95.0, float(image_crop.get("y", 0))))
+                cw = max(5.0, min(100.0 - cx, float(image_crop.get("width", 100))))
+                ch = max(5.0, min(100.0 - cy, float(image_crop.get("height", 100))))
                 if cw > 5 and ch > 5:
                     filter_parts.append(f"crop=iw*{cw/100:.3f}:ih*{ch/100:.3f}:iw*{cx/100:.3f}:ih*{cy/100:.3f}")
             except Exception:
@@ -772,51 +856,47 @@ class RenderService:
             if motion == "slow zoom in":
                 motion_filter = (
                     f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
-                    f"zoompan=z='min(zoom+0.0015,{base_z + 0.25:.2f})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps=30"
+                    f"zoompan=z='min(zoom+0.0015,{base_z + 0.25:.2f})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "slow zoom out":
                 motion_filter = (
                     f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
-                    f"zoompan=z='if(lte(zoom,1.0),{base_z + 0.25:.2f},max(1.001,zoom-0.0015))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps=30"
+                    f"zoompan=z='if(lte(zoom,1.0),{base_z + 0.25:.2f},max(1.001,zoom-0.0015))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan left":
                 motion_filter = (
                     f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
-                    f"zoompan=z={base_z * 1.15:.2f}:x='if(lte(on,1),(iw-iw/zoom),max(0,x-(iw*0.15/{num_frames})))':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps=30"
+                    f"zoompan=z={base_z * 1.15:.2f}:x='if(lte(on,1),(iw-iw/zoom),max(0,x-(iw*0.15/{num_frames})))':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan right":
                 motion_filter = (
                     f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
-                    f"zoompan=z={base_z * 1.15:.2f}:x='min((iw-iw/zoom), x+(iw*0.15/{num_frames}))':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps=30"
+                    f"zoompan=z={base_z * 1.15:.2f}:x='min((iw-iw/zoom), x+(iw*0.15/{num_frames}))':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan up":
                 motion_filter = (
                     f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
-                    f"zoompan=z={base_z * 1.15:.2f}:x='iw/2-(iw/zoom/2)':y='if(lte(on,1),(ih-ih/zoom),max(0,y-(ih*0.15/{num_frames})))':d={num_frames}:s={target_width}x{target_height}:fps=30"
+                    f"zoompan=z={base_z * 1.15:.2f}:x='iw/2-(iw/zoom/2)':y='if(lte(on,1),(ih-ih/zoom),max(0,y-(ih*0.15/{num_frames})))':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan down":
                 motion_filter = (
                     f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
-                    f"zoompan=z={base_z * 1.15:.2f}:x='iw/2-(iw/zoom/2)':y='min((ih-ih/zoom), y+(ih*0.15/{num_frames}))':d={num_frames}:s={target_width}x{target_height}:fps=30"
+                    f"zoompan=z={base_z * 1.15:.2f}:x='iw/2-(iw/zoom/2)':y='min((ih-ih/zoom), y+(ih*0.15/{num_frames}))':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             else:
                 motion_filter = f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,crop={target_width}:{target_height}"
             filter_parts.append(motion_filter)
 
         else:
-            # Static framing with fit/position/zoom
+            # Static framing with fit/position/zoom - strictly prevent stretching
             if image_fit == "contain":
                 # Scale down to fit within bounding box and pad canvas with black background
                 filter_parts.append(
                     f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,"
                     f"pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:color=black"
                 )
-            elif image_fit == "fill":
-                # Stretch to exact dimensions
-                filter_parts.append(f"scale={target_width}:{target_height}")
             else:
-                # "cover" (default)
-                # Scale up to cover canvas, apply optional static zoom, then crop according to image_position
+                # "cover", "fill", or unhandled fit defaults to stretch-free cover
                 zoom_factor = max(1.0, min(2.5, image_zoom))
                 if zoom_factor > 1.01:
                     filter_parts.append(f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,scale=iw*{zoom_factor:.2f}:ih*{zoom_factor:.2f}")
@@ -858,9 +938,9 @@ class RenderService:
             fade_start = duration - trans_duration
             filter_parts.append(f"fade=t=out:st={fade_start:.3f}:d={trans_duration:.3f}")
 
-        # 6. Enforce SAR and 30 fps
+        # 6. Enforce SAR and target fps
         filter_parts.append("setsar=1")
-        filter_parts.append("fps=30")
+        filter_parts.append(f"fps={target_fps}")
 
         return ",".join(filter_parts)
 

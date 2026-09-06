@@ -1054,3 +1054,43 @@ a {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ==========================================================================
+   Phase 7 — Responsive Timeline Studio Layout
+   ========================================================================== */
+
+/* Desktop Default (2-column layout) */
+.timeline-workspace-split {
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr) !important;
+}
+
+.cinema-stage-enclosure {
+  height: clamp(340px, 50vh, 520px) !important;
+}
+
+/* Tablet Breakpoint (<= 1024px) */
+@media (max-width: 1024px) {
+  .timeline-workspace-split {
+    grid-template-columns: 1fr !important;
+  }
+  .cinema-stage-enclosure {
+    height: clamp(300px, 45vh, 460px) !important;
+  }
+}
+
+/* Mobile Breakpoint (<= 640px) */
+@media (max-width: 640px) {
+  .timeline-workspace-split {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .cinema-stage-enclosure {
+    height: clamp(240px, 38vh, 340px) !important;
+  }
+  .timeline-toolbar-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+}
+

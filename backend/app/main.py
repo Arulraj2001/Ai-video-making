@@ -54,8 +54,8 @@ app.add_middleware(
 app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
-# Mount media directory for audio and images
-media_dir = Path("storage/projects")
+# Mount media directory for audio and images (supports persistent volume configuration)
+media_dir = Path(settings.STORAGE_DIR) / "projects"
 media_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/media", StaticFiles(directory=str(media_dir)), name="media")
 

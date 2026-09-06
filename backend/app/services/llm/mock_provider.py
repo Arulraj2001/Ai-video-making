@@ -16,22 +16,28 @@ class MockLLMProvider(BaseLLMProvider):
     def _extract_matching_entities(self, caption: str, visual_context: Dict[str, Any]) -> Dict[str, Any]:
         """Detect characters, locations, and objects referenced in caption or context."""
         cap_lower = caption.lower()
+        cap_tokens = {t for t in re.findall(r"[a-z0-9]+", cap_lower) if len(t) > 2}
+        stopwords = {"the", "and", "for", "with", "his", "her", "their", "its", "bobs", "bob", "new", "old", "room"}
+
         matched_chars = []
         for key, data in visual_context.get("characters_catalog", {}).items():
             name = data.get("name", key)
-            if name.lower() in cap_lower:
+            name_tokens = {t for t in re.findall(r"[a-z0-9]+", name.lower()) if t not in stopwords and len(t) > 2}
+            if name.lower() in cap_lower or (name_tokens and name_tokens & cap_tokens):
                 matched_chars.append({"name": name, **data})
 
         matched_locs = []
         for key, data in visual_context.get("locations_catalog", {}).items():
             name = data.get("name", key)
-            if name.lower() in cap_lower:
+            name_tokens = {t for t in re.findall(r"[a-z0-9]+", name.lower()) if t not in stopwords and len(t) > 2}
+            if name.lower() in cap_lower or (name_tokens and name_tokens & cap_tokens):
                 matched_locs.append({"name": name, **data})
 
         matched_objs = []
         for key, data in visual_context.get("objects_catalog", {}).items():
             name = data.get("name", key)
-            if name.lower() in cap_lower:
+            name_tokens = {t for t in re.findall(r"[a-z0-9]+", name.lower()) if t not in stopwords and len(t) > 2}
+            if name.lower() in cap_lower or (name_tokens and name_tokens & cap_tokens):
                 matched_objs.append({"name": name, **data})
 
         return {

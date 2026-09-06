@@ -221,6 +221,8 @@ class SceneImageService:
         capabilities = active_generator.capabilities
 
 
+        request_started_at = time.time()
+
         # 1. Update status to 'generating'
         project_service.update_scene_image_state(
             project_id=project.id,
@@ -316,6 +318,8 @@ class SceneImageService:
             metadata["resolved_scene_meaning"] = context.get("visual_description") or target_scene.caption
             metadata["final_prompt"] = effective_prompt
             metadata["regeneration_count"] = regeneration_count
+            metadata["gen_started_at"] = request_started_at
+            metadata["gen_completed_at"] = time.time()
             if seed is not None:
                 metadata["seed"] = seed
 

@@ -43,11 +43,22 @@ ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 MAX_AUDIO_SIZE = 50 * 1024 * 1024  # 50 MB
 MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
 
+PROJECT_ID_REGEX = re.compile(r'^[a-zA-Z0-9_-]+$')
+
 def sanitize_filename(filename: str) -> str:
     """Sanitizes filename and strips any directory path traversal characters."""
     base = Path(filename).name
     clean = re.sub(r'[^a-zA-Z0-9_.-]', '_', base)
     return clean or "file"
+
+def validate_project_id(project_id: str) -> str:
+    """Validates that project_id contains only alphanumeric, dash, or underscore characters and does not attempt directory traversal."""
+    if not project_id or not isinstance(project_id, str):
+        raise ValueError("Project ID cannot be empty")
+    clean_id = project_id.strip()
+    if not PROJECT_ID_REGEX.match(clean_id):
+        raise ValueError(f"Invalid project ID '{project_id}': contains disallowed characters")
+    return clean_id
 
 class ProjectService:
     def __init__(self):
@@ -56,7 +67,12 @@ class ProjectService:
         self._load_from_disk()
 
     def _get_project_dir(self, project_id: str) -> Path:
-        pdir = PROJECTS_DIR / project_id
+        valid_id = validate_project_id(project_id)
+        pdir = (PROJECTS_DIR / valid_id).resolve()
+        try:
+            pdir.relative_to(PROJECTS_DIR.resolve())
+        except ValueError:
+            raise ValueError(f"Directory traversal detected for project ID '{project_id}'")
         pdir.mkdir(parents=True, exist_ok=True)
         return pdir
 
@@ -226,8 +242,25 @@ class ProjectService:
                 "rules": vb.rules
             }
         }
-        with open(pfile, "w", encoding="utf-8") as f:
+        pdir = self._get_project_dir(project.id)
+        tmp_file = pdir / "project.json.tmp"
+        bak_file = pdir / "project.json.bak"
+
+        # Safe atomic write via temporary file
+        with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+
+        # Maintain backup if previous project.json exists
+        if pfile.exists():
+            try:
+                shutil.copy2(pfile, bak_file)
+            except Exception:
+                pass
+
+        # Atomic replace guarantees project.json is never partially written
+        os.replace(tmp_file, pfile)
 
     def _deserialize_project(self, data: dict, project_id: Optional[str] = None) -> ProjectModel:
         import uuid
@@ -380,10 +413,29 @@ class ProjectService:
         for pdir in PROJECTS_DIR.iterdir():
             if pdir.is_dir():
                 pfile = pdir / "project.json"
+                bak_file = pdir / "project.json.bak"
+                data = None
                 if pfile.exists():
                     try:
                         with open(pfile, "r", encoding="utf-8") as f:
                             data = json.load(f)
+                    except Exception:
+                        # Attempt recovery from backup if main file is corrupted
+                        if bak_file.exists():
+                            try:
+                                with open(bak_file, "r", encoding="utf-8") as bf:
+                                    data = json.load(bf)
+                            except Exception:
+                                pass
+                elif bak_file.exists():
+                    try:
+                        with open(bak_file, "r", encoding="utf-8") as bf:
+                            data = json.load(bf)
+                    except Exception:
+                        pass
+
+                if data:
+                    try:
                         proj = self._deserialize_project(data)
                         self._projects[proj.id] = proj
                     except Exception:
@@ -556,6 +608,22 @@ class ProjectService:
         target = next((s for s in project.scenes if s.id == scene_id), None)
         if not target:
             raise ValueError(f"Scene '{scene_id}' not found in project")
+
+        # Stale state protection:
+        # Never allow an older slow generation request to overwrite a newer successful state
+        if status == "completed" and target.image_status == "completed" and metadata:
+            req_started = metadata.get("gen_started_at")
+            current_completed = (target.image_metadata or {}).get("gen_completed_at")
+            if req_started and current_completed and req_started < current_completed:
+                # Newer image already completed; keep newer image state
+                return target
+
+        if status == "failed" and target.image_status == "completed":
+            # Never erase an already completed image on failure
+            target.image_error = error
+            project.updated_at = datetime.now(timezone.utc).isoformat()
+            self._save_to_disk(project)
+            return target
 
         target.image_status = status
         if url is not None:
