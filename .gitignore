@@ -15,8 +15,8 @@ venv/
 .pytest_cache/
 
 # Storage & Uploads
-backend/storage/projects/
-storage/
+/storage/
+backend/storage/
 backend/phase*_verified_images/
 backend/phase5_evaluation_report.json
 backend/scratch_*
