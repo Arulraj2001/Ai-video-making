@@ -4,20 +4,21 @@ import type { Project, ProjectCreateInput, SceneUpdateInput, Scene } from "../ty
 
 type ProjectUpdate = Project | ((previous: Project) => Project);
 
-export function useProjects() {
+export function useProjects(userId?: string | null, authLoading?: boolean) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProjects = useCallback(async () => {
+    if (authLoading) return;
     try {
       setLoading(true);
       setError(null);
       const list = await api.listProjects();
       setProjects(list);
       if (list.length > 0) {
-        setActiveProject((prev) => (prev ? list.find((p) => p.id === prev.id) || list[0] : list[0]));
+        setActiveProject((prev) => (prev && list.some((p) => p.id === prev.id) ? list.find((p) => p.id === prev.id)! : list[0]));
       } else {
         setActiveProject(null);
       }
@@ -26,11 +27,13 @@ export function useProjects() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authLoading, userId]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    if (!authLoading) {
+      fetchProjects();
+    }
+  }, [fetchProjects, authLoading, userId]);
 
   const createProject = async (input: ProjectCreateInput): Promise<Project> => {
     try {

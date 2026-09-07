@@ -11,7 +11,7 @@ export const TimelinePlaceholder: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white font-display">
+              <h3 className="text-sm font-bold font-display" style={{ color: "var(--text-primary)" }}>
                 Master Timeline Area
               </h3>
               <span className="badge badge-info">Future Timeline (Phase 4)</span>

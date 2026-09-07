@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Palette,
-  Users,
-  MapPin,
-  Package,
-  ShieldCheck,
-  Eye,
-  RefreshCw,
-  BookOpen,
-} from "lucide-react";
+import { Eye, RefreshCw } from "lucide-react";
 import { api } from "../../services/api";
 import type { VideoBible, OverallStyle, Character, Location, VideoObject } from "../../types";
 import { OverallStyleSection } from "./OverallStyleSection";
@@ -274,27 +265,15 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Global Visual Consistency Banner */}
-      <div
-        className="studio-card p-5 sm:p-6"
-        style={{
-          borderLeft: "4px solid var(--accent-warning)",
-        }}
-      >
+      {/* Video Bible heading and essential actions */}
+      <div className="border-b pb-5" style={{ borderColor: "var(--border-subtle)" }}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="badge badge-warning text-[10px] font-semibold uppercase tracking-wider">
-                <BookOpen size={12} />
-                Visual Consistency Engine
-              </span>
-              <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>• Video Bible</span>
-            </div>
             <h2 className="text-lg sm:text-xl font-bold font-display" style={{ color: "var(--text-primary)" }}>
-              Aesthetic Continuity & World Guidelines
+              Video Bible
             </h2>
             <p className="text-xs max-w-2xl leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-              Every scene frame inherits the visual rules, character descriptors, and lighting parameters defined here to ensure aesthetic consistency across all AI-generated images.
+              Define the characters, places, objects, and visual rules that keep every generated scene consistent.
             </p>
           </div>
 
@@ -311,77 +290,47 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
               className="btn-secondary text-xs py-2 px-3.5"
             >
               <Eye className="w-4 h-4" style={{ color: "var(--accent-primary)" }} />
-              <span>Inspect Prompt Injection</span>
+              <span>Inspect prompt context</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+      {/* Sub-navigation */}
+      <div className="flex items-center gap-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab("style")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === "style" ? "btn-primary" : "btn-secondary"
-          }`}
+          className={`video-bible-tab ${activeTab === "style" ? "is-active" : ""}`}
         >
-          <Palette className="w-4 h-4" />
           <span>Overall Style</span>
-          <span className="badge badge-neutral text-[10px] py-0 px-1.5 font-mono">
-            {bible.overall_style.visual_style || "Default"}
-          </span>
         </button>
 
         <button
           onClick={() => setActiveTab("characters")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === "characters" ? "btn-primary" : "btn-secondary"
-          }`}
+          className={`video-bible-tab ${activeTab === "characters" ? "is-active" : ""}`}
         >
-          <Users className="w-4 h-4" />
           <span>Characters</span>
-          <span className="badge badge-neutral text-[10px] py-0 px-1.5 font-mono">
-            {bible.characters.length}
-          </span>
         </button>
 
         <button
           onClick={() => setActiveTab("locations")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === "locations" ? "btn-primary" : "btn-secondary"
-          }`}
+          className={`video-bible-tab ${activeTab === "locations" ? "is-active" : ""}`}
         >
-          <MapPin className="w-4 h-4" />
           <span>Locations</span>
-          <span className="badge badge-neutral text-[10px] py-0 px-1.5 font-mono">
-            {bible.locations.length}
-          </span>
         </button>
 
         <button
           onClick={() => setActiveTab("objects")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === "objects" ? "btn-primary" : "btn-secondary"
-          }`}
+          className={`video-bible-tab ${activeTab === "objects" ? "is-active" : ""}`}
         >
-          <Package className="w-4 h-4" />
           <span>Key Objects</span>
-          <span className="badge badge-neutral text-[10px] py-0 px-1.5 font-mono">
-            {bible.objects.length}
-          </span>
         </button>
 
         <button
           onClick={() => setActiveTab("rules")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === "rules" ? "btn-primary" : "btn-secondary"
-          }`}
+          className={`video-bible-tab ${activeTab === "rules" ? "is-active" : ""}`}
         >
-          <ShieldCheck className="w-4 h-4" />
           <span>Global Rules</span>
-          <span className="badge badge-neutral text-[10px] py-0 px-1.5 font-mono">
-            {bible.rules.length}
-          </span>
         </button>
       </div>
 

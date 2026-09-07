@@ -27,13 +27,13 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-[#06090e] text-slate-100">
+        <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--surface)] text-[var(--text)]">
           <div className="glass-panel p-8 max-w-md w-full text-center">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={24} />
             </div>
-            <h2 className="text-lg font-bold text-white mb-2 font-display">Something went wrong</h2>
-            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+            <h2 className="text-lg font-bold mb-2 font-display" style={{ color: "var(--text-primary)" }}>Something went wrong</h2>
+            <p className="text-xs mb-6 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
               {this.state.error?.message || "An unexpected error occurred in the UI."}
             </p>
             <button

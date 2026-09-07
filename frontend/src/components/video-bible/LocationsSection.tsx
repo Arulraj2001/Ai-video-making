@@ -270,15 +270,19 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
       {/* Add / Edit Location Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl p-6 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
-              <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+          <div
+            className="relative w-full max-w-lg rounded-2xl border shadow-2xl p-6 overflow-hidden"
+            style={{ background: "var(--color-modal)", borderColor: "var(--border-default)" }}
+          >
+            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+              <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <MapPin className="w-4 h-4 text-emerald-400" />
                 {editingLoc ? "Edit Recurring Location" : "Add Recurring Location"}
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                className="p-1 rounded-lg transition-colors"
+                style={{ color: "var(--text-muted)" }}
               >
                 <X className="w-5 h-5" />
               </button>

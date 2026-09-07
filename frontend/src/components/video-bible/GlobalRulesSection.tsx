@@ -81,17 +81,17 @@ export const GlobalRulesSection: React.FC<GlobalRulesSectionProps> = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-base font-semibold text-[var(--text-primary)] flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-[var(--orange)]" />
             Global Visual Rules ({currentRules.length} Active)
           </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
             Hard constraints that are injected into every prompt generated for this project.
             These prevent style drift across scenes.
           </p>
         </div>
         {savedSuccess && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-400 text-xs font-medium animate-fade-in">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--color-success-subtle)] text-[var(--color-success-text)] text-xs font-medium animate-fade-in">
             <Check className="w-3.5 h-3.5" />
             Saved
           </span>
@@ -100,7 +100,7 @@ export const GlobalRulesSection: React.FC<GlobalRulesSectionProps> = ({
 
       {/* Preset Rules Grid */}
       <div>
-        <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-3">
+        <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
           Recommended Rule Presets
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -111,10 +111,10 @@ export const GlobalRulesSection: React.FC<GlobalRulesSectionProps> = ({
                 key={preset.id}
                 type="button"
                 onClick={() => handleTogglePreset(preset.id)}
-                className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
+                className={`p-3.5 rounded-[var(--radius-md)] border text-left transition-colors relative flex flex-col justify-between ${
                   isActive
-                    ? "bg-indigo-950/40 border-indigo-500/80 shadow-md shadow-indigo-950/30 text-zinc-100"
-                    : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                    ? "bg-[var(--color-primary-subtle)] border-[var(--color-primary)] text-[var(--text-primary)]"
+                    : "bg-[var(--color-card)] border-[var(--border)] hover:border-[var(--border-strong)] text-[var(--text-secondary)]"
                 }`}
               >
                 <div className="flex items-center justify-between w-full mb-1">
@@ -122,16 +122,16 @@ export const GlobalRulesSection: React.FC<GlobalRulesSectionProps> = ({
                     {preset.label}
                   </span>
                   <span
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center text-[10px] ${
+                    className={`w-4 h-4 rounded-[var(--radius-xs)] border flex items-center justify-center text-[10px] ${
                       isActive
-                        ? "bg-indigo-600 border-indigo-400 text-white"
-                        : "border-zinc-700 bg-zinc-800 text-transparent"
+                        ? "bg-[var(--orange)] border-[var(--orange)] text-white"
+                        : "border-[var(--border-strong)] bg-transparent text-transparent"
                     }`}
                   >
                     ✓
                   </span>
                 </div>
-                <p className="text-[11px] text-zinc-400 leading-normal line-clamp-2">
+                <p className="text-[11px] text-[var(--text-muted)] leading-normal line-clamp-2">
                   {preset.description}
                 </p>
               </button>
@@ -141,19 +141,19 @@ export const GlobalRulesSection: React.FC<GlobalRulesSectionProps> = ({
       </div>
 
       {/* Active Rules Badges & Custom Rule Input */}
-      <div className="p-5 rounded-xl border border-zinc-800 bg-zinc-900/40 space-y-4">
+      <div className="p-5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--color-card)] space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
+          <h4 className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[var(--orange)]" />
             Active Consistency Directives
           </h4>
-          <span className="text-[11px] text-zinc-500">
+          <span className="text-[11px] text-[var(--text-muted)]">
             {currentRules.length} rule{currentRules.length === 1 ? "" : "s"} enforced
           </span>
         </div>
 
         {currentRules.length === 0 ? (
-          <p className="text-xs text-zinc-500 italic">
+            <p className="text-xs text-[var(--text-muted)] italic">
             No rules currently active. Select presets above or type custom directives below.
           </p>
         ) : (
@@ -161,13 +161,13 @@ export const GlobalRulesSection: React.FC<GlobalRulesSectionProps> = ({
             {currentRules.map((rule) => (
               <span
                 key={rule}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/80 text-indigo-200 text-xs font-medium group"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)] text-[var(--color-primary)] text-xs font-medium group"
               >
                 <span>{rule}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveRule(rule)}
-                  className="text-indigo-400 hover:text-rose-400 rounded transition-colors"
+                  className="text-[var(--color-primary)] hover:text-[var(--color-error)] rounded transition-colors"
                   title={`Remove ${rule}`}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -184,12 +184,12 @@ export const GlobalRulesSection: React.FC<GlobalRulesSectionProps> = ({
             placeholder="Add custom rule (e.g. 'no lens flares', 'vintage 1970s film grain', 'isometric perspective')..."
             value={newRuleInput}
             onChange={(e) => setNewRuleInput(e.target.value)}
-            className="flex-1 px-3.5 py-2 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500"
+            className="flex-1 px-3.5 py-2 text-xs rounded-[var(--radius-input)] bg-[var(--color-input)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--color-focus)]"
           />
           <button
             type="submit"
             disabled={saving || !newRuleInput.trim()}
-            className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
+            className="px-4 py-2 rounded-[var(--radius-button)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-medium disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Add Rule

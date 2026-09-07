@@ -33,11 +33,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             id={inputId}
             ref={ref}
-            className={`w-full px-3 py-2 text-sm bg-[var(--color-input)] text-[var(--color-text)] border rounded-[var(--radius-md)] transition-all duration-150 placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] disabled:bg-[var(--color-input-disabled)] disabled:text-[var(--color-disabled-text)] disabled:cursor-not-allowed ${
+            className={`w-full px-4 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed ${
               error
                 ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-                : "border-[var(--color-border)] hover:border-[var(--color-border-strong)]"
-            } ${leftElement ? "pl-9" : ""} ${rightElement ? "pr-9" : ""} ${className}`}
+                : "border-[var(--border)] hover:border-[var(--border-strong)]"
+            } ${leftElement ? "pl-10" : ""} ${rightElement ? "pr-10" : ""} ${className}`}
             style={{ fontFamily: "var(--font-sans)" }}
             {...props}
           />
@@ -73,7 +73,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="flex flex-col gap-1.5 w-full">
         {label && (
-          <label htmlFor={textareaId} className="text-xs font-semibold text-[var(--color-text)]">
+          <label htmlFor={textareaId} className="text-xs font-semibold text-[var(--text)]">
             {label}
           </label>
         )}
@@ -81,10 +81,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           id={textareaId}
           ref={ref}
-          className={`w-full px-3 py-2 text-sm bg-[var(--color-input)] text-[var(--color-text)] border rounded-[var(--radius-md)] transition-all duration-150 placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] disabled:bg-[var(--color-input-disabled)] disabled:text-[var(--color-disabled-text)] disabled:cursor-not-allowed resize-y min-h-[80px] ${
+          className={`w-full px-4 py-3 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed resize-y min-h-[100px] ${
             error
               ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-              : "border-[var(--color-border)] hover:border-[var(--color-border-strong)]"
+              : "border-[var(--border)] hover:border-[var(--border-strong)]"
           } ${className}`}
           style={{ fontFamily: "var(--font-sans)" }}
           {...props}
@@ -122,7 +122,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="flex flex-col gap-1.5 w-full">
         {label && (
-          <label htmlFor={selectId} className="text-xs font-semibold text-[var(--color-text)]">
+          <label htmlFor={selectId} className="text-xs font-semibold text-[var(--text)]">
             {label}
           </label>
         )}
@@ -130,10 +130,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           id={selectId}
           ref={ref}
-          className={`w-full px-3 py-2 text-sm bg-[var(--color-surface)] text-[var(--color-text)] border rounded-[var(--radius-md)] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] cursor-pointer disabled:bg-[var(--color-input-disabled)] disabled:cursor-not-allowed ${
+          className={`w-full px-3.5 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] cursor-pointer disabled:bg-[var(--surface-alt)] disabled:cursor-not-allowed ${
             error
               ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-              : "border-[var(--color-border)] hover:border-[var(--color-border-strong)]"
+              : "border-[var(--border)] hover:border-[var(--border-strong)]"
           } ${className}`}
           style={{ fontFamily: "var(--font-sans)" }}
           {...props}

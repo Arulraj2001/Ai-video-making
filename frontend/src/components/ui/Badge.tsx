@@ -69,7 +69,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full select-none ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-md select-none ${className}`}
       style={{
         fontFamily: "var(--font-sans)",
         lineHeight: 1.25,

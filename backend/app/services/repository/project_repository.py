@@ -387,6 +387,7 @@ class FilesystemProjectRepository(ProjectRepository):
         return self._get_project_dir(project_id) / "project.json"
 
     def _load_all(self):
+        self._memory_cache.clear()
         if not self.projects_dir.exists():
             return
         for pdir in self.projects_dir.iterdir():
@@ -402,6 +403,7 @@ class FilesystemProjectRepository(ProjectRepository):
                         logger.warning(f"Failed to read project from {pfile}: {e}")
 
     def list_projects(self, owner_id: Optional[str] = None) -> List[ProjectModel]:
+        self._load_all()
         all_projs = list(self._memory_cache.values())
         if not owner_id:
             return all_projs

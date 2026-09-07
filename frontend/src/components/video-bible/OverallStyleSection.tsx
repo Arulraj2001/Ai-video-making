@@ -44,7 +44,7 @@ export const OverallStyleSection: React.FC<OverallStyleSectionProps> = ({ style,
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <Palette size={18} className="text-indigo-400" />
-          <h4 className="text-sm font-bold text-white font-display uppercase tracking-wider">
+          <h4 className="text-sm font-bold font-display uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
             Overall Visual Style & Cinematography
           </h4>
         </div>

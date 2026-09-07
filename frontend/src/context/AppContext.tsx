@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useProjects } from "../hooks/useProjects";
+import { useAuth } from "./AuthContext";
 import { useHealth } from "../hooks/useHealth";
 import { useTheme } from "../hooks/useTheme";
 import type { Project, ProjectCreateInput, SceneUpdateInput, Scene } from "../types";
@@ -48,6 +49,7 @@ const AppContext = createContext<AppContextType | null>(null);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { theme, preference, setPreference } = useTheme();
   const { isHealthy, checking: checkingHealth, error: healthError, refetch: refetchHealth } = useHealth();
+  const { user, loading: authLoading } = useAuth();
   const {
     projects,
     activeProject,
@@ -60,7 +62,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     applyProjectUpdate,
     patchActiveProject,
     refresh: refreshProjects,
-  } = useProjects();
+  } = useProjects(user?.uid, authLoading);
 
   const [activeStage, setActiveStageState] = useState<StudioStage>(() => {
     if (typeof window === "undefined") return "script";

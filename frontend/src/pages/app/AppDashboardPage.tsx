@@ -26,7 +26,7 @@ export const AppDashboardPage: React.FC = () => {
   const totalScenes = projects.reduce((acc, p) => acc + (p.scenes?.length || 0), 0);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-7xl mx-auto px-6 sm:px-8 py-8 sm:py-10 space-y-8">
       <PageHeader
         title="Creator Dashboard"
         subtitle="Manage your video projects, storyboard timelines, and production pipelines."
@@ -99,7 +99,7 @@ export const AppDashboardPage: React.FC = () => {
           {projects.length > 0 && (
             <button
               onClick={() => navigate("/app/projects")}
-              className="text-xs font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+              className="app-action-link"
             >
               View all ({projects.length}) <ArrowRight size={12} />
             </button>

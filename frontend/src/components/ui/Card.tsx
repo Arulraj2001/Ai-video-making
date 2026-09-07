@@ -2,6 +2,8 @@ import React from "react";
 
 export type CardVariant =
   | "default"
+  | "neu"
+  | "schematic"
   | "info"
   | "project"
   | "scene"
@@ -30,67 +32,63 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     },
     ref
   ) => {
-    // Distinct treatments across card types
+    // Cards define content boundaries without making every section float.
+    const baseCardStyle: React.CSSProperties = {
+      backgroundColor: "var(--color-card)",
+      border: "1px solid var(--color-border)",
+      borderRadius: "var(--radius-md)",
+      boxShadow: "none",
+    };
+
     const variantStyles: Record<CardVariant, React.CSSProperties> = {
       default: {
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius-card)",
-        boxShadow: "var(--shadow-card)",
+        ...baseCardStyle,
+      },
+      neu: {
+        ...baseCardStyle,
+      },
+      schematic: {
+        ...baseCardStyle,
+        border: "1px solid var(--color-border-strong)",
       },
       info: {
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--color-border-subtle)",
-        borderLeft: "4px solid var(--color-info)",
-        borderRadius: "var(--radius-card)",
-        boxShadow: "var(--shadow-card)",
+        ...baseCardStyle,
+        borderLeft: "4px solid var(--blue)",
       },
       project: {
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius-card)",
-        boxShadow: "var(--shadow-card)",
+        ...baseCardStyle,
       },
       scene: {
-        backgroundColor: "var(--color-card)",
-        border: "1px solid var(--color-card-border)",
-        borderRadius: "var(--radius-card)",
-        boxShadow: "var(--shadow-card)",
+        ...baseCardStyle,
+        border: "1px solid var(--color-border-subtle)",
       },
       action: {
-        backgroundColor: "var(--color-primary-subtle)",
-        border: "1.5px dashed var(--color-primary)",
-        borderRadius: "var(--radius-card)",
+        backgroundColor: "var(--surface)",
+        border: "1.5px dashed var(--orange)",
+        borderRadius: "12px",
         cursor: "pointer",
       },
       warning: {
-        backgroundColor: "var(--color-warning-subtle)",
-        border: "1px solid var(--color-warning)",
-        borderLeft: "4px solid var(--color-warning)",
-        borderRadius: "var(--radius-card)",
+        ...baseCardStyle,
+        borderLeft: "4px solid var(--accent)",
       },
       settings: {
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius-card)",
-        boxShadow: "var(--shadow-sm)",
+        ...baseCardStyle,
       },
       admin: {
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--scenora-rust)",
-        borderRadius: "var(--radius-card)",
-        boxShadow: "var(--shadow-card)",
+        ...baseCardStyle,
+        border: "1px solid var(--color-border-strong)",
       },
     };
 
     return (
       <div
         ref={ref}
-        className={`transition-all duration-180 ${
-          padded ? "p-5" : ""
+        className={`transition-all duration-200 ${
+          padded ? "p-6" : ""
         } ${
           interactive || variant === "project" || variant === "action"
-            ? "hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] cursor-pointer"
+            ? "hover:border-[var(--border-strong)] cursor-pointer"
             : ""
         } ${className}`}
         style={{

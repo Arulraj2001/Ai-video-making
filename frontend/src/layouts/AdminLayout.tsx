@@ -54,21 +54,27 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-text)]">
       {/* Admin Top Header */}
-      <header className="h-14 bg-[var(--color-surface)] border-b border-[var(--scenora-rust)]/30 px-4 flex items-center justify-between shrink-0 z-30">
-        <div className="flex items-center gap-3">
-          <Link to="/admin" className="flex items-center">
+      <header
+        className="bg-[var(--color-surface)] border-b border-[var(--color-border)] px-5 sm:px-8 flex items-center justify-between shrink-0 z-30 shadow-xs"
+        style={{
+          paddingTop: "clamp(20px, 2.5vw, 24px)",
+          paddingBottom: "clamp(16px, 2vw, 20px)",
+        }}
+      >
+        <div className="flex items-center gap-4">
+          <Link to="/admin" className="flex items-center py-1">
             <ScenoraLogo subBrand="admin" size="sm" />
           </Link>
 
-          <Badge variant="accent" className="hidden sm:inline-flex">
-            <ShieldAlert size={12} />
+          <Badge variant="accent" className="hidden sm:inline-flex px-2.5 py-1 text-xs">
+            <ShieldAlert size={13} />
             <span>Admin Portal</span>
           </Badge>
         </div>
 
         <div className="flex items-center gap-3">
           {user && (
-            <span className="hidden md:inline-block text-xs font-mono text-[var(--color-text-secondary)]">
+            <span className="hidden md:inline-block text-xs font-mono text-[var(--color-text-secondary)] px-3 py-1.5 rounded-md bg-[var(--color-card-subtle)] border border-[var(--color-border-subtle)]">
               {user.email}
             </span>
           )}
@@ -86,6 +92,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
             variant="secondary"
             leftIcon={<ArrowLeft size={14} />}
             onClick={() => navigate("/app")}
+            className="px-3.5 py-2 text-xs font-semibold"
           >
             Back to Studio
           </Button>
@@ -93,7 +100,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
           <IconButton
             size="sm"
             variant="ghost"
-            icon={<LogOut size={15} />}
+            icon={<LogOut size={16} />}
             aria-label="Sign out"
             title="Sign out"
             onClick={async () => {
@@ -109,21 +116,27 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
         {/* Admin Sidebar */}
         <aside
           className={`bg-[var(--color-surface)] border-r border-[var(--color-border)] transition-all duration-200 flex flex-col shrink-0 ${
-            collapsed ? "w-16" : "w-56"
+            collapsed ? "w-20" : "w-60"
           }`}
         >
-          <div className="flex-1 py-4 px-2 space-y-1">
+          <div
+            className="flex-1 px-3 space-y-1.5 overflow-y-auto"
+            style={{
+              paddingTop: "clamp(20px, 2.5vw, 24px)",
+              paddingBottom: "20px",
+            }}
+          >
             {adminNav.map((item) => {
               const isActive = path === item.to;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-xs font-semibold transition-colors ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[var(--radius-lg)] text-xs font-semibold transition-colors select-none ${
                     isActive
-                      ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[rgba(135,79,65,0.25)]"
+                      ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[rgba(135,79,65,0.25)] shadow-xs"
                       : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-card-subtle)]"
-                  } ${collapsed ? "justify-center px-0" : ""}`}
+                  } ${collapsed ? "justify-center px-0 py-3" : ""}`}
                   title={collapsed ? item.label : undefined}
                 >
                   <span className="shrink-0">{item.icon}</span>
@@ -133,10 +146,10 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
             })}
           </div>
 
-          <div className="p-2 border-t border-[var(--color-border-subtle)]">
+          <div className="p-3 border-t border-[var(--color-border-subtle)]">
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="w-full flex items-center justify-center p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-xs cursor-pointer"
+              className="w-full flex items-center justify-center p-2 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-card-subtle)] text-xs cursor-pointer transition-colors"
             >
               {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
               {!collapsed && <span className="ml-2 font-medium">Collapse</span>}
@@ -145,7 +158,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 bg-[var(--color-background)]">
+        <main className="flex-1 overflow-y-auto p-6 sm:p-8 lg:p-10 bg-[var(--color-background)]">
           {children}
         </main>
       </div>

@@ -244,15 +244,19 @@ export const ObjectsSection: React.FC<ObjectsSectionProps> = ({
       {/* Add / Edit Object Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl p-6 overflow-hidden">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
-              <h3 className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+          <div
+            className="relative w-full max-w-lg rounded-2xl border shadow-2xl p-6 overflow-hidden"
+            style={{ background: "var(--color-modal)", borderColor: "var(--border-default)" }}
+          >
+            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+              <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <Package className="w-4 h-4 text-amber-400" />
                 {editingObj ? "Edit Recurring Object" : "Add Recurring Object"}
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                className="p-1 rounded-lg transition-colors"
+                style={{ color: "var(--text-muted)" }}
               >
                 <X className="w-5 h-5" />
               </button>

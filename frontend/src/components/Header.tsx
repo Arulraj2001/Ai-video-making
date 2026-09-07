@@ -111,9 +111,6 @@ export const Header: React.FC<HeaderProps> = ({
                     {activeProject.name}
                   </span>
                 )}
-                <span className="badge badge-neutral text-[10px] py-0 px-1.5 font-mono">
-                  {sceneCount} sc
-                </span>
               </div>
             ) : (
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -144,11 +141,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="pipeline-step-num">2</span>
               <BookOpen size={13} />
               <span>Video Bible</span>
-              {bibleCount > 0 && (
-                <span className="badge badge-neutral text-[10px] py-0 px-1 font-mono">
-                  {bibleCount}
-                </span>
-              )}
             </button>
 
             <button
@@ -159,11 +151,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="pipeline-step-num">3</span>
               <Clapperboard size={13} />
               <span>Storyboard</span>
-              {imagesReadyCount > 0 && (
-                <span className="badge badge-success text-[10px] py-0 px-1 font-mono">
-                  {imagesReadyCount}/{sceneCount}
-                </span>
-              )}
             </button>
 
             <button

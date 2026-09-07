@@ -1,7 +1,7 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "success";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "success" | "ai" | "neu-primary" | "neu-secondary" | "neu-ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -29,19 +29,25 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    // Variant styling using ScenoraEdits design tokens
+    // Variant styling using SaaS Design System
     const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
       primary: {
-        backgroundColor: "var(--color-primary)",
-        color: "var(--color-primary-foreground)",
+        background: "var(--color-primary)",
+        color: "#FFFFFF",
         border: "1px solid transparent",
-        boxShadow: "var(--shadow-sm)",
+        boxShadow: "none",
+      },
+      ai: {
+        background: "var(--color-primary)",
+        color: "#FFFFFF",
+        border: "1px solid transparent",
+        boxShadow: "none",
       },
       secondary: {
         backgroundColor: "var(--color-surface)",
-        color: "var(--color-secondary)",
-        border: "1px solid var(--color-border)",
-        boxShadow: "var(--shadow-sm)",
+        color: "var(--color-text)",
+        border: "1.5px solid var(--color-border)",
+        boxShadow: "none",
       },
       ghost: {
         backgroundColor: "transparent",
@@ -52,41 +58,59 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         backgroundColor: "var(--color-error)",
         color: "#FFFFFF",
         border: "1px solid transparent",
+        boxShadow: "none",
       },
       outline: {
         backgroundColor: "transparent",
         color: "var(--color-primary)",
-        border: "1px solid var(--color-primary)",
+        border: "1.5px solid var(--color-primary)",
       },
       success: {
         backgroundColor: "var(--color-success)",
         color: "#FFFFFF",
         border: "1px solid transparent",
       },
+      "neu-primary": {
+        background: "var(--color-primary)",
+        color: "#FFFFFF",
+        border: "1px solid transparent",
+        boxShadow: "none",
+      },
+      "neu-secondary": {
+        backgroundColor: "var(--color-surface)",
+        color: "var(--color-text)",
+        border: "1.5px solid var(--color-border)",
+        boxShadow: "none",
+      },
+      "neu-ghost": {
+        backgroundColor: "transparent",
+        color: "var(--color-text)",
+        border: "1.5px solid var(--color-border-subtle)",
+      },
     };
 
-    // Size styling
+    // Strict 12px radius across all button sizes
     const sizeStyles: Record<ButtonSize, React.CSSProperties> = {
       sm: {
-        padding: "5px 10px",
+        padding: "6px 12px",
         fontSize: "0.8125rem",
-        borderRadius: "var(--radius-sm)",
-        gap: "5px",
-        height: "30px",
+        borderRadius: "var(--radius-button)",
+        gap: "6px",
+        height: "32px",
       },
       md: {
-        padding: "8px 16px",
+        padding: "9px 18px",
         fontSize: "0.875rem",
-        borderRadius: "var(--radius-md)",
+        borderRadius: "var(--radius-button)",
         gap: "8px",
-        height: "38px",
+        height: "40px",
       },
       lg: {
         padding: "12px 24px",
         fontSize: "1rem",
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--radius-button)",
         gap: "10px",
-        height: "46px",
+        height: "48px",
       },
     };
 
@@ -94,7 +118,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={`inline-flex items-center justify-center font-medium transition-all duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`inline-flex items-center justify-center font-semibold transition-colors duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         style={{
           fontFamily: "var(--font-sans)",
           fontWeight: 600,
@@ -153,6 +177,11 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         color: "var(--color-primary-foreground)",
         border: "1px solid transparent",
       },
+      ai: {
+        background: "var(--color-primary)",
+        color: "#FFFFFF",
+        border: "1px solid transparent",
+      },
       secondary: {
         backgroundColor: "var(--color-surface)",
         color: "var(--color-secondary)",
@@ -176,6 +205,21 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       success: {
         backgroundColor: "var(--color-success)",
         color: "#FFFFFF",
+        border: "1px solid transparent",
+      },
+      "neu-primary": {
+        backgroundColor: "var(--color-primary)",
+        color: "#FFFFFF",
+        border: "1px solid transparent",
+      },
+      "neu-secondary": {
+        backgroundColor: "var(--neu-bg)",
+        color: "var(--neu-text)",
+        border: "1px solid var(--neu-border-subtle)",
+      },
+      "neu-ghost": {
+        backgroundColor: "transparent",
+        color: "var(--neu-text)",
         border: "1px solid transparent",
       },
     };

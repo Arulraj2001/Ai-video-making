@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Edit3, Check, X, Clock, Layers, AlertCircle, Music } from "lucide-react";
+import { Edit3, Check, X, Clock, AlertCircle } from "lucide-react";
 import { api } from "../services/api";
 import type { Scene, AudioFile } from "../types";
 
@@ -70,78 +70,34 @@ export const SceneTable: React.FC<SceneTableProps> = ({
   const totalDuration = scenes.reduce((max, s) => Math.max(max, s.end), 0);
 
   return (
-    <div className="studio-card p-5 sm:p-6 space-y-5">
+    <div className="space-y-5">
       {/* Header & Stats Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4" style={{ borderColor: "var(--border-subtle)" }}>
         <div className="flex items-center gap-3">
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "var(--radius-md)",
-              background: "var(--accent-primary-subtle)",
-              color: "var(--accent-primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Layers size={18} />
-          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold font-display" style={{ color: "var(--text-primary)" }}>
-                Master Timeline Scene Grid
-              </h3>
-              <span className="badge badge-info text-[10px] font-mono">{scenes.length} Scenes</span>
-            </div>
+            <h3 className="text-base font-bold font-display" style={{ color: "var(--text-primary)" }}>
+              Scenes
+            </h3>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Narration text locked to caption time intervals. Click any row to fine-tune timestamps or text.
+              {scenes.length} scenes · Click a row to fine-tune timestamps or narration.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div
-            className="px-3 py-1.5 rounded-lg border text-xs font-mono flex items-center gap-1.5"
-            style={{
-              background: "var(--bg-card-subtle)",
-              borderColor: "var(--border-subtle)",
-              color: "var(--text-secondary)",
-            }}
-          >
-            <Clock size={13} style={{ color: "var(--accent-primary)" }} />
-            <span>Total Duration: <strong>{totalDuration.toFixed(2)}s</strong></span>
-          </div>
-        </div>
+        <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+          Total duration {totalDuration.toFixed(2)}s
+        </span>
       </div>
 
       {/* Audio player if audio uploaded */}
       {audioFile && (
         <div
-          className="p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          className="py-3 border-y flex flex-col sm:flex-row sm:items-center justify-between gap-3"
           style={{
-            background: "var(--bg-card-subtle)",
             borderColor: "var(--border-subtle)",
           }}
         >
           <div className="flex items-center gap-2.5">
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "var(--radius-sm)",
-                background: "var(--accent-info-subtle)",
-                color: "var(--accent-info-text)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Music size={16} />
-            </div>
             <div className="min-w-0">
               <div className="text-xs font-semibold truncate max-w-xs" style={{ color: "var(--text-primary)" }}>
                 {audioFile.filename}
@@ -175,7 +131,7 @@ export const SceneTable: React.FC<SceneTableProps> = ({
       )}
 
       {/* Scenes Table */}
-      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border-subtle)" }}>
+      <div className="overflow-x-auto border-y" style={{ borderColor: "var(--border-subtle)" }}>
         <table className="timeline-table">
           <thead>
             <tr>

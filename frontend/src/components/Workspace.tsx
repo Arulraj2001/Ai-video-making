@@ -187,45 +187,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         </div>
       </div>
 
-      {/* Mobile / Compact Stepper (visible on smaller screens) */}
-      <div className="flex md:hidden pipeline-stepper-container overflow-x-auto pb-1">
-        <button
-          onClick={() => onChangeStage("script")}
-          className={`pipeline-step-btn ${activeStage === "script" ? "active" : ""}`}
-        >
-          <span className="pipeline-step-num">1</span>
-          <span>Script</span>
-        </button>
-        <button
-          onClick={() => onChangeStage("bible")}
-          className={`pipeline-step-btn ${activeStage === "bible" ? "active" : ""}`}
-        >
-          <span className="pipeline-step-num">2</span>
-          <span>Bible</span>
-        </button>
-        <button
-          onClick={() => onChangeStage("storyboard")}
-          className={`pipeline-step-btn ${activeStage === "storyboard" ? "active" : ""}`}
-        >
-          <span className="pipeline-step-num">3</span>
-          <span>Storyboard</span>
-        </button>
-        <button
-          onClick={() => onChangeStage("timeline")}
-          className={`pipeline-step-btn ${activeStage === "timeline" ? "active" : ""}`}
-        >
-          <span className="pipeline-step-num">4</span>
-          <span>Timeline</span>
-        </button>
-        <button
-          onClick={() => onChangeStage("export")}
-          className={`pipeline-step-btn ${activeStage === "export" ? "active" : ""}`}
-        >
-          <span className="pipeline-step-num">5</span>
-          <span>Export</span>
-        </button>
-      </div>
-
       {/* =========================================================================
           STAGE 1: AUDIO & SCRIPT
           ========================================================================= */}
@@ -262,8 +223,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               {/* Stage 1 Guided Navigation Bar */}
               <div className="bottom-nav-bar">
                 <div className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
-                  <span className="badge badge-success mr-2 text-[10px]">✓ {scenes.length} Scenes Loaded</span>
-                  Ready to configure visual consistency for characters and scenes.
+                  {scenes.length} scenes loaded · Ready to configure visual consistency for characters and scenes.
                 </div>
 
                 <button
@@ -342,13 +302,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             </button>
 
             <div className="hidden sm:block text-xs" style={{ color: "var(--text-muted)" }}>
-              {bibleCount > 0 ? (
-                <span className="badge badge-success text-[10px]">
-                  ✓ {bibleCount} Bible Assets Active
-                </span>
-              ) : (
-                <span>Add characters or style to inject visual descriptors into storyboard prompts.</span>
-              )}
+              {bibleCount > 0
+                ? `${bibleCount} Bible assets configured`
+                : "Add characters or style to inject visual descriptors into storyboard prompts."}
             </div>
 
             <button
@@ -386,13 +342,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             </button>
 
             <div className="hidden sm:block text-xs font-mono" style={{ color: "var(--text-muted)" }}>
-              {imagesReadyCount === scenes.length && scenes.length > 0 ? (
-                <span className="badge badge-success text-[10px]">
-                  ✓ All {scenes.length} Scene Images Ready
-                </span>
-              ) : (
-                <span>Images Ready: {imagesReadyCount} of {scenes.length}</span>
-              )}
+              Images ready: {imagesReadyCount} of {scenes.length}
             </div>
 
             <button

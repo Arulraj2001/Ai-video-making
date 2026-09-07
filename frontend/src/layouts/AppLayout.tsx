@@ -94,27 +94,33 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const userDisplayName = user?.displayName || user?.email?.split("@")[0] || "Creator";
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-text)]">
+    <div className="app-shell min-h-screen flex flex-col text-[var(--color-text)]">
       {/* Top Application Header */}
-      <header className="h-14 bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 flex items-center justify-between z-30 shrink-0">
-        <div className="flex items-center gap-3">
+      <header
+        className="app-header border-b border-[var(--color-border)] px-5 sm:px-8 flex items-center justify-between z-30 shrink-0"
+        style={{
+          paddingTop: "clamp(20px, 2.5vw, 24px)",
+          paddingBottom: "clamp(16px, 2vw, 20px)",
+        }}
+      >
+        <div className="flex min-w-0 items-center gap-4">
           {/* Mobile menu trigger */}
           <button
             onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="md:hidden p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+            className="md:hidden p-2 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-card-subtle)] transition-colors"
             aria-label="Toggle navigation"
           >
             {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
           {/* Logo with Studio subbrand */}
-          <Link to="/app" className="flex items-center">
+          <Link to="/app" className="flex items-center py-1">
             <ScenoraLogo subBrand="studio" size="sm" />
           </Link>
 
           {/* Active Project Switcher */}
           {projects.length > 0 && (
-            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-[var(--color-border-subtle)]">
+            <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-[var(--color-border-subtle)]">
               <span className="text-xs text-[var(--color-text-muted)] font-medium">Project:</span>
               <select
                 value={activeProject?.id || ""}
@@ -122,7 +128,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                   selectProject(e.target.value);
                   navigate(`/app/studio/${e.target.value}`);
                 }}
-                className="text-xs font-semibold bg-[var(--color-card-subtle)] border border-[var(--color-border)] rounded-[var(--radius-sm)] px-2 py-1 text-[var(--color-text)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] max-w-[180px] truncate"
+                className="text-xs font-semibold bg-[var(--color-card-subtle)] border border-[var(--color-border)] rounded-[var(--radius-md)] px-2.5 py-1.5 text-[var(--color-text)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] max-w-[200px] truncate"
               >
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -135,12 +141,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         </div>
 
         {/* Right Header Actions */}
-        <div className="flex items-center gap-2">
+        <div className="app-header-actions flex min-w-0 items-center gap-2.5 sm:gap-3">
           {/* Generation Usage Indicator (Phase 16) */}
           <UsageBadge usage={usage} loading={usageLoading} />
 
           {/* Health Status Indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-full bg-[var(--color-card-subtle)] border border-[var(--color-border-subtle)] text-[11px] font-medium">
+          <div className="hidden sm:flex items-center gap-2 text-[11px] font-medium text-[var(--color-text-muted)]">
             <span
               className={`w-2 h-2 rounded-full ${
                 isHealthy === true
@@ -154,6 +160,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               {isHealthy === true ? "Engine Online" : "Engine Checking"}
             </span>
           </div>
+
+          <div className="h-5 w-px bg-[var(--color-border-subtle)] hidden sm:block" />
 
           {/* Keyboard Shortcuts Trigger */}
           <IconButton
@@ -178,7 +186,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           {/* User Account / Identity Chip */}
           <Link
             to="/app/account"
-            className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-[var(--radius-md)] hover:bg-[var(--color-card-subtle)] border border-[var(--color-border-subtle)] transition-colors"
+            className="hidden md:flex items-center gap-2 px-1 py-1 transition-colors"
             title="Account Settings"
           >
             {user?.photoURL ? (
@@ -196,7 +204,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               {userDisplayName}
             </span>
             {isAdmin && (
-              <span className="text-[9px] px-1 rounded bg-[var(--color-primary-subtle)] text-[var(--color-primary)] font-bold">
+                <span className="text-[9px] text-[var(--color-primary)] font-bold">
                 Admin
               </span>
             )}
@@ -208,6 +216,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             variant="primary"
             leftIcon={<PlusCircle size={14} />}
             onClick={() => setIsCreateModalOpen(true)}
+            className="px-3.5 py-2 text-xs font-semibold"
           >
             <span className="hidden sm:inline">New Project</span>
           </Button>
@@ -238,14 +247,20 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       </header>
 
       {/* Main Body Area: Sidebar + Main Stage Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="app-body flex-1 flex min-h-0 min-w-0 overflow-hidden">
         {/* Desktop Sidebar */}
         <aside
-          className={`hidden md:flex flex-col bg-[var(--color-surface)] border-r border-[var(--color-border)] transition-all duration-200 shrink-0 ${
-            sidebarCollapsed ? "w-16" : "w-56"
+          className={`app-sidebar hidden md:flex flex-col border-r border-[var(--color-border)] transition-all duration-200 shrink-0 ${
+            sidebarCollapsed ? "w-20" : "w-60"
           }`}
         >
-          <div className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+          <div
+            className="flex-1 px-3 space-y-1.5 overflow-y-auto"
+            style={{
+              paddingTop: "clamp(20px, 2.5vw, 24px)",
+              paddingBottom: "20px",
+            }}
+          >
             {navItems.map((item) => {
               const isActive =
                 path === item.to ||
@@ -255,11 +270,11 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-xs font-semibold transition-colors select-none ${
+                  className={`app-nav-link flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold transition-colors select-none ${
                     isActive
-                      ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary)] border border-[rgba(230,72,51,0.2)]"
-                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-card-subtle)]"
-                  } ${sidebarCollapsed ? "justify-center px-0" : ""}`}
+                      ? "is-active"
+                      : "text-[var(--color-text-secondary)]"
+                  } ${sidebarCollapsed ? "justify-center px-0 py-3" : ""}`}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
                   <span className="shrink-0">{item.icon}</span>
@@ -280,7 +295,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="w-full flex items-center justify-center p-1.5 rounded-[var(--radius-sm)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-card-subtle)] transition-colors cursor-pointer text-xs"
+              className="app-collapse-button"
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -296,7 +311,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               className="fixed inset-0 bg-[var(--color-modal-backdrop)] backdrop-blur-xs"
               onClick={() => setMobileNavOpen(false)}
             />
-            <div className="relative w-64 bg-[var(--color-surface)] border-r border-[var(--color-border)] p-4 flex flex-col z-50 animate-in slide-in-from-left-2 duration-150">
+            <div className="app-sidebar relative w-64 border-r border-[var(--color-border)] p-4 flex flex-col z-50 animate-in slide-in-from-left-2 duration-150">
               <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border-subtle)] mb-4">
                 <ScenoraLogo subBrand="studio" size="sm" />
                 <button
@@ -331,9 +346,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileNavOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] text-xs font-semibold ${
+                    className={`app-nav-link flex items-center gap-3 px-3 py-2.5 text-xs font-semibold ${
                       path === item.to || (item.label === "Studio" && path.startsWith("/app/studio"))
-                        ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary)] font-bold"
+                        ? "is-active"
                         : "text-[var(--color-text-secondary)]"
                     }`}
                   >
@@ -369,7 +384,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-[var(--color-background)]">
+        <main className="app-main min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
       </div>

@@ -125,7 +125,7 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <User size={18} className="text-cyan-400" />
-          <h4 className="text-sm font-bold text-white font-display uppercase tracking-wider">
+          <h4 className="text-sm font-bold font-display uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
             Recurring Characters ({characters.length})
           </h4>
         </div>
@@ -152,7 +152,10 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
             >
               <div className="flex items-start gap-3">
                 {/* Reference Image Thumbnail */}
-                <div className="w-16 h-16 rounded-xl bg-[#080d14] border border-white/10 overflow-hidden flex items-center justify-center flex-shrink-0 relative group">
+                <div
+                  className="w-16 h-16 rounded-xl border overflow-hidden flex items-center justify-center flex-shrink-0 relative group"
+                  style={{ background: "var(--bg-card-subtle)", borderColor: "var(--border-subtle)" }}
+                >
                   {char.reference_image?.url ? (
                     <img
                       src={api.getMediaUrl(char.reference_image.url)}
@@ -174,7 +177,10 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
-                    <h5 className="text-sm font-bold text-white truncate font-display">
+                    <h5
+                      className="text-sm font-bold truncate font-display"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {char.name}
                     </h5>
                     {char.age_range && (
@@ -254,12 +260,19 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
       {/* Add / Edit Character Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0c121c] border border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+          <div
+            className="rounded-2xl border p-6 max-w-lg w-full shadow-2xl"
+            style={{ background: "var(--color-modal)", borderColor: "var(--border-default)" }}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white font-display">
+              <h3 className="text-base font-bold font-display" style={{ color: "var(--text-primary)" }}>
                 {editingChar ? `Edit ${editingChar.name}` : "Add Recurring Character"}
               </h3>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-1 rounded transition-colors"
+                style={{ color: "var(--text-muted)" }}
+              >
                 <X size={16} />
               </button>
             </div>

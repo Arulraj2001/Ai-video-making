@@ -17,7 +17,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   return (
     <div
-      className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-8 border-b border-[var(--color-border-subtle)] mb-8 ${className}`}
+      className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border-subtle)] mb-6 ${className}`}
     >
       <div>
         <div className="flex items-center gap-2.5">
@@ -25,7 +25,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           {badge}
         </div>
         {subtitle && (
-          <p className="text-base text-[var(--color-text-secondary)] mt-3 max-w-2xl leading-relaxed">{subtitle}</p>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2 max-w-2xl leading-relaxed">{subtitle}</p>
         )}
       </div>
 

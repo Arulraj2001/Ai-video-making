@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Link, useRouter } from "../../router/Router";
 import { useSEO, PAGE_SEO } from "../../utils/seo";
 import { ScenoraLogo } from "../../components/brand/ScenoraLogo";
-import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Alert } from "../../components/ui/Feedback";
@@ -89,19 +88,19 @@ export const SignUpPage: React.FC = () => {
   const displayError = localError || authError;
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-12">
+    <div className="public-auth-page min-h-[85vh] flex flex-col items-center justify-center px-4 py-16 bg-[var(--surface)] text-[var(--text)]">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-7">
           <ScenoraLogo size="lg" className="justify-center mb-3" />
-          <h2 className="text-xl font-bold font-display text-[var(--color-text)]">
-            Create your ScenoraEdits Account
+          <h2 className="text-xl font-bold font-sans text-[var(--neu-text)]">
+            Create your Scenora Account
           </h2>
-          <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+          <p className="text-xs text-[var(--neu-text-secondary)] mt-1 font-sans">
             Start directing AI-consistent scenes, timelines, and multi-angle videos.
           </p>
         </div>
 
-        <Card variant="default" className="p-6 sm:p-8 shadow-[var(--shadow-card)]">
+        <div className="public-auth-surface p-7 sm:p-9">
           {!isConfigured && (
             <Alert type="warning" className="mb-5" title="Firebase Setup Needed">
               Real account creation requires Firebase keys in <code className="font-mono text-[10px]">frontend/.env</code>.
@@ -122,7 +121,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="Samuel Creator"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              leftElement={<UserIcon size={16} />}
+              leftElement={<UserIcon size={16} className="text-[var(--neu-text-muted)]" />}
             />
 
             <Input
@@ -132,7 +131,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="creator@scenoraedits.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              leftElement={<Mail size={16} />}
+              leftElement={<Mail size={16} className="text-[var(--neu-text-muted)]" />}
               required
             />
 
@@ -143,7 +142,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              leftElement={<Lock size={16} />}
+              leftElement={<Lock size={16} className="text-[var(--neu-text-muted)]" />}
               required
             />
 
@@ -154,15 +153,15 @@ export const SignUpPage: React.FC = () => {
               placeholder="Re-enter password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              leftElement={<Lock size={16} />}
+              leftElement={<Lock size={16} className="text-[var(--neu-text-muted)]" />}
               required
             />
 
             <Button
               type="submit"
-              variant="primary"
+              variant="neu-primary"
               size="md"
-              className="w-full mt-2"
+              className="w-full mt-2 font-bold py-3"
               isLoading={isSubmitting}
               rightIcon={<ArrowRight size={14} />}
             >
@@ -172,18 +171,18 @@ export const SignUpPage: React.FC = () => {
 
           <div className="relative my-6 text-center">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[var(--color-border-subtle)]" />
+              <div className="w-full border-t border-[var(--neu-border-subtle)]" />
             </div>
-            <span className="relative px-3 bg-[var(--color-card)] text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
+            <span className="relative px-3 bg-[var(--neu-bg)] text-[10px] uppercase font-mono tracking-wider text-[var(--neu-text-muted)] font-semibold">
               Or continue with
             </span>
           </div>
 
           <Button
             type="button"
-            variant="secondary"
+            variant="neu-secondary"
             size="md"
-            className="w-full"
+            className="w-full font-semibold py-2.5"
             isLoading={isGoogleSubmitting}
             onClick={handleGoogleSignIn}
             leftIcon={
@@ -210,16 +209,16 @@ export const SignUpPage: React.FC = () => {
             Google
           </Button>
 
-          <div className="mt-6 pt-5 border-t border-[var(--color-border-subtle)] text-center text-xs text-[var(--color-text-secondary)]">
+          <div className="mt-6 pt-5 border-t border-[var(--neu-border-subtle)] text-center text-xs text-[var(--neu-text-secondary)] font-sans">
             Already have an account?{" "}
             <Link
               to={`/sign-in${returnUrl !== "/app" ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
-              className="text-[var(--color-primary)] font-bold hover:underline"
+              className="text-[var(--neu-accent)] font-bold hover:underline"
             >
               Sign in
             </Link>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

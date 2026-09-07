@@ -17,9 +17,6 @@ import {
   ShieldCheck,
   LogOut,
   ExternalLink,
-  Mail,
-  CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 
 export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,14 +24,12 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
   const { preference, setPreference } = useTheme();
   const { user, isAuthenticated, isAdmin, signOutUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
   const navLinks = [
     { label: "Features", to: "/features" },
     { label: "How It Works", to: "/how-it-works" },
     { label: "Pricing", to: "/pricing" },
-    { label: "Blog / Guides", to: "/blog" },
+    { label: "Guides", to: "/blog" },
     { label: "Contact", to: "/contact" },
   ];
 
@@ -52,76 +47,77 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
   const userDisplayName = user?.displayName || user?.email?.split("@")[0] || "Creator";
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-text)] transition-colors duration-200">
-      {/* Top Announcement Bar (Subtle & Restrained) */}
-      <div className="bg-[var(--color-surface)] border-b border-[var(--color-border-subtle)] text-xs py-2 text-center text-[var(--color-text-secondary)]">
-        <SiteContainer className="flex items-center justify-center gap-2">
-          <span className="pill-tag-mono bg-[var(--color-primary-subtle)] text-[var(--color-primary)] font-bold">
-            Phase 12
-          </span>
-          <span className="hidden sm:inline">
-            Video Bible character consistency and offline local GPU inference now active.
-          </span>
-          <span className="sm:hidden">
-            Local GPU &amp; Video Bible active.
-          </span>
-          <Link
-            to="/how-it-works"
-            className="font-semibold text-[var(--color-primary)] hover:underline inline-flex items-center gap-0.5 ml-1"
-          >
-            <span>Learn more</span>
-            <ArrowRight size={11} />
-          </Link>
-        </SiteContainer>
-      </div>
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
 
-      {/* Main Studio Navigation Header */}
-      <header className="sticky top-0 z-40 bg-[var(--color-background)]/90 backdrop-blur-md border-b border-[var(--color-border-subtle)]">
-        <SiteContainer className="h-16 flex items-center justify-between gap-6">
+  return (
+    <div className="min-h-screen flex flex-col bg-[var(--surface)] text-[var(--text)] transition-colors duration-200">
+      {/* Subtle Top Announcement Bar (Level 1) */}
+      {!announcementDismissed && (
+        <div className="relative min-h-[36px] bg-[#F8FAFC] dark:bg-[#1A1C24] border-b border-[#E2E8F0] dark:border-[rgba(255,255,255,0.08)] py-1.5 px-6 flex items-center justify-center transition-colors">
+          <div className="flex items-center justify-center gap-2 text-center text-xs">
+            <span className="text-[#4B5563] dark:text-[#94A3B8] font-normal">
+              AI video pipeline 2.4 <span className="text-[#CBD5E1] dark:text-[#475569] mx-1">·</span> Video Bible continuity <span className="text-[#CBD5E1] dark:text-[#475569] mx-1">·</span> Audio ducking
+            </span>
+            <Link
+              to="/how-it-works"
+              className="font-semibold text-[#FF6B00] hover:underline inline-flex items-center gap-1 shrink-0 ml-1"
+            >
+              <span>See how it works</span>
+              <ArrowRight size={12} />
+            </Link>
+          </div>
+
+          <button
+            onClick={() => setAnnouncementDismissed(true)}
+            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-white p-1 rounded transition-colors cursor-pointer"
+            aria-label="Dismiss announcement"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Main Studio Navigation Header (Level 2) */}
+      <header
+        className="saas-header bg-white dark:bg-[#14151B] border-b border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]"
+        style={{
+          paddingTop: "clamp(20px, 2.5vw, 24px)",
+          paddingBottom: "clamp(16px, 2vw, 20px)",
+          height: "auto",
+        }}
+      >
+        <div className="saas-header-inner max-w-7xl px-6 sm:px-8">
           {/* LEFT: ScenoraEdits Brand Mark */}
           <Link to="/" className="flex items-center shrink-0">
             <ScenoraLogo size="md" />
           </Link>
 
-          {/* CENTER: Navigation Links (Clean Text Links with Active Indicator) */}
-          <nav className="hidden md:flex items-center gap-6">
+          {/* CENTER: Clean Commercial Navigation (Neutral Charcoal, NOT Orange) */}
+          <nav className="hidden md:flex items-center gap-7 lg:gap-8">
             {navLinks.map((link) => {
               const isActive = path === link.to;
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`text-sm font-medium transition-colors relative py-1 ${
+                  className={`text-[15px] font-medium transition-colors ${
                     isActive
-                      ? "text-[var(--color-text)] font-semibold"
-                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                      ? "text-[#FF6B00] font-semibold"
+                      : "text-[#1F2937] dark:text-[#D1D5DB] hover:text-[#FF6B00]"
                   }`}
                 >
-                  <span>{link.label}</span>
-                  {isActive && (
-                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[var(--color-primary)] rounded-full" />
-                  )}
+                  {link.label}
                 </Link>
               );
             })}
           </nav>
 
-          {/* RIGHT: Aligned Controls & Primary CTA */}
-          <div className="hidden md:flex items-center gap-4 shrink-0">
-            {/* GPU Status Pill */}
-            <div
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono text-[var(--color-text-secondary)] bg-[var(--color-surface)] border border-[var(--color-border-subtle)]"
-              title="SANA-Sprint 1.6B Offline GPU & Cloud Ready"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] pulse-indicator" />
-              <span>GPU: Online</span>
-            </div>
-
-            {/* Theme Toggle Button */}
+          {/* RIGHT: User Actions & Primary CTA */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* Theme Toggle Button (Compact 38x38 rounded-xl) */}
             <button
               onClick={cycleTheme}
-              className="p-2 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer"
+              className="w-[38px] h-[38px] rounded-xl border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] bg-white dark:bg-[#1E2028] shadow-xs flex items-center justify-center text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-white transition-all cursor-pointer"
               title={`Theme: ${preference} (Click to toggle)`}
               aria-label="Toggle theme"
             >
@@ -135,7 +131,7 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
                     <Button
                       variant="ghost"
                       size="sm"
-                      leftIcon={<ShieldCheck size={14} className="text-[var(--color-primary)]" />}
+                      leftIcon={<ShieldCheck size={14} className="text-[var(--orange)]" />}
                     >
                       Admin
                     </Button>
@@ -144,148 +140,129 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
                 <Link
                   to="/app/account"
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--color-surface)] transition-colors border border-[var(--color-border-subtle)]"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-[12px] hover:bg-[var(--surface)] transition-colors border border-[var(--border)]"
                 >
                   {user?.photoURL ? (
                     <img
                       src={user.photoURL}
                       alt={userDisplayName}
-                      className="w-5 h-5 rounded-full object-cover border border-[var(--color-border)]"
+                      className="w-5 h-5 rounded-full object-cover border border-[var(--border)]"
                     />
                   ) : (
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary)] font-bold text-xs flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-[var(--orange-subtle)] text-[var(--orange)] font-bold text-xs flex items-center justify-center">
                       <User size={11} />
                     </div>
                   )}
-                  <span className="text-xs font-semibold text-[var(--color-text)] max-w-[90px] truncate">
+                  <span className="text-xs font-semibold text-[var(--text)] max-w-[90px] truncate">
                     {userDisplayName}
                   </span>
                 </Link>
 
-                <Button
-                  variant="primary"
-                  size="sm"
-                  rightIcon={<ArrowRight size={14} />}
+                <button
                   onClick={() => navigate("/app")}
+                  className="saas-primary-cta"
                 >
-                  Open Studio
-                </Button>
+                  <span>Open Studio</span>
+                  <ArrowRight size={14} />
+                </button>
 
                 <button
                   onClick={() => signOutUser()}
-                  className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-subtle)] transition-colors cursor-pointer"
+                  className="p-2 rounded-[10px] text-[var(--text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-subtle)] transition-colors cursor-pointer"
                   title="Sign Out"
                   aria-label="Sign Out"
                 >
-                  <LogOut size={15} />
+                  <LogOut size={16} />
                 </button>
               </>
             ) : (
               <>
                 <Link
                   to="/sign-in"
-                  className="text-sm font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors px-2 py-1"
+                  className="saas-signin-btn"
                 >
                   Sign In
                 </Link>
 
-                <Button
-                  variant="primary"
-                  size="sm"
-                  rightIcon={<ArrowRight size={14} />}
+                <button
                   onClick={() => navigate("/app")}
-                  className="font-semibold shadow-sm"
+                  className="saas-primary-cta"
                 >
-                  Launch Studio
-                </Button>
+                  <span>Start Creating</span>
+                  <ArrowRight size={15} />
+                </button>
               </>
             )}
           </div>
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile Menu Toggle Buttons */}
           <div className="flex md:hidden items-center gap-2">
             <button
               onClick={cycleTheme}
-              className="p-2 rounded-lg text-[var(--color-text-secondary)]"
+              className="saas-theme-btn"
               aria-label="Toggle theme"
             >
               {themeIcon}
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-[var(--color-text)] cursor-pointer"
+              className="saas-theme-btn"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
-        </SiteContainer>
+        </div>
 
         {/* Mobile Dropdown Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 pt-3 pb-6 flex flex-col gap-3 shadow-lg">
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`py-2 text-sm font-medium flex items-center justify-between ${
-                  path === link.to
-                    ? "text-[var(--color-primary)] font-bold"
-                    : "text-[var(--color-text-secondary)]"
-                }`}
-              >
-                <span>{link.label}</span>
-                {path === link.to && <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />}
-              </Link>
-            ))}
+          <div className="md:hidden absolute top-[72px] left-0 right-0 bg-[var(--white)] border-b border-[var(--border)] px-5 py-5 space-y-3 shadow-lg z-50">
+            <nav className="flex flex-col space-y-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`saas-nav-link text-base py-2.5 ${
+                    path === link.to ? "is-active" : ""
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
 
-            <div className="pt-3 border-t border-[var(--color-border-subtle)] flex flex-col gap-2.5">
+            <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
               {isAuthenticated ? (
-                <>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    className="w-full"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      navigate("/app");
-                    }}
-                  >
-                    Launch Studio
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-[var(--color-error)]"
-                    leftIcon={<LogOut size={14} />}
-                    onClick={async () => {
-                      setMobileMenuOpen(false);
-                      await signOutUser();
-                      navigate("/sign-in");
-                    }}
-                  >
-                    Sign Out
-                  </Button>
-                </>
+                <button
+                  className="saas-primary-cta w-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/app");
+                  }}
+                >
+                  <span>Open Studio</span>
+                  <ArrowRight size={14} />
+                </button>
               ) : (
                 <>
-                  <Link to="/sign-in" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="secondary" size="md" className="w-full">
-                      Sign In
-                    </Button>
+                  <Link
+                    to="/sign-in"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="saas-signin-btn w-full justify-center text-center"
+                  >
+                    Sign In
                   </Link>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    className="w-full"
+                  <button
+                    className="saas-primary-cta w-full"
                     onClick={() => {
                       setMobileMenuOpen(false);
                       navigate("/app");
                     }}
                   >
-                    Launch Studio
-                  </Button>
+                    <span>Start Creating</span>
+                    <ArrowRight size={15} />
+                  </button>
                 </>
               )}
             </div>
@@ -296,172 +273,107 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
       {/* Main Page Content */}
       <main className="flex-1">{children}</main>
 
-      {/* World-Class Creative Software Footer */}
-      <footer className="bg-[var(--color-surface)] border-t border-[var(--color-border)] pt-16 pb-12 transition-colors relative overflow-hidden">
-        {/* Subtle decorative glow */}
-        <div className="absolute top-0 right-1/3 w-96 h-40 bg-[var(--color-primary)]/5 blur-3xl pointer-events-none rounded-full" />
-
+      {/* Balanced Commercial SaaS Product Footer */}
+      <footer className="bg-[var(--white)] border-t border-[var(--border)] py-16 sm:py-20 transition-colors">
         <SiteContainer>
-          {/* 1. Newsletter & Creator Dispatch Strip */}
-          <div className="p-6 sm:p-8 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border-subtle)] mb-14 flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10 shadow-xs">
-            <div className="space-y-1.5 text-center lg:text-left max-w-xl">
-              <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-[var(--color-primary)] uppercase tracking-wider">
-                <Sparkles size={13} />
-                <span>The Creator Dispatch</span>
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold font-display text-[var(--color-text)]">
-                Master AI video production workflows
-              </h3>
-              <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
-                Join 2,400+ creators receiving weekly Video Bible character prompts, SANA diffusion benchmarks, and multi-track NLE techniques.
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+            {/* Brand Column (5 cols on lg) */}
+            <div className="lg:col-span-5 space-y-4 text-left">
+              <Link to="/" className="inline-flex items-center gap-3">
+                <ScenoraLogo size="md" />
+              </Link>
+              <p className="text-[15px] text-[var(--text-secondary)] leading-relaxed max-w-sm mt-3">
+                Turn narration into cinematic visuals. An automated AI video production platform coordinating spoken voiceover narration, Video Bible character continuity, and multi-track timelines.
+              </p>
+
+              <p className="pt-2 text-sm text-[var(--text-muted)]">
+                Built for high-velocity video creators.
               </p>
             </div>
 
-            <div className="w-full lg:w-auto shrink-0">
-              {newsletterSubscribed ? (
-                <div className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-success-subtle)] text-[var(--color-success)] text-xs font-semibold border border-[var(--color-success)]/30">
-                  <CheckCircle2 size={16} />
-                  <span>You're on the list! Welcome to the ScenoraEdits creator circle.</span>
-                </div>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (newsletterEmail.trim()) setNewsletterSubscribed(true);
-                  }}
-                  className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto"
-                >
-                  <div className="relative w-full sm:w-72">
-                    <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="Enter your creator email..."
-                      value={newsletterEmail}
-                      onChange={(e) => setNewsletterEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    className="w-full sm:w-auto font-semibold px-5 py-2.5"
-                  >
-                    Subscribe Free
-                  </Button>
-                </form>
-              )}
+            {/* Link Columns (7 cols on lg, 3 columns) */}
+            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10">
+              {/* Product */}
+              <div className="space-y-3.5 text-left">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-[var(--text)]">
+                  Product
+                </h4>
+                <ul className="space-y-2 text-[14px] text-[var(--text-secondary)]">
+                  <li><Link to="/features" className="hover:text-[var(--orange)] transition-colors">Features</Link></li>
+                  <li><Link to="/how-it-works" className="hover:text-[var(--orange)] transition-colors">5-Stage Pipeline</Link></li>
+                  <li><Link to="/pricing" className="hover:text-[var(--orange)] transition-colors">Pricing &amp; Plans</Link></li>
+                  <li><Link to="/features" className="hover:text-[var(--orange)] transition-colors">Video Bible Registry</Link></li>
+                  <li>
+                    <Link to="/features" className="hover:text-[var(--orange)] transition-colors inline-flex items-center gap-1.5">
+                      <span>Timeline Editor</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/app" className="text-[var(--orange)] font-semibold hover:underline inline-flex items-center gap-1">
+                      <span>Scenora Studio</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Workflows */}
+              <div className="space-y-3.5 text-left">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-[var(--text)]">
+                  Workflows
+                </h4>
+                <ul className="space-y-2 text-[14px] text-[var(--text-secondary)]">
+                  <li><Link to="/how-it-works" className="hover:text-[var(--orange)] transition-colors">YouTube Documentaries</Link></li>
+                  <li><Link to="/how-it-works" className="hover:text-[var(--orange)] transition-colors">9:16 Shorts &amp; Reels</Link></li>
+                  <li><Link to="/how-it-works" className="hover:text-[var(--orange)] transition-colors">Character Continuity</Link></li>
+                  <li><Link to="/how-it-works" className="hover:text-[var(--orange)] transition-colors">Audio Ducking &amp; Captions</Link></li>
+                  <li><Link to="/how-it-works" className="hover:text-[var(--orange)] transition-colors">Local RTX Diffusion</Link></li>
+                </ul>
+              </div>
+
+              {/* Resources */}
+              <div className="space-y-3.5 text-left">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-[var(--text)]">
+                  Resources
+                </h4>
+                <ul className="space-y-2 text-[14px] text-[var(--text-secondary)]">
+                  <li><Link to="/blog" className="hover:text-[var(--orange)] transition-colors">Creator Guides</Link></li>
+                  <li><Link to="/contact" className="hover:text-[var(--orange)] transition-colors">Support &amp; FAQ</Link></li>
+                  <li>
+                    <a
+                      href={BRAND.links.github}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-[var(--orange)] transition-colors inline-flex items-center gap-1"
+                    >
+                      <span>GitHub Repository</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </li>
+                  <li><Link to="/contact" className="hover:text-[var(--orange)] transition-colors">Privacy Policy</Link></li>
+                  <li><Link to="/contact" className="hover:text-[var(--orange)] transition-colors">Terms of Service</Link></li>
+                </ul>
+              </div>
             </div>
           </div>
 
-          {/* 2. Multi-Column Navigation Hierarchy */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-10 pb-12 border-b border-[var(--color-border-subtle)]">
-            {/* Col 1: Brand & Purpose (2 cols on mobile, 1.5 on desktop) */}
-            <div className="col-span-2 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <ScenoraLogo size="sm" />
-                <span className="pill-tag-mono bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] text-[10px]">
-                  v{BRAND.version}
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed max-w-sm font-sans">
-                {BRAND.tagline}. An automated AI video production software suite coordinating voiceover audio, character consistency, and local GPU diffusion.
-              </p>
-
-              {/* Real-time System Status Pill */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] text-[11px] font-mono text-[var(--color-text-secondary)]">
-                <span className="w-2 h-2 rounded-full bg-[var(--color-success)] pulse-indicator" />
-                <span>All Systems Operational</span>
-                <span className="text-[var(--color-border-strong)]">•</span>
-                <span className="text-[var(--color-text-muted)]">GPU Engine Ready</span>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-[var(--color-text-muted)]">
-                <span>SANA-Sprint 1.6B</span>
-                <span>•</span>
-                <span>FFmpeg 7.0</span>
-                <span>•</span>
-                <span>RTX Accelerated</span>
-              </div>
-            </div>
-
-            {/* Col 2: Product */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)]">
-                Product
-              </h4>
-              <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
-                <li><Link to="/features" className="hover:text-[var(--color-text)] transition-colors">Features</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">5-Stage Pipeline</Link></li>
-                <li><Link to="/pricing" className="hover:text-[var(--color-text)] transition-colors">Pricing &amp; Plans</Link></li>
-                <li><Link to="/features" className="hover:text-[var(--color-text)] transition-colors">Video Bible Registry</Link></li>
-                <li><Link to="/features" className="hover:text-[var(--color-text)] transition-colors">Timeline Editor</Link></li>
-                <li>
-                  <Link to="/app" className="text-[var(--color-primary)] font-semibold hover:underline inline-flex items-center gap-1">
-                    <span>Scenora Studio</span>
-                    <ArrowRight size={10} />
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Col 3: Workflows */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)]">
-                Workflows
-              </h4>
-              <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
-                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">YouTube Documentaries</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">9:16 Shorts &amp; Reels</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">Character Consistency</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">Local RTX Inference</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-[var(--color-text)] transition-colors">FFmpeg Auto-Ducking</Link></li>
-              </ul>
-            </div>
-
-            {/* Col 4: Resources & Legal */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[var(--color-text)]">
-                Resources
-              </h4>
-              <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
-                <li><Link to="/blog" className="hover:text-[var(--color-text)] transition-colors">Creator Guides</Link></li>
-                <li><Link to="/contact" className="hover:text-[var(--color-text)] transition-colors">Support &amp; FAQ</Link></li>
-                <li>
-                  <a
-                    href={BRAND.links.github}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-[var(--color-text)] transition-colors inline-flex items-center gap-1"
-                  >
-                    <span>GitHub Repository</span>
-                    <ExternalLink size={10} />
-                  </a>
-                </li>
-                <li><Link to="/contact" className="hover:text-[var(--color-text)] transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/contact" className="hover:text-[var(--color-text)] transition-colors">Terms of Service</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* 3. Bottom Operational & Legal Strip */}
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[var(--color-text-muted)] gap-4">
-            <div className="flex flex-wrap items-center gap-4 text-center sm:text-left">
+          {/* Bottom Operational Strip */}
+          <div className="pt-6 mt-12 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between text-sm text-[var(--text-muted)] gap-4">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
               <p>{BRAND.copyright}</p>
-              <span className="hidden sm:inline text-[var(--color-border-subtle)]">•</span>
-              <span className="text-[11px] font-mono">Built for modern creators</span>
+              <span className="hidden sm:inline text-[var(--border)]">•</span>
+              <span>Built for high-velocity video creators</span>
             </div>
 
-            <div className="flex items-center gap-5">
-              <Link to="/contact" className="hover:text-[var(--color-text)] transition-colors text-[11px]">
+            <div className="flex items-center gap-6">
+              <Link to="/contact" className="hover:text-[var(--text)] transition-colors">
                 Privacy
               </Link>
-              <Link to="/contact" className="hover:text-[var(--color-text)] transition-colors text-[11px]">
+              <Link to="/contact" className="hover:text-[var(--text)] transition-colors">
                 Terms
               </Link>
               {isAdmin && (
-                <Link to="/admin" className="text-[var(--color-primary)] font-semibold hover:underline text-[11px]">
+                <Link to="/admin" className="text-[var(--orange)] font-semibold hover:underline">
                   Admin Shell
                 </Link>
               )}
@@ -469,7 +381,7 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
                 href={BRAND.links.github}
                 target="_blank"
                 rel="noreferrer"
-                className="p-1.5 rounded-lg hover:text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)] transition-colors inline-flex items-center justify-center"
+                className="p-1.5 rounded-lg hover:text-[var(--text)] hover:bg-[var(--surface)] transition-colors inline-flex items-center justify-center"
                 title="View GitHub Repository"
                 aria-label="GitHub Repository"
               >
@@ -484,4 +396,3 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
     </div>
   );
 };
-

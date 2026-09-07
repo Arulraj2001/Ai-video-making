@@ -16,7 +16,6 @@ import {
   Maximize2,
   CheckCircle2,
   Cpu,
-  Info,
   ExternalLink,
   Merge,
   Search,
@@ -122,7 +121,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
   // Provider capabilities
   const [capabilities, setCapabilities] = useState<ImageGeneratorCapabilities | null>(null);
-  const [providerHealth, setProviderHealth] = useState<ImageProviderHealth | null>(null);
+  const [, setProviderHealth] = useState<ImageProviderHealth | null>(null);
 
   // Art style mode for image generation
   const [styleMode, setStyleMode] = useState<string>("photorealistic");
@@ -249,11 +248,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   }, [selectedProvider, selectedModelId]);
 
   const storyboardedCount = scenes.filter((s) => Boolean(s.image_prompt)).length;
-  const isAllStoryboarded = scenes.length > 0 && storyboardedCount === scenes.length;
   const imagesCompletedCount = scenes.filter((s) => s.image_status === "completed" && Boolean(s.image_url)).length;
   const imagesFailedCount = scenes.filter((s) => s.image_status === "failed").length;
-  const imagesGeneratingCount = scenes.filter((s) => s.image_status === "generating").length;
-  const imagesRemainingCount = Math.max(0, scenes.length - imagesCompletedCount - imagesFailedCount);
   const isAllImagesCompleted = scenes.length > 0 && imagesCompletedCount === scenes.length;
 
   const totalVideoDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
@@ -607,47 +603,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Storyboard Header Banner */}
-      <div
-        className="studio-card p-5 sm:p-6"
-        style={{
-          borderLeft: "4px solid var(--accent-primary)",
-        }}
-      >
+      {/* Storyboard heading and essential controls */}
+      <div className="border-b pb-5" style={{ borderColor: "var(--border-subtle)" }}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2 storyboard-header-controls">
-              <span className="badge badge-info text-[10px] font-semibold uppercase tracking-wider">
-                <Clapperboard size={12} />
-                Stage 3: Storyboard & AI Frames
-              </span>
-
-              {capabilities && (
-                <span className="badge badge-neutral text-[10px] font-mono">
-                  <Cpu size={11} />
-                  {capabilities.provider.toUpperCase()} ({capabilities.model})
-                </span>
-              )}
-
-              {providerHealth && (
-                <span className={`badge ${providerHealth.status === "ready" ? "badge-success" : "badge-danger"} text-[10px]`}>
-                  {providerHealth.message}
-                </span>
-              )}
-
-              {capabilities?.supports_reference_images ? (
-                <span className="badge badge-success text-[10px]">
-                  <CheckCircle2 size={11} />
-                  Ref Conditioning Supported
-                </span>
-              ) : (
-                <span className="badge badge-info text-[10px]">
-                  <Info size={11} />
-                  Prompt Injected References
-                </span>
-              )}
-            </div>
-
             <h2 className="text-lg sm:text-xl font-bold font-display" style={{ color: "var(--text-primary)" }}>
               Visual Storyboard
             </h2>
@@ -794,65 +753,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </select>
             </label>
 
-            {/* Progress metrics */}
-            <div
-              className="flex items-center gap-3 px-3 py-1.5 rounded-xl border text-xs font-mono"
-              style={{
-                background: "var(--bg-card-subtle)",
-                borderColor: "var(--border-subtle)",
-              }}
-            >
-              <div>
-                <span className="block text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>Prompts</span>
-                <span className="font-bold" style={{ color: "var(--accent-primary)" }}>
-                  {storyboardedCount} / {scenes.length}
-                </span>
-              </div>
-              <div className="h-6 w-px" style={{ background: "var(--border-subtle)" }} />
-              <div>
-                <span className="block text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>Images</span>
-                <span className="font-bold" style={{ color: "var(--accent-success-text)" }}>
-                  {imagesCompletedCount} / {scenes.length}
-                </span>
-              </div>
-              {(imagesGeneratingCount > 0 || imagesFailedCount > 0) && (
-                <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
-                  {imagesGeneratingCount} active / {imagesFailedCount} failed / {imagesRemainingCount} remaining
-                </span>
-              )}
-            </div>
-
-            {/* Smart Cluster Button */}
-            <button
-              onClick={() => setClusteringModalOpen(true)}
-              disabled={clusteringInProgress || generatingAllImages || retryingFailed || mergingInProgress || scenes.length === 0}
-              className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
-              title="Intelligently group fast captions into 15-25s visual scenes"
-            >
-              <Layers className="w-3.5 h-3.5" style={{ color: "var(--accent-primary)" }} />
-              <span>Smart Cluster ({scenes.length})</span>
-            </button>
+            <span className="text-xs text-[var(--text-muted)]">
+              {storyboardedCount} of {scenes.length} prompts · {imagesCompletedCount} images ready
+            </span>
 
             {/* Prompt Synthesis Button */}
-            <button
-              onClick={handleGenerateAllStoryboard}
-              disabled={generatingAllStoryboard || generatingAllImages || retryingFailed || mergingInProgress || scenes.length === 0}
-              className="btn-secondary text-xs py-2 px-3"
-              title="Generate or update visual storyboard prompts"
-            >
-              {generatingAllStoryboard ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" style={{ color: "var(--accent-primary)" }} />
-                  <span>Synthesizing Prompts...</span>
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-3.5 h-3.5" style={{ color: "var(--accent-primary)" }} />
-                  <span>{isAllStoryboarded ? "Regenerate Prompts" : "Synthesize Prompts"}</span>
-                </>
-              )}
-            </button>
-
             {/* Generate All Scene Images Button */}
             <button
               onClick={() => handleGenerateAllImages(isAllImagesCompleted)}
@@ -982,15 +887,34 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
       {/* Empty State: If no scenes are storyboarded yet */}
       {storyboardedCount === 0 && !generatingAllStoryboard ? (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-10 text-center flex flex-col items-center justify-center max-w-2xl mx-auto space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-950/60 border border-indigo-800/60 flex items-center justify-center text-indigo-400">
+        <div
+          className="rounded-2xl border p-10 text-center flex flex-col items-center justify-center max-w-2xl mx-auto space-y-4 shadow-sm"
+          style={{
+            background: "var(--bg-card)",
+            borderColor: "var(--border-subtle)",
+          }}
+        >
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{
+              background: "var(--accent-primary-subtle)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--accent-primary)",
+            }}
+          >
             <Clapperboard className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight">
+            <h3
+              className="text-base font-bold tracking-tight"
+              style={{ color: "var(--text-primary)" }}
+            >
               Storyboard Not Synthesized Yet
             </h3>
-            <p className="text-xs text-zinc-400 mt-1 max-w-md mx-auto leading-relaxed">
+            <p
+              className="text-xs mt-1.5 max-w-md mx-auto leading-relaxed"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Transform your {scenes.length} timestamped scenes into an actionable visual storyboard.
               The AI will craft detailed visual descriptions, cinematic image prompts, suggested camera motions,
               and seamless transitions adhering strictly to your Video Bible.
@@ -1001,7 +925,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             <button
               onClick={handleGenerateAllStoryboard}
               disabled={generatingAllStoryboard || scenes.length === 0}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-950/50 transition-all"
+              className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold shadow-md transition-all disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4" />
               <span>Synthesize Storyboard ({scenes.length} Scenes)</span>
@@ -1009,7 +933,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
             {onSwitchToBible && (
               <button
                 onClick={onSwitchToBible}
-                className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors"
+                className="btn-secondary px-4 py-2.5 rounded-xl text-xs font-medium transition-colors"
+                style={{
+                  background: "var(--bg-card-subtle)",
+                  color: "var(--text-primary)",
+                  border: "1px solid var(--border-default)",
+                }}
               >
                 Review Video Bible First
               </button>
@@ -1373,80 +1302,125 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                       </>
                     ) : (
                       /* Inline Edit Mode */
-                      <div className="p-4 rounded-xl border border-indigo-500/40 bg-zinc-950/80 space-y-3">
+                      <div
+                        className="p-4 rounded-xl border space-y-3 shadow-sm"
+                        style={{
+                          background: "var(--bg-card)",
+                          borderColor: "var(--border-default)",
+                        }}
+                      >
                         <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold text-white flex items-center gap-1.5">
-                            <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-                            Edit Scene {index + 1} Storyboard Directives
+                          <h4
+                            className="text-xs font-semibold flex items-center gap-1.5"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            <Edit3 className="w-3.5 h-3.5" style={{ color: "var(--accent-primary)" }} />
+                            <span>Edit Scene {index + 1} Storyboard Directives</span>
                           </h4>
                           <button
                             onClick={cancelEditing}
-                            className="text-zinc-400 hover:text-white"
+                            className="p-1 rounded transition-colors"
+                            style={{ color: "var(--text-muted)" }}
                           >
                             <X className="w-4 h-4" />
                           </button>
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                          <label
+                            className="block text-[11px] font-medium mb-1"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
                             Image Generation Prompt
                           </label>
                           <textarea
                             rows={3}
                             value={editPrompt}
                             onChange={(e) => setEditPrompt(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500 font-mono resize-none"
+                            className="w-full px-3 py-2 text-xs rounded-lg border focus:outline-none font-mono resize-none"
+                            style={{
+                              background: "var(--bg-input)",
+                              borderColor: "var(--border-default)",
+                              color: "var(--text-primary)",
+                            }}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                          <label
+                            className="block text-[11px] font-medium mb-1"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
                             Visual Description
                           </label>
                           <textarea
                             rows={2}
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500 resize-none"
+                            className="w-full px-3 py-2 text-xs rounded-lg border focus:outline-none resize-none"
+                            style={{
+                              background: "var(--bg-input)",
+                              borderColor: "var(--border-default)",
+                              color: "var(--text-primary)",
+                            }}
                           />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                            <label
+                              className="block text-[11px] font-medium mb-1"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
                               Suggested Motion
                             </label>
                             <input
                               type="text"
                               value={editMotion}
                               onChange={(e) => setEditMotion(e.target.value)}
-                              className="w-full px-3 py-1.5 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500"
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border focus:outline-none"
+                              style={{
+                                background: "var(--bg-input)",
+                                borderColor: "var(--border-default)",
+                                color: "var(--text-primary)",
+                              }}
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                            <label
+                              className="block text-[11px] font-medium mb-1"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
                               Suggested Transition
                             </label>
                             <input
                               type="text"
                               value={editTransition}
                               onChange={(e) => setEditTransition(e.target.value)}
-                              className="w-full px-3 py-1.5 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500"
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border focus:outline-none"
+                              style={{
+                                background: "var(--bg-input)",
+                                borderColor: "var(--border-default)",
+                                color: "var(--text-primary)",
+                              }}
                             />
                           </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                        <div
+                          className="flex justify-end gap-2 pt-2 border-t"
+                          style={{ borderColor: "var(--border-subtle)" }}
+                        >
                           <button
                             onClick={cancelEditing}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs transition-colors"
+                            className="btn-secondary px-3 py-1.5 rounded-lg text-xs"
                           >
                             Cancel
                           </button>
                           <button
                             onClick={() => handleSaveEdit(scene.id)}
                             disabled={savingEdit}
-                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                            className="btn-primary inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
                           >
                             {savingEdit ? (
                               <>
@@ -1668,29 +1642,53 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       {/* Prompt Regeneration Modal */}
       {regenModalScene && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-700 p-6 space-y-4 shadow-2xl">
+          <div
+            className="w-full max-w-lg rounded-2xl border p-6 space-y-4 shadow-2xl"
+            style={{
+              background: "var(--color-modal)",
+              borderColor: "var(--border-default)",
+            }}
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-indigo-400" />
-                Direct Prompt Tweak • {regenModalScene.id}
+              <h3
+                className="text-sm font-bold flex items-center gap-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <Wand2 className="w-4 h-4" style={{ color: "var(--accent-primary)" }} />
+                <span>Direct Prompt Tweak • {regenModalScene.id}</span>
               </h3>
               <button
                 onClick={() => setRegenModalScene(null)}
-                className="text-zinc-400 hover:text-white"
+                className="p-1 rounded transition-colors"
+                style={{ color: "var(--text-muted)" }}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-3 rounded-xl bg-black/40 border border-zinc-800 text-xs">
-              <span className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">
+            <div
+              className="p-3 rounded-xl border text-xs"
+              style={{
+                background: "var(--bg-card-subtle)",
+                borderColor: "var(--border-subtle)",
+              }}
+            >
+              <span
+                className="text-[10px] uppercase font-bold block mb-1"
+                style={{ color: "var(--text-muted)" }}
+              >
                 Scene Caption
               </span>
-              <p className="text-zinc-300 italic">{regenModalScene.caption}</p>
+              <p className="italic" style={{ color: "var(--text-primary)" }}>
+                {regenModalScene.caption}
+              </p>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 Creative Direction / Custom Guidance (Optional)
               </label>
               <textarea
@@ -1698,24 +1696,35 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 value={regenInstructions}
                 onChange={(e) => setRegenInstructions(e.target.value)}
                 placeholder="e.g. Extreme close-up on cybernetic eye with rain droplets, high tension, macro lens..."
-                className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 resize-none"
+                className="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none resize-none font-sans"
+                style={{
+                  background: "var(--bg-input)",
+                  borderColor: "var(--border-default)",
+                  color: "var(--text-primary)",
+                }}
               />
-              <p className="text-[11px] text-zinc-400 mt-1">
+              <p
+                className="text-[11px] mt-1"
+                style={{ color: "var(--text-muted)" }}
+              >
                 The AI will preserve the Video Bible visual rules while applying your specific directorial adjustments.
               </p>
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-2 border-t border-zinc-800">
+            <div
+              className="flex justify-end gap-2.5 pt-2 border-t"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
               <button
                 onClick={() => setRegenModalScene(null)}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors"
+                className="btn-secondary px-4 py-2 rounded-xl text-xs font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRegeneratePrompt}
                 disabled={regeneratingPrompt}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all disabled:opacity-50"
+                className="btn-primary inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold shadow-md disabled:opacity-50"
               >
                 {regeneratingPrompt ? (
                   <>
@@ -1809,48 +1818,62 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
       {/* Smart Scene Clustering Modal */}
       {clusteringModalOpen && (
-
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-700 p-6 space-y-4 shadow-2xl">
+          <div
+            className="w-full max-w-lg rounded-2xl border p-6 space-y-4 shadow-2xl"
+            style={{
+              background: "var(--color-modal)",
+              borderColor: "var(--border-default)",
+            }}
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-400" />
-                Smart Visual Scene Clustering
+              <h3
+                className="text-sm font-bold flex items-center gap-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <Layers className="w-4 h-4" style={{ color: "var(--accent-primary)" }} />
+                <span>Smart Visual Scene Clustering</span>
               </h3>
-              <button onClick={() => setClusteringModalOpen(false)} className="text-zinc-400 hover:text-white">
+              <button
+                onClick={() => setClusteringModalOpen(false)}
+                className="p-1 rounded transition-colors"
+                style={{ color: "var(--text-muted)" }}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-zinc-300 leading-relaxed">
+            <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
               Rapid sentence-by-sentence captions make videos feel like a slideshow. Smart Clustering groups consecutive captions into 15–25 second visual scenes so images hold naturally while captions animate.
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div
                 onClick={() => setClusterMode("fixed_duration")}
-                className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                  clusterMode === "fixed_duration"
-                    ? "border-indigo-500 bg-indigo-950/40 text-white"
-                    : "border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:border-zinc-700"
-                }`}
+                className="p-3 rounded-xl border cursor-pointer transition-all"
+                style={{
+                  borderColor: clusterMode === "fixed_duration" ? "var(--accent-primary)" : "var(--border-default)",
+                  background: clusterMode === "fixed_duration" ? "var(--accent-primary-subtle)" : "var(--bg-card-subtle)",
+                  color: "var(--text-primary)",
+                }}
               >
                 <span className="block text-xs font-bold mb-1">Target Duration</span>
-                <span className="text-[11px] leading-tight block">
+                <span className="text-[11px] leading-tight block" style={{ color: "var(--text-secondary)" }}>
                   Groups captions into natural ~{clusterTargetDuration}s visual chunks
                 </span>
               </div>
 
               <div
                 onClick={() => setClusterMode("smart_llm")}
-                className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                  clusterMode === "smart_llm"
-                    ? "border-indigo-500 bg-indigo-950/40 text-white"
-                    : "border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:border-zinc-700"
-                }`}
+                className="p-3 rounded-xl border cursor-pointer transition-all"
+                style={{
+                  borderColor: clusterMode === "smart_llm" ? "var(--accent-primary)" : "var(--border-default)",
+                  background: clusterMode === "smart_llm" ? "var(--accent-primary-subtle)" : "var(--bg-card-subtle)",
+                  color: "var(--text-primary)",
+                }}
               >
                 <span className="block text-xs font-bold mb-1">Smart AI Clustering</span>
-                <span className="text-[11px] leading-tight block">
+                <span className="text-[11px] leading-tight block" style={{ color: "var(--text-secondary)" }}>
                   LLM analyzes narrative & topic shifts to detect scene boundaries
                 </span>
               </div>
@@ -1858,9 +1881,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
             {clusterMode === "fixed_duration" && (
               <div className="space-y-2">
-                <div className="flex justify-between text-xs font-medium text-zinc-300">
+                <div className="flex justify-between text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
                   <span>Target Scene Length</span>
-                  <span className="font-mono text-indigo-400">{clusterTargetDuration} seconds</span>
+                  <span className="font-mono font-semibold" style={{ color: "var(--accent-primary)" }}>
+                    {clusterTargetDuration} seconds
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   {[10, 15, 20, 25, 30].map((dur) => (
@@ -1868,11 +1893,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                       key={dur}
                       type="button"
                       onClick={() => setClusterTargetDuration(dur)}
-                      className={`flex-1 py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all ${
-                        clusterTargetDuration === dur
-                          ? "bg-indigo-600 border-indigo-500 text-white"
-                          : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
-                      }`}
+                      className="flex-1 py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all"
+                      style={{
+                        background: clusterTargetDuration === dur ? "var(--accent-primary)" : "var(--bg-card-subtle)",
+                        borderColor: clusterTargetDuration === dur ? "var(--accent-primary)" : "var(--border-default)",
+                        color: clusterTargetDuration === dur ? "#FFFFFF" : "var(--text-secondary)",
+                      }}
                     >
                       {dur}s
                     </button>
@@ -1881,18 +1907,28 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </div>
             )}
 
-            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-900/60 text-xs text-indigo-200 flex items-center justify-between">
-              <span>Current: <strong className="text-white">{scenes.length}</strong> rapid captions</span>
+            <div
+              className="p-3 rounded-xl border text-xs flex items-center justify-between"
+              style={{
+                background: "var(--accent-primary-subtle)",
+                borderColor: "var(--border-subtle)",
+                color: "var(--text-primary)",
+              }}
+            >
+              <span>Current: <strong>{scenes.length}</strong> rapid captions</span>
               <span>→</span>
               <span>
-                Est. Result: <strong className="text-indigo-300">~{Math.max(1, Math.round(totalVideoDuration / clusterTargetDuration))}</strong> visual scenes
+                Est. Result: <strong>~{Math.max(1, Math.round(totalVideoDuration / clusterTargetDuration))}</strong> visual scenes
               </span>
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-2 border-t border-zinc-800">
+            <div
+              className="flex justify-end gap-2.5 pt-2 border-t"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
               <button
                 onClick={() => setClusteringModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors"
+                className="btn-secondary px-4 py-2 rounded-xl text-xs font-medium"
               >
                 Cancel
               </button>
@@ -1921,28 +1957,41 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       {/* Variations Modal */}
       {variationsModalScene && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl rounded-2xl bg-zinc-900 border border-zinc-700 p-6 space-y-4 shadow-2xl">
+          <div
+            className="w-full max-w-3xl rounded-2xl border p-6 space-y-4 shadow-2xl"
+            style={{
+              background: "var(--color-modal)",
+              borderColor: "var(--border-default)",
+            }}
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Palette className="w-4 h-4 text-purple-400" />
-                Scene Visual Variations (A/B Test) • {variationsModalScene.id}
+              <h3
+                className="text-sm font-bold flex items-center gap-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <Palette className="w-4 h-4" style={{ color: "var(--accent-primary)" }} />
+                <span>Scene Visual Variations (A/B Test) • {variationsModalScene.id}</span>
               </h3>
-              <button onClick={() => setVariationsModalScene(null)} className="text-zinc-400 hover:text-white">
+              <button
+                onClick={() => setVariationsModalScene(null)}
+                className="p-1 rounded transition-colors"
+                style={{ color: "var(--text-muted)" }}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
               Choose the best candidate visual for this scene. Click any variation to apply it directly.
             </p>
 
             {variationsLoading ? (
               <div className="py-16 text-center space-y-3">
                 <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
-                <span className="text-xs text-zinc-300 block">Generating 3 candidate variations in parallel...</span>
+                <span className="text-xs block" style={{ color: "var(--text-secondary)" }}>Generating 3 candidate variations in parallel...</span>
               </div>
             ) : variations.length === 0 ? (
-              <div className="py-12 text-center text-xs text-zinc-500">
+              <div className="py-12 text-center text-xs" style={{ color: "var(--text-muted)" }}>
                 No variations available. Click below to generate candidates.
               </div>
             ) : (
@@ -1952,11 +2001,18 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                     key={v.id}
                     type="button"
                     onClick={() => handleApplyVariation(variationsModalScene.id, v)}
-                    className="group border border-zinc-800 hover:border-purple-500 rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] bg-black/40 p-2 space-y-2 text-left"
+                    className="group border rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] p-2 space-y-2 text-left"
+                    style={{
+                      background: "var(--bg-card-subtle)",
+                      borderColor: "var(--border-subtle)",
+                    }}
                   >
                     <div
-                      className="relative rounded-lg overflow-hidden bg-zinc-950"
-                      style={{ aspectRatio: projectAspectRatio.replace(":", " / ") }}
+                      className="relative rounded-lg overflow-hidden"
+                      style={{
+                        aspectRatio: projectAspectRatio.replace(":", " / "),
+                        background: "var(--bg-surface)",
+                      }}
                     >
                       <img src={api.getMediaUrl(v.image_url)} alt={`Variation ${i + 1}`} className="w-full h-full object-cover" />
                       <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-black/70 text-[10px] font-mono text-zinc-300">
@@ -1971,7 +2027,10 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </div>
             )}
 
-            <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
+            <div
+              className="flex justify-between items-center pt-3 border-t"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
               <button
                 onClick={() => handleOpenVariations(variationsModalScene)}
                 disabled={variationsLoading}
@@ -1982,7 +2041,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </button>
               <button
                 onClick={() => setVariationsModalScene(null)}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium"
+                className="btn-secondary px-4 py-2 rounded-xl text-xs font-medium"
               >
                 Close
               </button>
@@ -1994,24 +2053,37 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       {/* Graphic Template Card Modal */}
       {graphicModalScene && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-700 p-6 space-y-4 shadow-2xl">
+          <div
+            className="w-full max-w-lg rounded-2xl border p-6 space-y-4 shadow-2xl"
+            style={{
+              background: "var(--color-modal)",
+              borderColor: "var(--border-default)",
+            }}
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-400" />
-                Use Graphic Template Card • {graphicModalScene.id}
+              <h3
+                className="text-sm font-bold flex items-center gap-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <Layers className="w-4 h-4" style={{ color: "var(--accent-primary)" }} />
+                <span>Use Graphic Template Card • {graphicModalScene.id}</span>
               </h3>
-              <button onClick={() => setGraphicModalScene(null)} className="text-zinc-400 hover:text-white">
+              <button
+                onClick={() => setGraphicModalScene(null)}
+                className="p-1 rounded transition-colors"
+                style={{ color: "var(--text-muted)" }}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
               Generate crisp high-res cards (Key Point, Quote, Stat, Step) server-side without needing an AI generator.
             </p>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Template Style</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Template Style</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: "title_card", label: "Title / Key Point" },
@@ -2024,11 +2096,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                       key={t.id}
                       type="button"
                       onClick={() => setGraphicTemplateType(t.id as any)}
-                      className={`p-2 rounded-lg text-xs font-medium border text-center transition-all ${
-                        graphicTemplateType === t.id
-                          ? "bg-indigo-600 border-indigo-500 text-white"
-                          : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700"
-                      }`}
+                      className="p-2 rounded-lg text-xs font-medium border text-center transition-all"
+                      style={{
+                        background: graphicTemplateType === t.id ? "var(--accent-primary)" : "var(--bg-card-subtle)",
+                        borderColor: graphicTemplateType === t.id ? "var(--accent-primary)" : "var(--border-default)",
+                        color: graphicTemplateType === t.id ? "#FFFFFF" : "var(--text-secondary)",
+                      }}
                     >
                       {t.label}
                     </button>
@@ -2037,27 +2110,37 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Headline Text</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Headline Text</label>
                 <input
                   type="text"
                   value={graphicHeadline}
                   onChange={(e) => setGraphicHeadline(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none"
+                  style={{
+                    background: "var(--bg-input)",
+                    borderColor: "var(--border-default)",
+                    color: "var(--text-primary)",
+                  }}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Subtext / Citation (Optional)</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Subtext / Citation (Optional)</label>
                 <input
                   type="text"
                   value={graphicSubtext}
                   onChange={(e) => setGraphicSubtext(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none"
+                  style={{
+                    background: "var(--bg-input)",
+                    borderColor: "var(--border-default)",
+                    color: "var(--text-primary)",
+                  }}
                 />
               </div>
 
               <div className="flex items-center gap-3">
-                <label className="text-xs font-medium text-zinc-300">Accent Color:</label>
+                <label className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Accent Color:</label>
                 <div className="flex items-center gap-2">
                   {["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#3b82f6"].map((col) => (
                     <button
@@ -2074,10 +2157,13 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-3 border-t border-zinc-800">
+            <div
+              className="flex justify-end gap-2.5 pt-3 border-t"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
               <button
                 onClick={() => setGraphicModalScene(null)}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium"
+                className="btn-secondary px-4 py-2 rounded-xl text-xs font-medium"
               >
                 Cancel
               </button>
