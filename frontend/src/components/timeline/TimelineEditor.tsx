@@ -53,6 +53,20 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     project.scenes?.[0] ||
     null;
 
+  // Synchronize selectedSceneId whenever project.scenes updates or loads
+  useEffect(() => {
+    if (!project.scenes || project.scenes.length === 0) {
+      if (selectedSceneId !== null) {
+        setSelectedSceneId(null);
+      }
+      return;
+    }
+    const exists = project.scenes.some((s) => s.id === selectedSceneId);
+    if (!exists) {
+      setSelectedSceneId(project.scenes[0].id);
+    }
+  }, [project.scenes, selectedSceneId]);
+
   // Initialize history when project scenes first become available
   useEffect(() => {
     if (project.scenes && project.scenes.length > 0 && historyRef.current.length === 0) {
@@ -281,9 +295,15 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
   const handleSplitScene = async (sceneId: string, splitTime: number) => {
     try {
+      const prevIds = new Set((project.scenes || []).map((s) => s.id));
       const updatedProject = await api.splitScene(project.id, sceneId, splitTime);
       pushHistorySnapshot(updatedProject.scenes);
       onProjectUpdated(updatedProject);
+      // Automatically select the newly created split scene
+      const newlyCreated = updatedProject.scenes.find((s) => !prevIds.has(s.id));
+      if (newlyCreated) {
+        setSelectedSceneId(newlyCreated.id);
+      }
     } catch (err: any) {
       alert(err.message || "Failed to split scene");
     }
@@ -291,9 +311,15 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
   const handleDuplicateScene = async (sceneId: string) => {
     try {
+      const prevIds = new Set((project.scenes || []).map((s) => s.id));
       const updatedProject = await api.duplicateScene(project.id, sceneId);
       pushHistorySnapshot(updatedProject.scenes);
       onProjectUpdated(updatedProject);
+      // Automatically select the duplicated scene
+      const newlyCreated = updatedProject.scenes.find((s) => !prevIds.has(s.id));
+      if (newlyCreated) {
+        setSelectedSceneId(newlyCreated.id);
+      }
     } catch (err: any) {
       alert(err.message || "Failed to duplicate scene");
     }
@@ -307,12 +333,17 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     if (!deleteTargetSceneId) return;
     const sceneId = deleteTargetSceneId;
     setDeleteTargetSceneId(null);
+    const scenes = project.scenes || [];
+    const deleteIdx = scenes.findIndex((s) => s.id === sceneId);
     try {
       const updatedProject = await api.deleteTimelineScene(project.id, sceneId, true);
       pushHistorySnapshot(updatedProject.scenes);
       onProjectUpdated(updatedProject);
       if (updatedProject.scenes.length > 0) {
-        setSelectedSceneId(updatedProject.scenes[0].id);
+        const fallbackIdx = Math.min(deleteIdx >= 0 ? deleteIdx : 0, updatedProject.scenes.length - 1);
+        setSelectedSceneId(updatedProject.scenes[fallbackIdx].id);
+      } else {
+        setSelectedSceneId(null);
       }
     } catch (err: any) {
       alert(err.message || "Failed to delete scene");
@@ -336,6 +367,10 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
       const updatedProject = await api.reorderScenes(project.id, newIds);
       pushHistorySnapshot(updatedProject.scenes);
       onProjectUpdated(updatedProject);
+      const movedScene = updatedProject.scenes.find((s) => s.id === sceneId);
+      if (movedScene) {
+        handleSeek(movedScene.start);
+      }
     } catch (err: any) {
       alert(err.message || "Failed to reorder scenes");
     }
@@ -484,6 +519,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{ display: "flex", gap: "4px" }}>
             <button
+              id="timeline-undo-btn"
               onClick={handleUndo}
               disabled={!canUndo}
               title="Undo (Ctrl+Z)"
@@ -507,6 +543,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             </button>
 
             <button
+              id="timeline-redo-btn"
               onClick={handleRedo}
               disabled={!canRedo}
               title="Redo (Ctrl+Y)"
@@ -543,6 +580,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>Zoom:</span>
             <button
+              id="timeline-zoom-out-btn"
               onClick={() => setPixelsPerSecond((prev) => Math.max(30, prev - 15))}
               disabled={pixelsPerSecond <= 30}
               title="Zoom Out (-15px)"
@@ -560,6 +598,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
               -
             </button>
             <span
+              id="timeline-zoom-readout"
               style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: "0.78rem",
@@ -572,6 +611,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
               {pixelsPerSecond}px
             </span>
             <button
+              id="timeline-zoom-in-btn"
               onClick={() => setPixelsPerSecond((prev) => Math.min(150, prev + 15))}
               disabled={pixelsPerSecond >= 150}
               title="Zoom In (+15px)"
@@ -601,6 +641,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
           {/* Export Video Action Button */}
           <button
+            id="timeline-export-btn"
             onClick={() => setIsExportModalOpen(true)}
             className="btn-primary"
             title="Render Full HD MP4 Video with FFmpeg"
@@ -646,6 +687,8 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {/* Settings Navigation Tabs */}
           <div
+            id="timeline-tabs-nav"
+            role="tablist"
             style={{
               display: "flex",
               background: "var(--bg-card-subtle)",
@@ -665,6 +708,10 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
               return (
                 <button
                   key={t.id}
+                  id={`timeline-tab-${t.id}`}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`timeline-panel-${t.id}`}
                   onClick={() => setActiveTab(t.id as any)}
                   style={{
                     flex: 1,
@@ -692,52 +739,60 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
           {/* Tab Content */}
           {activeTab === "scene" && (
-            selectedScene ? (
-              <SceneInspector
-                project={project}
-                scene={selectedScene}
-                currentTime={currentTime}
-                onUpdateScene={handleUpdateScene}
-                onSplitScene={handleSplitScene}
-                onDuplicateScene={handleDuplicateScene}
-                onDeleteScene={handleDeleteScene}
-                onMoveScene={handleMoveScene}
-                onRegenerateImage={handleRegenerateImage}
-                onUploadImage={handleUploadImage}
-              />
-            ) : (
-              <div
-                className="glass-panel"
-                style={{
-                  padding: "32px",
-                  textAlign: "center",
-                  color: "var(--text-muted)",
-                }}
-              >
-                Select a scene block on the timeline to inspect and edit.
-              </div>
-            )
+            <div id="timeline-panel-scene" role="tabpanel" aria-labelledby="timeline-tab-scene">
+              {selectedScene ? (
+                <SceneInspector
+                  project={project}
+                  scene={selectedScene}
+                  currentTime={currentTime}
+                  onUpdateScene={handleUpdateScene}
+                  onSplitScene={handleSplitScene}
+                  onDuplicateScene={handleDuplicateScene}
+                  onDeleteScene={handleDeleteScene}
+                  onMoveScene={handleMoveScene}
+                  onRegenerateImage={handleRegenerateImage}
+                  onUploadImage={handleUploadImage}
+                />
+              ) : (
+                <div
+                  className="glass-panel"
+                  style={{
+                    padding: "32px",
+                    textAlign: "center",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  Select a scene block on the timeline to inspect and edit.
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === "captions" && (
-            <CaptionsSettingsPanel
-              project={project}
-              onProjectUpdated={onProjectUpdated}
-            />
+            <div id="timeline-panel-captions" role="tabpanel" aria-labelledby="timeline-tab-captions">
+              <CaptionsSettingsPanel
+                project={project}
+                onProjectUpdated={onProjectUpdated}
+              />
+            </div>
           )}
 
           {activeTab === "audio" && (
-            <AudioSettingsPanel
-              project={project}
-              onProjectUpdated={onProjectUpdated}
-            />
+            <div id="timeline-panel-audio" role="tabpanel" aria-labelledby="timeline-tab-audio">
+              <AudioSettingsPanel
+                project={project}
+                onProjectUpdated={onProjectUpdated}
+              />
+            </div>
           )}
 
           {activeTab === "canvas" && (
-            <CanvasSettingsPanel
-              project={project}
-              onProjectUpdated={onProjectUpdated}
-            />
+            <div id="timeline-panel-canvas" role="tabpanel" aria-labelledby="timeline-tab-canvas">
+              <CanvasSettingsPanel
+                project={project}
+                onProjectUpdated={onProjectUpdated}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -767,6 +822,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             {/* Quick Undo / Redo */}
             <div style={{ display: "flex", gap: "4px" }}>
               <button
+                id="timeline-bottom-undo-btn"
                 onClick={handleUndo}
                 disabled={!canUndo}
                 title="Undo (Ctrl+Z)"
@@ -788,6 +844,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                 ⤺ Undo
               </button>
               <button
+                id="timeline-bottom-redo-btn"
                 onClick={handleRedo}
                 disabled={!canRedo}
                 title="Redo (Ctrl+Y)"
@@ -814,6 +871,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>Zoom:</span>
               <button
+                id="timeline-bottom-zoom-out-btn"
                 onClick={() => setPixelsPerSecond((prev) => Math.max(30, prev - 15))}
                 disabled={pixelsPerSecond <= 30}
                 title="Zoom Out"
@@ -831,6 +889,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                 -
               </button>
               <span
+                id="timeline-bottom-zoom-readout"
                 style={{
                   fontFamily: "var(--font-mono)",
                   fontSize: "0.74rem",
@@ -843,6 +902,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                 {pixelsPerSecond}px
               </span>
               <button
+                id="timeline-bottom-zoom-in-btn"
                 onClick={() => setPixelsPerSecond((prev) => Math.min(150, prev + 15))}
                 disabled={pixelsPerSecond >= 150}
                 title="Zoom In"
@@ -862,6 +922,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             </div>
 
             <button
+              id="timeline-shortcuts-btn"
               onClick={() => setIsShortcutsModalOpen(true)}
               className="px-2.5 py-1 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 hover:text-white text-xs flex items-center gap-1.5 transition-colors font-mono"
               title="View keyboard shortcuts"

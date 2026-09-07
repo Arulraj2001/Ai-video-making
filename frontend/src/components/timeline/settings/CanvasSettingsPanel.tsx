@@ -76,7 +76,7 @@ export const CanvasSettingsPanel: React.FC<CanvasSettingsPanelProps> = ({
   };
 
   return (
-    <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div id="canvas-settings-panel" className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -114,6 +114,7 @@ export const CanvasSettingsPanel: React.FC<CanvasSettingsPanelProps> = ({
           return (
             <div
               key={preset.resolution}
+              id={`canvas-preset-${preset.aspect_ratio.replace(":", "-")}`}
               onClick={() => handleSelectPreset(preset.aspect_ratio, preset.resolution)}
               style={{
                 display: "flex",
@@ -169,6 +170,7 @@ export const CanvasSettingsPanel: React.FC<CanvasSettingsPanelProps> = ({
 
       {/* Details Bar */}
       <div
+        id="canvas-details-bar"
         style={{
           display: "flex",
           alignItems: "center",

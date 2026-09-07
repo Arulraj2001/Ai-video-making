@@ -77,12 +77,19 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<"visual" | "framing" | "motion" | "color" | "timing">("visual");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync state when selected scene changes
+  const lastSceneIdRef = useRef(scene.id);
+
+  // Sync state when selected scene changes or external values update
   useEffect(() => {
-    setStart(scene.start);
-    setEnd(scene.end);
-    setCaption(scene.caption || "");
-    setPrompt(scene.image_prompt || "");
+    const isDifferentScene = scene.id !== lastSceneIdRef.current;
+    lastSceneIdRef.current = scene.id;
+
+    if (isDifferentScene) {
+      setStart(scene.start);
+      setEnd(scene.end);
+      setCaption(scene.caption || "");
+      setPrompt(scene.image_prompt || "");
+    }
     setMotion(scene.motion || "none");
     setTransition(scene.transition || "none");
     setTransitionDuration(scene.transition_duration || 0.5);
@@ -97,6 +104,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
   }, [scene]);
 
   const sceneIndex = (project.scenes || []).findIndex((s) => s.id === scene.id);
+  const safeSceneIndex = sceneIndex !== -1 ? sceneIndex : 0;
   const canMoveEarlier = sceneIndex > 0;
   const canMoveLater = sceneIndex !== -1 && sceneIndex < (project.scenes || []).length - 1;
 
@@ -282,6 +290,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
       {/* Hidden File Input for Image Replacement */}
       <input
         ref={fileInputRef}
+        id="scene-file-input"
         type="file"
         accept="image/png,image/jpeg,image/webp"
         style={{ display: "none" }}
@@ -290,6 +299,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
 
       {/* Header & Scene Navigation */}
       <div
+        id="scene-inspector-header"
         style={{
           display: "flex",
           alignItems: "center",
@@ -300,6 +310,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span
+            id="scene-index-badge"
             style={{
               background: "rgba(99, 102, 241, 0.15)",
               color: "var(--primary)",
@@ -309,9 +320,12 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
               fontSize: "0.85rem",
             }}
           >
-            Scene {sceneIndex + 1}
+            Scene {safeSceneIndex + 1}
           </span>
-          <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontFamily: "var(--font-mono)" }}>
+          <span
+            id="scene-id-label"
+            style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontFamily: "var(--font-mono)" }}
+          >
             ID: {scene.id}
           </span>
         </div>
@@ -319,6 +333,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
         {/* Reorder Buttons */}
         <div style={{ display: "flex", gap: "6px" }}>
           <button
+            id="scene-move-earlier-btn"
             onClick={() => onMoveScene(scene.id, "earlier")}
             disabled={!canMoveEarlier}
             title="Move scene earlier in timeline"
@@ -335,6 +350,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             ⬅ Earlier
           </button>
           <button
+            id="scene-move-later-btn"
             onClick={() => onMoveScene(scene.id, "later")}
             disabled={!canMoveLater}
             title="Move scene later in timeline"
@@ -355,6 +371,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
 
       {/* Sub-Branch Navigation Row */}
       <div
+        id="scene-subtabs-nav"
         style={{
           display: "flex",
           background: "rgba(255,255,255,0.03)",
@@ -376,6 +393,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
           return (
             <button
               key={item.id}
+              id={`scene-subtab-${item.id}`}
               type="button"
               onClick={() => setActiveSubTab(item.id as any)}
               style={{
@@ -507,6 +525,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", justifyContent: "center" }}>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button
+                  id="scene-upload-btn"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
                   style={{
@@ -524,6 +543,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
                 </button>
 
                 <button
+                  id="scene-regenerate-btn"
                   onClick={handleRegenerate}
                   disabled={isRegenerating}
                   style={{
@@ -541,7 +561,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
                 </button>
               </div>
 
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              <span id="scene-image-status" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                 Generation Status: <strong style={{ color: "var(--text-secondary)" }}>{scene.image_status || "pending"}</strong>
               </span>
             </div>
@@ -550,10 +570,14 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
           {/* Caption & Prompt Fields */}
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div>
-              <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: 600 }}>
+              <label
+                htmlFor="scene-caption-input"
+                style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: 600 }}
+              >
                 Scene Caption Text
               </label>
               <textarea
+                id="scene-caption-input"
                 rows={2}
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
@@ -574,10 +598,14 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             </div>
 
             <div>
-              <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: 600 }}>
+              <label
+                htmlFor="scene-prompt-input"
+                style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: 600 }}
+              >
                 Image Generation Prompt
               </label>
               <textarea
+                id="scene-prompt-input"
                 rows={3}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -634,6 +662,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
               ] as const).map((f) => (
                 <button
                   key={f.value}
+                  id={`scene-fit-${f.value}`}
                   onClick={() => handleFitChange(f.value)}
                   style={{
                     flex: 1,
@@ -657,8 +686,11 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             {/* Position */}
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Alignment Position</span>
+              <label htmlFor="scene-position-select" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                Alignment Position
+              </label>
               <select
+                id="scene-position-select"
                 value={imagePosition}
                 onChange={(e) => handlePositionChange(e.target.value as ImagePosition)}
                 className="select-custom"
@@ -675,12 +707,15 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             {/* Zoom */}
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Zoom Level</span>
+                <label htmlFor="scene-zoom-slider" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Zoom Level
+                </label>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--primary)" }}>
                   {imageZoom.toFixed(1)}x
                 </span>
               </div>
               <input
+                id="scene-zoom-slider"
                 type="range"
                 min={1.0}
                 max={2.5}
@@ -704,6 +739,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
               ] as const).map((cp) => (
                 <button
                   key={cp.value}
+                  id={`scene-crop-${cp.value.replace(":", "-")}`}
                   onClick={() => handleCropPreset(cp.value)}
                   style={{
                     flex: 1,
@@ -736,9 +772,11 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "6px" }}>
               {MOTION_OPTIONS.map((opt) => {
                 const isSelected = motion === opt.value;
+                const safeOptId = opt.value.replace(/\s+/g, "-");
                 return (
                   <button
                     key={opt.value}
+                    id={`scene-motion-${safeOptId}`}
                     onClick={() => handleQuickMotionChange(opt.value)}
                     style={{
                       padding: "7px 10px",
@@ -766,7 +804,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
           {/* Transition Selector */}
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+              <label htmlFor="scene-transition-duration-slider" style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)" }}>
                 ⚡ Scene Transition
               </label>
               {transition !== "none" && (
@@ -782,6 +820,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
                 return (
                   <button
                     key={opt.value}
+                    id={`scene-transition-${opt.value}`}
                     onClick={() => handleQuickTransitionChange(opt.value)}
                     style={{
                       padding: "8px",
@@ -808,6 +847,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
                 <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>0.2s</span>
                 <input
+                  id="scene-transition-duration-slider"
                   type="range"
                   min={0.2}
                   max={2.0}
@@ -842,6 +882,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             </label>
             {(brightness !== 0 || contrast !== 1 || saturation !== 1 || colorFilter !== "none") && (
               <button
+                id="scene-reset-visuals-btn"
                 onClick={handleResetVisuals}
                 style={{
                   background: "transparent",
@@ -867,6 +908,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
                 return (
                   <button
                     key={filt.value}
+                    id={`scene-filter-${filt.value}`}
                     onClick={() => handleColorFilterChange(filt.value)}
                     style={{
                       padding: "8px",
@@ -913,12 +955,15 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             {/* Brightness */}
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Brightness</span>
+                <label htmlFor="scene-brightness-slider" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Brightness
+                </label>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--primary)" }}>
                   {brightness > 0 ? `+${Math.round(brightness * 100)}%` : `${Math.round(brightness * 100)}%`}
                 </span>
               </div>
               <input
+                id="scene-brightness-slider"
                 type="range"
                 min={-0.5}
                 max={0.5}
@@ -932,12 +977,15 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             {/* Contrast */}
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Contrast</span>
+                <label htmlFor="scene-contrast-slider" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Contrast
+                </label>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--primary)" }}>
                   {Math.round(contrast * 100)}%
                 </span>
               </div>
               <input
+                id="scene-contrast-slider"
                 type="range"
                 min={0.5}
                 max={1.5}
@@ -951,12 +999,15 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             {/* Saturation */}
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Saturation</span>
+                <label htmlFor="scene-saturation-slider" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Saturation
+                </label>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--primary)" }}>
                   {Math.round(saturation * 100)}%
                 </span>
               </div>
               <input
+                id="scene-saturation-slider"
                 type="range"
                 min={0.0}
                 max={2.0}
@@ -991,10 +1042,11 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label htmlFor="scene-start-input" style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
                   Start Time (s)
                 </label>
                 <input
+                  id="scene-start-input"
                   type="number"
                   step="0.1"
                   value={start}
@@ -1013,10 +1065,11 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
               </div>
 
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label htmlFor="scene-end-input" style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
                   End Time (s)
                 </label>
                 <input
+                  id="scene-end-input"
                   type="number"
                   step="0.1"
                   value={end}
@@ -1035,10 +1088,11 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
               </div>
 
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label htmlFor="scene-duration-input" style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
                   Duration (s)
                 </label>
                 <input
+                  id="scene-duration-input"
                   type="text"
                   readOnly
                   value={(end - start > 0 ? (end - start).toFixed(2) : "0.00") + "s"}
@@ -1059,6 +1113,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-muted)", cursor: "pointer" }}>
                 <input
+                  id="scene-ripple-checkbox"
                   type="checkbox"
                   checked={ripple}
                   onChange={(e) => setRipple(e.target.checked)}
@@ -1068,6 +1123,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
               </label>
 
               <button
+                id="scene-apply-timing-btn"
                 onClick={handleSaveTimes}
                 disabled={isSaving}
                 className="btn-primary"
@@ -1083,6 +1139,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
 
           {/* Clip Operations Toolbar */}
           <div
+            id="scene-operations-toolbar"
             style={{
               display: "flex",
               alignItems: "center",
@@ -1095,7 +1152,8 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             }}
           >
             <button
-              onClick={() => onSplitScene(scene.id, currentTime)}
+              id="scene-split-btn"
+              onClick={() => onSplitScene(scene.id, Number(currentTime.toFixed(3)))}
               disabled={!canSplitAtPlayhead}
               title={
                 canSplitAtPlayhead
@@ -1120,6 +1178,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             </button>
 
             <button
+              id="scene-duplicate-btn"
               onClick={() => onDuplicateScene(scene.id)}
               title="Duplicate scene directly downstream"
               className="btn-secondary text-xs"
@@ -1135,6 +1194,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
             </button>
 
             <button
+              id="scene-delete-btn"
               onClick={() => onDeleteScene(scene.id)}
               disabled={(project.scenes || []).length <= 1}
               title="Delete scene from timeline with ripple shift [Shortcut: Del]"

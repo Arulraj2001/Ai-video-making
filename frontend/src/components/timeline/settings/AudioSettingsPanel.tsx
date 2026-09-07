@@ -23,6 +23,10 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
   };
 
   const [settings, setSettings] = useState<AudioSettings>(current);
+  const [localNarrationVol, setLocalNarrationVol] = useState<number>(current.narration_volume ?? 1.0);
+  const [localMusicVol, setLocalMusicVol] = useState<number>(current.music_volume ?? 0.25);
+  const [localMusicFadeIn, setLocalMusicFadeIn] = useState<number>(current.music_fade_in ?? 1.0);
+  const [localMusicFadeOut, setLocalMusicFadeOut] = useState<number>(current.music_fade_out ?? 2.0);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingVoice, setIsUploadingVoice] = useState(false);
   const [isDeletingVoice, setIsDeletingVoice] = useState(false);
@@ -37,10 +41,15 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
 
   useEffect(() => {
     if (project.audio_settings) {
-      setSettings({
+      const merged = {
         ducking_enabled: true,
         ...project.audio_settings,
-      });
+      };
+      setSettings(merged);
+      setLocalNarrationVol(merged.narration_volume ?? 1.0);
+      setLocalMusicVol(merged.music_volume ?? 0.25);
+      setLocalMusicFadeIn(merged.music_fade_in ?? 1.0);
+      setLocalMusicFadeOut(merged.music_fade_out ?? 2.0);
     }
   }, [project.audio_settings]);
 
@@ -160,7 +169,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
   const bgm = project.audio_settings?.music_file;
 
   return (
-    <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div id="audio-settings-panel" className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -189,6 +198,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
 
       {/* Hidden file inputs */}
       <input
+        id="narration-file-input"
         ref={voiceFileInputRef}
         type="file"
         accept="audio/mp3,audio/mpeg,audio/wav,audio/aac,audio/m4a,audio/ogg"
@@ -196,6 +206,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
         onChange={handleVoiceInputChange}
       />
       <input
+        id="bgm-file-input"
         ref={musicFileInputRef}
         type="file"
         accept="audio/mp3,audio/mpeg,audio/wav,audio/aac,audio/m4a,audio/ogg"
@@ -205,6 +216,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
 
       {/* Track 1: Voice / Narration Track */}
       <div
+        id="narration-track-section"
         style={{
           background: "rgba(255,255,255,0.02)",
           border: "1px solid rgba(255,255,255,0.07)",
@@ -238,6 +250,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
             {project.audio_file && (
               <>
                 <button
+                  id="narration-mute-btn"
                   onClick={() => handleChange("narration_muted", !settings.narration_muted)}
                   style={{
                     padding: "5px 10px",
@@ -258,6 +271,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
                 </button>
 
                 <button
+                  id="narration-delete-btn"
                   onClick={handleDeleteVoice}
                   disabled={isDeletingVoice}
                   title="Remove Voiceover"
@@ -280,6 +294,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
             )}
 
             <button
+              id="narration-upload-btn"
               onClick={() => voiceFileInputRef.current?.click()}
               disabled={isUploadingVoice}
               className="btn-secondary"
@@ -295,26 +310,30 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
         {project.audio_file ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Narration Volume</span>
+              <label htmlFor="narration-volume-slider" style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Narration Volume</label>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--primary)" }}>
-                {settings.narration_muted ? "0%" : `${Math.round(settings.narration_volume * 100)}%`}
+                {settings.narration_muted ? "0%" : `${Math.round(localNarrationVol * 100)}%`}
               </span>
             </div>
             <input
+              id="narration-volume-slider"
               type="range"
               min={0}
               max={2}
               step={0.05}
-              value={settings.narration_muted ? 0 : settings.narration_volume}
+              value={settings.narration_muted ? 0 : localNarrationVol}
               onChange={(e) => {
                 if (settings.narration_muted) handleChange("narration_muted", false);
-                handleChange("narration_volume", Number(e.target.value));
+                setLocalNarrationVol(Number(e.target.value));
               }}
+              onPointerUp={() => handleChange("narration_volume", localNarrationVol)}
+              onKeyUp={() => handleChange("narration_volume", localNarrationVol)}
               style={{ width: "100%", accentColor: "var(--primary)", cursor: "pointer" }}
             />
           </div>
         ) : (
           <div
+            id="narration-dropzone"
             onDragOver={(e) => {
               e.preventDefault();
               setIsDraggingVoice(true);
@@ -349,6 +368,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
 
       {/* Track 2: Background Music (BGM) */}
       <div
+        id="bgm-track-section"
         style={{
           background: "rgba(255,255,255,0.02)",
           border: "1px solid rgba(255,255,255,0.07)",
@@ -382,6 +402,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
             {bgm && (
               <>
                 <button
+                  id="music-mute-btn"
                   onClick={() => handleChange("music_muted", !settings.music_muted)}
                   style={{
                     padding: "5px 10px",
@@ -402,6 +423,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
                 </button>
 
                 <button
+                  id="music-delete-btn"
                   onClick={handleDeleteMusic}
                   disabled={isDeletingMusic}
                   title="Remove Background Music"
@@ -424,6 +446,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
             )}
 
             <button
+              id="music-upload-btn"
               onClick={() => musicFileInputRef.current?.click()}
               disabled={isUploadingMusic}
               className="btn-secondary"
@@ -442,21 +465,24 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
               {/* Music Volume */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>BGM Master Volume</span>
+                  <label htmlFor="music-volume-slider" style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>BGM Master Volume</label>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#c084fc" }}>
-                    {settings.music_muted ? "0%" : `${Math.round(settings.music_volume * 100)}%`}
+                    {settings.music_muted ? "0%" : `${Math.round(localMusicVol * 100)}%`}
                   </span>
                 </div>
                 <input
+                  id="music-volume-slider"
                   type="range"
                   min={0}
                   max={2}
                   step={0.05}
-                  value={settings.music_muted ? 0 : settings.music_volume}
+                  value={settings.music_muted ? 0 : localMusicVol}
                   onChange={(e) => {
                     if (settings.music_muted) handleChange("music_muted", false);
-                    handleChange("music_volume", Number(e.target.value));
+                    setLocalMusicVol(Number(e.target.value));
                   }}
+                  onPointerUp={() => handleChange("music_volume", localMusicVol)}
+                  onKeyUp={() => handleChange("music_volume", localMusicVol)}
                   style={{ width: "100%", accentColor: "#a855f7", cursor: "pointer" }}
                 />
               </div>
@@ -464,18 +490,21 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
               {/* Fade In */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Music Fade In</span>
+                  <label htmlFor="music-fade-in-slider" style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Music Fade In</label>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                    {settings.music_fade_in.toFixed(1)}s
+                    {localMusicFadeIn.toFixed(1)}s
                   </span>
                 </div>
                 <input
+                  id="music-fade-in-slider"
                   type="range"
                   min={0}
                   max={5}
                   step={0.2}
-                  value={settings.music_fade_in}
-                  onChange={(e) => handleChange("music_fade_in", Number(e.target.value))}
+                  value={localMusicFadeIn}
+                  onChange={(e) => setLocalMusicFadeIn(Number(e.target.value))}
+                  onPointerUp={() => handleChange("music_fade_in", localMusicFadeIn)}
+                  onKeyUp={() => handleChange("music_fade_in", localMusicFadeIn)}
                   style={{ width: "100%", accentColor: "#a855f7", cursor: "pointer" }}
                 />
               </div>
@@ -483,18 +512,21 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
               {/* Fade Out */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Music Fade Out</span>
+                  <label htmlFor="music-fade-out-slider" style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Music Fade Out</label>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                    {settings.music_fade_out.toFixed(1)}s
+                    {localMusicFadeOut.toFixed(1)}s
                   </span>
                 </div>
                 <input
+                  id="music-fade-out-slider"
                   type="range"
                   min={0}
                   max={5}
                   step={0.2}
-                  value={settings.music_fade_out}
-                  onChange={(e) => handleChange("music_fade_out", Number(e.target.value))}
+                  value={localMusicFadeOut}
+                  onChange={(e) => setLocalMusicFadeOut(Number(e.target.value))}
+                  onPointerUp={() => handleChange("music_fade_out", localMusicFadeOut)}
+                  onKeyUp={() => handleChange("music_fade_out", localMusicFadeOut)}
                   style={{ width: "100%", accentColor: "#a855f7", cursor: "pointer" }}
                 />
               </div>
@@ -528,8 +560,9 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
                 </span>
               </div>
 
-              <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+              <label htmlFor="audio-ducking-toggle" style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
                 <input
+                  id="audio-ducking-toggle"
                   type="checkbox"
                   checked={settings.ducking_enabled !== false}
                   onChange={(e) => handleChange("ducking_enabled", e.target.checked)}
@@ -545,6 +578,7 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
           </div>
         ) : (
           <div
+            id="music-dropzone"
             onDragOver={(e) => {
               e.preventDefault();
               setIsDraggingMusic(true);

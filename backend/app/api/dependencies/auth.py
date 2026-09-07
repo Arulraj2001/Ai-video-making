@@ -64,6 +64,11 @@ def get_current_user(
         or "render.com" in req_host
     )
 
+    if not authorization:
+        token_param = request.query_params.get("token") or request.query_params.get("auth")
+        if token_param:
+            authorization = f"Bearer {token_param.strip()}"
+
     if authorization:
         parts = authorization.strip().split()
         if len(parts) == 2 and parts[0].lower() == "bearer":

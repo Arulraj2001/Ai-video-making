@@ -34,20 +34,27 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
 
   // Find currently active scene according to authoritative timestamps
   const scenes = project.scenes || [];
-  const activeSceneIndex = scenes.findIndex(
-    (s) => currentTime >= s.start && currentTime < s.end
-  );
-  const activeScene: Scene | undefined =
+  const activeSceneIndex = scenes.findIndex((s, idx) => {
+    const isLast = idx === scenes.length - 1;
+    return currentTime >= s.start && (isLast ? currentTime <= s.end + 0.001 : currentTime < s.end);
+  });
+  const safeActiveIndex =
     activeSceneIndex !== -1
-      ? scenes[activeSceneIndex]
-      : scenes.length > 0 && currentTime >= scenes[scenes.length - 1].end
-      ? scenes[scenes.length - 1]
-      : scenes[0];
+      ? activeSceneIndex
+      : scenes.length > 0
+      ? currentTime >= scenes[scenes.length - 1].end
+        ? scenes.length - 1
+        : scenes.findIndex((s) => s.end > currentTime) !== -1
+        ? scenes.findIndex((s) => s.end > currentTime)
+        : 0
+      : -1;
+  const activeScene: Scene | undefined =
+    safeActiveIndex !== -1 ? scenes[safeActiveIndex] : undefined;
 
   // Check if upcoming scene transition should crossfade
   const nextScene: Scene | undefined =
-    activeSceneIndex !== -1 && activeSceneIndex < scenes.length - 1
-      ? scenes[activeSceneIndex + 1]
+    safeActiveIndex !== -1 && safeActiveIndex < scenes.length - 1
+      ? scenes[safeActiveIndex + 1]
       : undefined;
 
   const transitionDuration = activeScene?.transition_duration || 0.5;
@@ -242,6 +249,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
 
   return (
     <div
+      id="cinema-preview-container"
       ref={containerRef}
       className="cinema-preview-container glass-panel"
       style={{
@@ -258,6 +266,8 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
       {/* Hidden Narration Audio element */}
       {audioUrl && (
         <audio
+          id="cinema-narration-audio"
+          key={audioUrl}
           ref={audioRef}
           src={audioUrl}
           preload="auto"
@@ -273,6 +283,8 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
       {/* Hidden BGM Audio element */}
       {bgmUrl && (
         <audio
+          id="cinema-bgm-audio"
+          key={bgmUrl}
           ref={bgmAudioRef}
           src={bgmUrl}
           loop
@@ -283,6 +295,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
 
       {/* Main Dynamic Stage Enclosure */}
       <div
+        id="cinema-stage-enclosure"
         className="cinema-stage-enclosure"
         style={{
           position: "relative",
@@ -297,6 +310,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
       >
         {/* Canvas Screen */}
         <div
+          id="cinema-canvas-screen"
           onClick={onTogglePlay}
           onDragOver={handleCanvasDragOver}
           onDragLeave={handleCanvasDragLeave}
@@ -325,6 +339,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           {/* Centered Play Button HUD Overlay when Paused */}
           {!isPlaying && !isDraggingCanvas && !isCanvasUploading && (
             <div
+              id="cinema-play-hud"
               style={{
                 position: "absolute",
                 top: "50%",
@@ -355,6 +370,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           {/* Drag & Drop Canvas Overlay */}
           {isDraggingCanvas && (
             <div
+              id="cinema-drag-drop-overlay"
               style={{
                 position: "absolute",
                 top: 0,
@@ -376,7 +392,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             >
               <div style={{ fontSize: "36px" }}>📥</div>
               <div style={{ color: "#FFFFFF", fontWeight: 700, fontSize: "1.1rem" }}>
-                Drop image to replace Scene {activeSceneIndex !== -1 ? activeSceneIndex + 1 : 1}
+                Drop image to replace Scene {safeActiveIndex !== -1 ? safeActiveIndex + 1 : 1}
               </div>
               <div style={{ color: "var(--accent-cyan)", fontSize: "0.8rem", fontWeight: 500 }}>
                 Instant desktop replacement with visual color grading
@@ -387,6 +403,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           {/* Uploading Status Overlay */}
           {isCanvasUploading && (
             <div
+              id="cinema-uploading-overlay"
               style={{
                 position: "absolute",
                 top: 0,
@@ -607,6 +624,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             {/* Cinematic Subtitle Badge (Phase 8 Styling) */}
             {project.caption_settings?.enabled !== false && activeScene?.caption && (
               <div
+                id="cinema-subtitle-container"
                 style={{
                   position: "absolute",
                   ...(project.caption_settings?.position === "top"
@@ -628,6 +646,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
                 }}
               >
                 <div
+                  id="cinema-subtitle-text"
                   style={{
                     fontFamily: project.caption_settings?.font_family || "Inter",
                     fontSize: `${Math.max(12, Math.min(22, Math.round((project.caption_settings?.font_size || 42) / 2.6)))}px`,
@@ -677,6 +696,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           {/* Top HUD: Current Scene Details & Camera Motion Badge */}
           {activeScene && (
             <div
+              id="cinema-top-hud"
               style={{
                 position: "absolute",
                 top: "14px",
@@ -690,6 +710,9 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
               }}
             >
               <div
+                id="cinema-active-scene-badge"
+                onClick={() => activeScene && onSelectScene && onSelectScene(activeScene.id)}
+                title={onSelectScene ? `Click to inspect Scene ${safeActiveIndex + 1}` : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -700,10 +723,12 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
                   borderRadius: "20px",
                   border: "1px solid rgba(255,255,255,0.1)",
                   fontSize: "0.78rem",
+                  cursor: onSelectScene ? "pointer" : "default",
+                  pointerEvents: "auto",
                 }}
               >
                 <span style={{ color: "var(--primary)", fontWeight: 700 }}>
-                  SCENE {activeSceneIndex !== -1 ? activeSceneIndex + 1 : 1}/{scenes.length}
+                  SCENE {safeActiveIndex !== -1 ? safeActiveIndex + 1 : 1}/{scenes.length}
                 </span>
                 <span style={{ color: "var(--text-muted)" }}>•</span>
                 <span style={{ color: "var(--text-secondary)" }}>
@@ -713,6 +738,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
 
               {activeScene.motion && activeScene.motion !== "none" && (
                 <div
+                  id="cinema-motion-badge"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -739,6 +765,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
 
       {/* Glassmorphic Transport Controls */}
       <div
+        id="cinema-transport-bar"
         style={{
           padding: "12px 18px",
           background: "var(--bg-surface)",
@@ -751,6 +778,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
         {/* Scrubber Progress Bar */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <input
+            id="cinema-playhead-scrubber"
             type="range"
             min={0}
             max={totalDuration || 1}
@@ -766,6 +794,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             }}
           />
           <div
+            id="cinema-time-display"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "0.85rem",
@@ -793,6 +822,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           {/* Left: Playback buttons */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
+              id="cinema-rewind-btn"
               onClick={() => onSeek(Math.max(0, currentTime - 2))}
               title="Rewind 2 seconds"
               style={{
@@ -809,6 +839,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             </button>
 
             <button
+              id="cinema-play-btn"
               onClick={onTogglePlay}
               title={isPlaying ? "Pause (Space)" : "Play (Space)"}
               className="btn-primary"
@@ -824,6 +855,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             </button>
 
             <button
+              id="cinema-forward-btn"
               onClick={() => onSeek(Math.min(totalDuration, currentTime + 2))}
               title="Forward 2 seconds"
               style={{
@@ -840,6 +872,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             </button>
 
             <button
+              id="cinema-start-btn"
               onClick={() => onSeek(0)}
               title="Return to start"
               style={{
@@ -860,6 +893,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             {/* Audio Volume */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <button
+                id="cinema-master-volume-btn"
                 onClick={() => setIsMuted(!isMuted)}
                 title={isMuted ? "Unmute" : "Mute"}
                 style={{
@@ -873,6 +907,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
                 {isMuted || volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
               </button>
               <input
+                id="cinema-master-volume-slider"
                 type="range"
                 min={0}
                 max={1}
@@ -894,6 +929,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             {/* Jump to active scene in inspector */}
             {activeScene && onSelectScene && (
               <button
+                id="cinema-inspect-scene-btn"
                 onClick={() => onSelectScene(activeScene.id)}
                 style={{
                   background: "rgba(99, 102, 241, 0.12)",
@@ -912,6 +948,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
 
             {/* Fullscreen button */}
             <button
+              id="cinema-fullscreen-btn"
               onClick={toggleFullscreen}
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
               style={{

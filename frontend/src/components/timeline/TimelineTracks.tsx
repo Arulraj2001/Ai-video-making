@@ -145,6 +145,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
   return (
     <div
+      id="timeline-tracks-container"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -157,6 +158,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
     >
       {/* Scrollable Timeline Viewport */}
       <div
+        id="timeline-tracks-viewport"
         ref={containerRef}
         style={{
           overflowX: "auto",
@@ -175,6 +177,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
         >
           {/* Vertical Playhead Indicator spanning all tracks */}
           <div
+            id="timeline-playhead-needle"
             className="timeline-playhead-line"
             style={{
               left: `${playheadLeft}px`,
@@ -189,6 +192,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
             }}
           >
             <div
+              id="timeline-playhead-handle"
               className="timeline-playhead-head"
               style={{ cursor: "ew-resize" }}
               title="Drag playhead to scrub timeline"
@@ -197,6 +201,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
           {/* 1. Time Ruler Header */}
           <div
+            id="timeline-ruler"
             onMouseDown={handleRulerMouseDown}
             style={{
               height: "36px",
@@ -250,6 +255,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
           {/* 2. Track 1: Image Track (Master Timeline Rule Enforced with Trimming) */}
           <div
+            id="timeline-image-track"
             style={{
               padding: "10px 0",
               borderBottom: "1px solid var(--border-subtle)",
@@ -293,6 +299,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
               return (
                 <div
                   key={scene.id}
+                  id={`timeline-scene-block-${scene.id}`}
                   onClick={() => {
                     onSelectScene(scene.id);
                     onSeek(scene.start);
@@ -375,6 +382,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
                   {/* Left Trim Handle */}
                   <div
+                    id={`timeline-trim-left-${scene.id}`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -406,6 +414,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
                   {/* Right Trim Handle */}
                   <div
+                    id={`timeline-trim-right-${scene.id}`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -585,6 +594,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
           {/* 3. Track 2: Caption Track */}
           <div
+            id="timeline-captions-track"
             style={{
               padding: "6px 0",
               borderBottom: "1px solid var(--border-subtle)",
@@ -619,6 +629,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
               return (
                 <div
                   key={scene.id}
+                  id={`timeline-caption-block-${scene.id}`}
                   onClick={() => {
                     onSelectScene(scene.id);
                     onSeek(scene.start);
@@ -663,6 +674,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
           {/* 4. Track 3: Voiceover Narration Track */}
           <div
+            id="timeline-narration-track"
             style={{
               padding: "6px 0",
               borderBottom: "1px solid var(--border-subtle)",
@@ -749,6 +761,7 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
 
           {/* 5. Track 4: Background Music (BGM) Track */}
           <div
+            id="timeline-bgm-track"
             style={{
               padding: "6px 0",
               display: "flex",

@@ -647,9 +647,104 @@ class ApiService {
     });
   }
 
-  getRenderDownloadUrl(projectId: string, jobId: string, format: string = "mp4"): string {
-    const query = format && format !== "mp4" ? `?format=${encodeURIComponent(format)}` : "";
-    return `${this.baseUrl}/api/projects/${projectId}/render/${jobId}/download${query}`;
+  getRenderDownloadUrl(
+    projectId: string,
+    jobId: string,
+    format: string = "mp4",
+    token?: string,
+    disposition?: "attachment" | "inline"
+  ): string {
+    const params = new URLSearchParams();
+    if (format && format !== "mp4") params.set("format", format);
+    if (disposition) params.set("disposition", disposition);
+    if (token) params.set("token", token);
+    const qs = params.toString();
+    return `${this.baseUrl}/api/projects/${projectId}/render/${jobId}/download${qs ? `?${qs}` : ""}`;
+  }
+
+  async getAuthenticatedRenderDownloadUrl(
+    projectId: string,
+    jobId: string,
+    format: string = "mp4",
+    disposition: "attachment" | "inline" = "inline"
+  ): Promise<string> {
+    let token: string | undefined;
+    try {
+      const currentUser = auth?.currentUser;
+      if (currentUser) {
+        token = (await currentUser.getIdToken()) || undefined;
+      }
+    } catch {
+      // fallback if offline or unauthenticated
+    }
+    return this.getRenderDownloadUrl(projectId, jobId, format, token, disposition);
+  }
+
+  async downloadRenderFile(
+    projectId: string,
+    jobId: string,
+    format: string = "mp4",
+    filename?: string
+  ): Promise<void> {
+    let authHeader: Record<string, string> = {};
+    try {
+      const currentUser = auth?.currentUser;
+      if (currentUser) {
+        const token = await currentUser.getIdToken();
+        if (token) {
+          authHeader = { Authorization: `Bearer ${token}` };
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    const params = new URLSearchParams();
+    if (format && format !== "mp4") params.set("format", format);
+    params.set("disposition", "attachment");
+    const url = `${this.baseUrl}/api/projects/${projectId}/render/${jobId}/download?${params.toString()}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...authHeader,
+      },
+    });
+
+    if (!response.ok) {
+      let errorDetail = `Failed to download file (${response.status})`;
+      try {
+        const errJson = await response.json();
+        if (errJson.detail) errorDetail = errJson.detail;
+      } catch {
+        // fallback
+      }
+      throw new Error(errorDetail);
+    }
+
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+
+    let resolvedFilename = filename;
+    if (!resolvedFilename) {
+      const cd = response.headers.get("content-disposition");
+      if (cd) {
+        const match = cd.match(/filename="?([^";]+)"?/);
+        if (match?.[1]) resolvedFilename = match[1];
+      }
+    }
+    if (!resolvedFilename) {
+      const ext = format === "mp3" ? "mp3" : format === "webm" ? "webm" : format === "gif" ? "gif" : "mp4";
+      resolvedFilename = `render_${jobId}_${format}.${ext}`;
+    }
+
+    link.download = resolvedFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
   }
 
   async deleteRenderJob(projectId: string, jobId: string): Promise<void> {

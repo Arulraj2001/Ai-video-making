@@ -247,3 +247,69 @@ def test_expired_local_render_is_removed():
             dummy_file.parent.rmdir()
 
 
+def test_download_authenticated_and_capability_token():
+    from app.services.project_service import STORAGE_DIR
+    from app.models.render import RenderJobModel
+
+    owner_uid = "UpZC2saOUzdbUFiZYtxAnCvfdcg1"
+    # Create project owned by authenticated Firebase user
+    project_res = client.post(
+        "/api/projects",
+        json={"name": "Auth Download Project", "description": "Testing capability & token auth"},
+        headers={"Authorization": f"Bearer test-token-{owner_uid}"}
+    )
+    assert project_res.status_code == 201
+    project_id = project_res.json()["id"]
+
+    dummy_job = RenderJobModel(
+        project_id=project_id,
+        status="completed",
+        resolution="1080x1080",
+        output_path=f"projects/{project_id}/renders/test_render.mp4",
+        output_filename="test_video_1080x1080.mp4"
+    )
+    render_service._jobs[dummy_job.id] = dummy_job
+
+    dummy_file = STORAGE_DIR / "projects" / project_id / "renders" / "test_render.mp4"
+    dummy_file.parent.mkdir(parents=True, exist_ok=True)
+    dummy_file.write_bytes(b"render binary data content")
+
+    try:
+        # 1. Unauthenticated browser GET without headers (capability-token download)
+        # This mirrors the exact user failure case: browser clicking <a download> without auth headers
+        res_unauth = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download")
+        assert res_unauth.status_code == 200
+        assert res_unauth.content == b"render binary data content"
+        assert res_unauth.headers["content-disposition"].startswith("attachment")
+
+        # 2. Inline disposition test for video player preview
+        res_inline = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download?disposition=inline")
+        assert res_inline.status_code == 200
+        assert res_inline.headers["content-disposition"].startswith("inline")
+
+        # 3. Authenticated query parameter GET (?token=test-token-<owner_uid>)
+        res_token = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download?token=test-token-{owner_uid}")
+        assert res_token.status_code == 200
+        assert res_token.content == b"render binary data content"
+
+        # 4. Unauthorized user query param GET (?token=test-token-attacker) -> 403 Forbidden
+        res_unauthorized = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download?token=test-token-attacker")
+        assert res_unauthorized.status_code == 403
+        assert "Not authorized" in res_unauthorized.json()["detail"]
+
+        # 5. Invalid job_id -> 404
+        res_bad_job = client.get(f"/api/projects/{project_id}/render/non_existent_job/download")
+        assert res_bad_job.status_code == 404
+
+        # 6. Invalid project_id -> 404
+        res_bad_project = client.get(f"/api/projects/proj_non_existent/render/{dummy_job.id}/download")
+        assert res_bad_project.status_code == 404
+    finally:
+        if dummy_file.exists():
+            dummy_file.unlink(missing_ok=True)
+        if dummy_file.parent.exists():
+            dummy_file.parent.rmdir()
+        client.delete(f"/api/projects/{project_id}", headers={"Authorization": f"Bearer test-token-{owner_uid}"})
+
+
+

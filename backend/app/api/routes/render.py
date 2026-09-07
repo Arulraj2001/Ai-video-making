@@ -7,6 +7,7 @@ from app.schemas.render import RenderRequest, RenderJobResponse, RenderJobListRe
 from app.services.render_service import render_service, RESOLUTIONS, get_ffmpeg_executable
 from app.services.project_service import STORAGE_DIR, project_service
 from app.api.dependencies.auth import get_current_user, AuthenticatedUser
+from app.configuration.config import settings
 
 router = APIRouter(prefix="/projects", tags=["render"])
 
@@ -90,14 +91,31 @@ def download_rendered_video(
     project_id: str,
     job_id: str,
     format: str = Query("mp4", description="Output format: mp4, 720p, mp3, webm, gif"),
+    disposition: str = Query("attachment", description="Content disposition: attachment or inline"),
     current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Downloads the completed video or transcoded audio/video in requested format."""
-    if not project_service.get_project(project_id, owner_id=current_user.uid):
+    project = project_service.get_project(project_id, owner_id=None)
+    if not project:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
+
     job = render_service.get_job(job_id)
     if not job or job.project_id != project_id:
         raise HTTPException(status_code=404, detail=f"Render job '{job_id}' not found.")
+
+    # Ownership check:
+    # If caller is an authenticated user (not the local fallback user), verify ownership or admin.
+    # If caller is unauthenticated/fallback (browser <a download> or <video src>), possession of
+    # project_id + valid unguessable completed job_id acts as a capability token.
+    default_uid = getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
+    is_fallback_user = (current_user.uid == default_uid) and current_user.claims.get("local_fallback", False)
+
+    if not is_fallback_user:
+        if project.owner_id and current_user.uid != project.owner_id and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this project's renders."
+            )
 
     if job.status != "completed" or not job.output_path:
         raise HTTPException(
@@ -109,6 +127,7 @@ def download_rendered_video(
     if not master_path.exists():
         raise HTTPException(status_code=404, detail="Rendered video file not found on disk.")
 
+    disp_type = "inline" if disposition == "inline" else "attachment"
     base_name = Path(job.output_filename or f"{project_id}_{job.resolution}").stem
     ffmpeg_exe = get_ffmpeg_executable()
 
@@ -131,6 +150,7 @@ def download_rendered_video(
             path=mp3_path,
             media_type="audio/mpeg",
             filename=f"{base_name}.mp3",
+            content_disposition_type=disp_type,
         )
 
     elif format == "720p":
@@ -154,6 +174,7 @@ def download_rendered_video(
             path=p720_path,
             media_type="video/mp4",
             filename=f"{base_name}_720p.mp4",
+            content_disposition_type=disp_type,
         )
 
     elif format == "webm":
@@ -176,6 +197,7 @@ def download_rendered_video(
             path=webm_path,
             media_type="video/webm",
             filename=f"{base_name}.webm",
+            content_disposition_type=disp_type,
         )
 
     elif format == "gif":
@@ -196,6 +218,7 @@ def download_rendered_video(
             path=gif_path,
             media_type="image/gif",
             filename=f"{base_name}_preview.gif",
+            content_disposition_type=disp_type,
         )
 
     else:
@@ -204,6 +227,7 @@ def download_rendered_video(
             path=master_path,
             media_type="video/mp4",
             filename=job.output_filename or f"{base_name}.mp4",
+            content_disposition_type=disp_type,
         )
 
 

@@ -13,6 +13,7 @@ import {
   X,
   Play,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import type { Project } from "../../types/project";
 import type { RenderJob } from "../../types/render";
@@ -79,7 +80,53 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [recentJobs, setRecentJobs] = useState<RenderJob[]>([]);
   const [activePreviewJobId, setActivePreviewJobId] = useState<string | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [downloadingFormat, setDownloadingFormat] = useState<string | null>(null);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const [activePreviewJobUrl, setActivePreviewJobUrl] = useState<string | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (activeJob?.status === "completed") {
+      api.getAuthenticatedRenderDownloadUrl(project.id, activeJob.id, "mp4", "inline").then((url) => {
+        if (isMounted) setPreviewVideoUrl(url);
+      });
+    } else {
+      setPreviewVideoUrl(null);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [activeJob?.id, activeJob?.status, project.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (activePreviewJobId) {
+      api.getAuthenticatedRenderDownloadUrl(project.id, activePreviewJobId, "mp4", "inline").then((url) => {
+        if (isMounted) setActivePreviewJobUrl(url);
+      });
+    } else {
+      setActivePreviewJobUrl(null);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [activePreviewJobId, project.id]);
+
+  const handleDownloadFormat = async (jobId: string, formatId: string, outputFilename?: string | null) => {
+    const key = `${jobId}-${formatId}`;
+    setDownloadingFormat(key);
+    try {
+      const ext = formatId === "mp3" ? "mp3" : formatId === "webm" ? "webm" : formatId === "gif" ? "gif" : "mp4";
+      const cleanBase = (outputFilename || "video").replace(/\.[^/.]+$/, "");
+      const filename = `${cleanBase}_${formatId}.${ext}`;
+      await api.downloadRenderFile(project.id, jobId, formatId, filename);
+    } catch (err: any) {
+      alert(err.message || "Failed to download render file.");
+    } finally {
+      setDownloadingFormat(null);
+    }
+  };
 
   const totalDuration =
     project.scenes && project.scenes.length > 0
@@ -684,37 +731,43 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               {downloadUrl && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-end" }}>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "flex-end" }}>
-                    {DOWNLOAD_FORMATS.map((fmt) => (
-                      <a
-                        key={fmt.id}
-                        href={api.getRenderDownloadUrl(project.id, activeJob.id, fmt.id)}
-                        download={`${(activeJob.output_filename || "video").replace(/\.[^/.]+$/, "")}_${fmt.id}.${fmt.ext}`}
-                        title={fmt.desc}
-                        className={fmt.id === "mp4" ? "btn-primary" : "btn-secondary"}
-                        style={{
-                          padding: "8px 14px",
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          textDecoration: "none",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          borderRadius: "8px",
-                          background: fmt.id === "mp4" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "rgba(255, 255, 255, 0.08)",
-                          boxShadow: fmt.id === "mp4" ? "0 8px 16px -4px rgba(16, 185, 129, 0.4)" : "none",
-                        }}
-                      >
-                        <Download size={13} />
-                        <span>{fmt.label}</span>
-                      </a>
-                    ))}
+                    {DOWNLOAD_FORMATS.map((fmt) => {
+                      const isDownloading = downloadingFormat === `${activeJob.id}-${fmt.id}`;
+                      return (
+                        <button
+                          key={fmt.id}
+                          type="button"
+                          onClick={() => handleDownloadFormat(activeJob.id, fmt.id, activeJob.output_filename)}
+                          disabled={isDownloading}
+                          title={fmt.desc}
+                          className={fmt.id === "mp4" ? "btn-primary" : "btn-secondary"}
+                          style={{
+                            padding: "8px 14px",
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            cursor: isDownloading ? "wait" : "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            borderRadius: "8px",
+                            background: fmt.id === "mp4" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "rgba(255, 255, 255, 0.08)",
+                            boxShadow: fmt.id === "mp4" ? "0 8px 16px -4px rgba(16, 185, 129, 0.4)" : "none",
+                            opacity: isDownloading ? 0.75 : 1,
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                          <span>{isDownloading ? "Downloading..." : fmt.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
 
             {/* In-Modal Video Player Preview */}
-            {downloadUrl && (
+            {(previewVideoUrl || downloadUrl) && (
               <div>
                 <label
                   style={{
@@ -744,7 +797,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   <video
                     controls
                     playsInline
-                    src={downloadUrl}
+                    key={previewVideoUrl || downloadUrl || ""}
+                    src={previewVideoUrl || downloadUrl || ""}
                     style={{
                       maxHeight: "360px",
                       maxWidth: "100%",
@@ -984,31 +1038,36 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                         Download Formats:
                       </span>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                        {DOWNLOAD_FORMATS.map((fmt) => (
-                          <a
-                            key={fmt.id}
-                            href={api.getRenderDownloadUrl(project.id, j.id, fmt.id)}
-                            download={`${(j.output_filename || "video").replace(/\.[^/.]+$/, "")}_${fmt.id}.${fmt.ext}`}
-                            title={fmt.desc}
-                            style={{
-                              padding: "4px 8px",
-                              borderRadius: "6px",
-                              background: fmt.id === "mp4" ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.05)",
-                              border: fmt.id === "mp4" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(255, 255, 255, 0.08)",
-                              color: fmt.id === "mp4" ? "#34d399" : "var(--text-secondary)",
-                              fontSize: "0.74rem",
-                              fontWeight: 600,
-                              textDecoration: "none",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              transition: "all 0.15s ease",
-                            }}
-                          >
-                            <Download size={11} />
-                            <span>{fmt.label}</span>
-                          </a>
-                        ))}
+                        {DOWNLOAD_FORMATS.map((fmt) => {
+                          const isDownloading = downloadingFormat === `${j.id}-${fmt.id}`;
+                          return (
+                            <button
+                              key={fmt.id}
+                              type="button"
+                              onClick={() => handleDownloadFormat(j.id, fmt.id, j.output_filename)}
+                              disabled={isDownloading}
+                              title={fmt.desc}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                background: fmt.id === "mp4" ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                                border: fmt.id === "mp4" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(255, 255, 255, 0.08)",
+                                color: fmt.id === "mp4" ? "#34d399" : "var(--text-secondary)",
+                                fontSize: "0.74rem",
+                                fontWeight: 600,
+                                cursor: isDownloading ? "wait" : "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                transition: "all 0.15s ease",
+                                opacity: isDownloading ? 0.75 : 1,
+                              }}
+                            >
+                              {isDownloading ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                              <span>{isDownloading ? "Saving..." : fmt.label}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1032,7 +1091,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                         controls
                         autoPlay
                         playsInline
-                        src={api.getRenderDownloadUrl(project.id, j.id, "mp4")}
+                        key={activePreviewJobUrl || j.id}
+                        src={activePreviewJobUrl || api.getRenderDownloadUrl(project.id, j.id, "mp4")}
                         style={{
                           maxWidth: "100%",
                           maxHeight: "260px",

@@ -44,12 +44,14 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
   };
 
   const [settings, setSettings] = useState<CaptionSettings>(current);
+  const [localFontSize, setLocalFontSize] = useState<number>(current.font_size || 42);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (project.caption_settings) {
       setSettings(project.caption_settings);
+      setLocalFontSize(project.caption_settings.font_size || 42);
     }
   }, [project.caption_settings]);
 
@@ -79,7 +81,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
   };
 
   return (
-    <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div id="captions-settings-panel" className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Header & Toggle */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -103,8 +105,9 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
               <Check size={14} /> Saved
             </span>
           )}
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: settings.enabled ? "var(--primary)" : "var(--text-muted)" }}>
+          <label htmlFor="captions-enabled-toggle" style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: settings.enabled ? "var(--primary)" : "var(--text-muted)" }}>
             <input
+              id="captions-enabled-toggle"
               type="checkbox"
               checked={settings.enabled}
               onChange={(e) => handleChange("enabled", e.target.checked)}
@@ -122,6 +125,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
           <span>Live Styling Preview</span>
         </div>
         <div
+          id="captions-live-preview"
           style={{
             position: "relative",
             width: "100%",
@@ -150,7 +154,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
             <div
               style={{
                 fontFamily: settings.font_family,
-                fontSize: `${Math.max(12, Math.min(22, Math.round(settings.font_size / 2.6)))}px`,
+                fontSize: `${Math.max(12, Math.min(22, Math.round(localFontSize / 2.6)))}px`,
                 color: settings.color,
                 fontWeight: 700,
                 textAlign: settings.alignment as any,
@@ -188,10 +192,11 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
         {/* Font Family */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+          <label htmlFor="captions-font-family-select" style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
             Font Family
           </label>
           <select
+            id="captions-font-family-select"
             value={settings.font_family}
             onChange={(e) => handleChange("font_family", e.target.value)}
             disabled={!settings.enabled}
@@ -209,20 +214,23 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
         {/* Font Size */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+            <label htmlFor="captions-font-size-slider" style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
               Font Size
             </label>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--primary)" }}>
-              {settings.font_size} pt
+              {localFontSize} pt
             </span>
           </div>
           <input
+            id="captions-font-size-slider"
             type="range"
             min={24}
             max={72}
             step={2}
-            value={settings.font_size}
-            onChange={(e) => handleChange("font_size", Number(e.target.value))}
+            value={localFontSize}
+            onChange={(e) => setLocalFontSize(Number(e.target.value))}
+            onPointerUp={() => handleChange("font_size", localFontSize)}
+            onKeyUp={() => handleChange("font_size", localFontSize)}
             disabled={!settings.enabled}
             style={{ width: "100%", accentColor: "var(--primary)", cursor: "pointer" }}
           />
@@ -237,6 +245,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
             {(["bottom", "center", "top"] as const).map((pos) => (
               <button
                 key={pos}
+                id={`captions-pos-${pos}`}
                 onClick={() => handleChange("position", pos)}
                 disabled={!settings.enabled}
                 style={{
@@ -267,6 +276,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
             {(["left", "center", "right"] as const).map((align) => (
               <button
                 key={align}
+                id={`captions-align-${align}`}
                 onClick={() => handleChange("alignment", align)}
                 disabled={!settings.enabled}
                 style={{
@@ -297,6 +307,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
             {(["semi-transparent", "solid", "none"] as const).map((bg) => (
               <button
                 key={bg}
+                id={`captions-bg-${bg}`}
                 onClick={() => handleChange("background", bg)}
                 disabled={!settings.enabled}
                 style={{
@@ -327,6 +338,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
             {(["none", "subtle", "strong"] as const).map((sh) => (
               <button
                 key={sh}
+                id={`captions-shadow-${sh}`}
                 onClick={() => handleChange("outline_shadow", sh)}
                 disabled={!settings.enabled}
                 style={{
@@ -358,6 +370,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
             {COLOR_SWATCHES.map((c) => (
               <button
                 key={c.value}
+                id={`captions-color-${c.label.toLowerCase().replace(/\s+/g, "-")}`}
                 onClick={() => handleChange("color", c.value)}
                 disabled={!settings.enabled}
                 title={c.label}
@@ -373,6 +386,7 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
               />
             ))}
             <input
+              id="captions-color-picker"
               type="color"
               value={settings.color}
               onChange={(e) => handleChange("color", e.target.value)}
@@ -384,9 +398,10 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
         </div>
 
         {/* Safe-area positioning toggle */}
-        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+        <label htmlFor="captions-safe-area-toggle" style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
           <ShieldCheck size={16} color={settings.safe_area ? "#10b981" : "var(--text-muted)"} />
           <input
+            id="captions-safe-area-toggle"
             type="checkbox"
             checked={settings.safe_area}
             onChange={(e) => handleChange("safe_area", e.target.checked)}
