@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { Project, CaptionSettings } from "../../../types/project";
 import { api } from "../../../services/api";
 import { Check, Type, Eye, ShieldCheck } from "lucide-react";
@@ -47,26 +47,37 @@ const CaptionsSettingsPanelComponent: React.FC<CaptionsSettingsPanelProps> = ({
   const [localFontSize, setLocalFontSize] = useState<number>(current.font_size || 42);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const settingsRef = useRef<CaptionSettings>(current);
+  const saveRequestRef = useRef(0);
 
   useEffect(() => {
     if (project.caption_settings) {
       setSettings(project.caption_settings);
       setLocalFontSize(project.caption_settings.font_size || 42);
+      settingsRef.current = project.caption_settings;
     }
   }, [project.caption_settings]);
 
   const saveSettings = async (newSettings: CaptionSettings) => {
+    const requestId = ++saveRequestRef.current;
     setSettings(newSettings);
+    settingsRef.current = newSettings;
+    onProjectUpdated({ ...project, caption_settings: newSettings });
     setIsSaving(true);
     try {
       const updated = await api.updateProjectSettings(project.id, {
         caption_settings: newSettings,
       });
-      onProjectUpdated(updated);
+      if (requestId === saveRequestRef.current) onProjectUpdated(updated);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1800);
     } catch (err: any) {
       console.error("Failed to save caption settings:", err);
+      if (requestId === saveRequestRef.current) {
+        settingsRef.current = current;
+        setSettings(current);
+        onProjectUpdated(project);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -76,7 +87,7 @@ const CaptionsSettingsPanelComponent: React.FC<CaptionsSettingsPanelProps> = ({
     key: K,
     value: CaptionSettings[K]
   ) => {
-    const updated = { ...settings, [key]: value };
+    const updated = { ...settingsRef.current, [key]: value };
     saveSettings(updated);
   };
 

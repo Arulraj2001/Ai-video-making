@@ -589,7 +589,7 @@ class DualReadProjectRepository(ProjectRepository):
     Seamless Dual-Read & Non-Destructive Migration Repository:
     1. Checks Cloud Firestore (users/{owner_id}/projects/{project_id})
     2. If not found in Firestore, falls back to local filesystem storage
-    3. If found locally and user is authenticated, seamlessly migrates to Firestore
+    3. Keeps reads side-effect free; explicit saves migrate local projects to Firestore
     4. Writes to both Firestore and local filesystem to preserve 100% backward compatibility
     """
 
@@ -618,20 +618,9 @@ class DualReadProjectRepository(ProjectRepository):
         return sorted(projects_by_id.values(), key=lambda p: p.updated_at, reverse=True)
 
     def get_project(self, project_id: str, owner_id: Optional[str] = None) -> Optional[ProjectModel]:
-        default_legacy = getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
-
         # 1. Check local filesystem / cache first (instant response & unit-test safe)
         proj = self.fs_repo.get_project(project_id, owner_id)
         if proj:
-            # Dual-Read non-destructive migration: if authenticated creator, sync to Firestore
-            if self.is_firestore_ready and owner_id and owner_id != default_legacy:
-                try:
-                    if proj.owner_id != owner_id:
-                        proj.owner_id = owner_id
-                    self.firestore_repo.save_project(proj, owner_id)
-                    logger.info(f"Non-destructively synced project '{project_id}' to Firestore for user '{owner_id}'")
-                except Exception as e:
-                    logger.debug(f"Firestore background sync deferred for {project_id}: {e}")
             return proj
 
         # 2. Dual-Read: If not in local cache, check Cloud Firestore

@@ -45,16 +45,18 @@ export const StoryboardLightboxModal: React.FC<StoryboardLightboxModalProps> = (
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 backdrop-blur-md sm:p-6"
-      style={{ background: "rgba(5, 6, 8, 0.88)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
+      style={{ background: "rgba(15, 23, 42, 0.48)" }}
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[calc(100vh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl sm:max-h-[calc(100vh-3rem)]"
+        className="relative flex max-h-[calc(100vh-1.5rem)] max-w-[94vw] flex-col overflow-hidden rounded-xl sm:max-h-[calc(100vh-3rem)]"
         style={{
-          backgroundColor: "#16181F",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06)",
+          width: "fit-content",
+          minWidth: "min(320px, 94vw)",
+          backgroundColor: "var(--color-card)",
+          border: "1px solid var(--color-border)",
+          boxShadow: "0 24px 70px rgba(15,23,42,0.28)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -75,8 +77,8 @@ export const StoryboardLightboxModal: React.FC<StoryboardLightboxModalProps> = (
         <div
           className="flex items-center justify-between px-4 py-3 sm:px-5"
           style={{
-            background: "#13151B",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            background: "var(--color-card)",
+            borderBottom: "1px solid var(--color-border-subtle)",
           }}
         >
           <div className="flex items-center gap-2.5 min-w-0 pr-4">
@@ -99,7 +101,7 @@ export const StoryboardLightboxModal: React.FC<StoryboardLightboxModalProps> = (
             </span>
             <span
               className="truncate text-xs font-medium"
-              style={{ color: "#F0F1F5" }}
+              style={{ color: "var(--color-text)" }}
             >
               "{previewImage.caption}"
             </span>
@@ -199,8 +201,8 @@ export const StoryboardLightboxModal: React.FC<StoryboardLightboxModalProps> = (
 
         {/* Cinema Viewport */}
         <div
-          className="relative flex min-h-[260px] flex-1 items-center justify-center overflow-hidden p-4 sm:min-h-[380px] sm:p-6"
-          style={{ backgroundColor: "#090A0D" }}
+          className="relative flex items-center justify-center overflow-auto p-3 sm:p-5"
+          style={{ backgroundColor: "var(--color-surface-sunken)" }}
         >
           {/* Previous Button */}
           {onPrevScene && hasPrev && (
@@ -247,9 +249,11 @@ export const StoryboardLightboxModal: React.FC<StoryboardLightboxModalProps> = (
           <img
             src={previewImage.url}
             alt={`Scene ${previewImage.sceneNumber} Full Preview`}
-            className="max-h-[min(70vh,720px)] max-w-full rounded-xl object-contain shadow-2xl"
+            className="block max-w-full rounded-lg object-contain"
             style={{
-              boxShadow: "0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)",
+              maxWidth: "calc(94vw - 32px)",
+              maxHeight: "calc(100vh - 190px)",
+              boxShadow: "0 12px 32px rgba(15,23,42,0.18)",
             }}
           />
 
@@ -301,23 +305,23 @@ export const StoryboardLightboxModal: React.FC<StoryboardLightboxModalProps> = (
           <div
             className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-xs font-mono sm:px-5"
             style={{
-              backgroundColor: "#13151B",
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-              color: "#8A8F9E",
+              backgroundColor: "var(--color-card)",
+              borderTop: "1px solid var(--color-border-subtle)",
+              color: "var(--color-text-muted)",
             }}
           >
             <div className="flex items-center gap-3 flex-wrap">
-              <span>Engine: <strong style={{ color: "#F0F1F5" }}>{previewImage.metadata.provider?.toUpperCase() || "FLUX"}</strong></span>
-              <span style={{ color: "#4E5364" }}>·</span>
-              <span>Model: <strong style={{ color: "#F0F1F5" }}>{previewImage.metadata.model || "Schnell"}</strong></span>
-              <span style={{ color: "#4E5364" }}>·</span>
+              <span>Engine: <strong style={{ color: "var(--color-text)" }}>{previewImage.metadata.provider?.toUpperCase() || "FLUX"}</strong></span>
+              <span style={{ color: "var(--color-border-strong)" }}>·</span>
+              <span>Model: <strong style={{ color: "var(--color-text)" }}>{previewImage.metadata.model || "Schnell"}</strong></span>
+              <span style={{ color: "var(--color-border-strong)" }}>·</span>
               <span>
                 {previewImage.metadata.width}×{previewImage.metadata.height} ({previewImage.metadata.aspect_ratio || "16:9"})
               </span>
             </div>
 
             {previewImage.metadata.generated_at && (
-              <span style={{ fontSize: "11px", color: "#4E5364" }}>
+              <span style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>
                 Rendered: {new Date(previewImage.metadata.generated_at).toLocaleTimeString()}
               </span>
             )}

@@ -27,7 +27,7 @@ export const AdminUsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [users.length]);
+  }, []);
 
   useEffect(() => {
     loadUsers(false);

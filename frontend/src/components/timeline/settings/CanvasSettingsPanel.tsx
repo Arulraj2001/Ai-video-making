@@ -60,6 +60,7 @@ const CanvasSettingsPanelComponent: React.FC<CanvasSettingsPanelProps> = ({
       fps: 30,
     };
     setSettings(updated);
+    onProjectUpdated({ ...project, canvas_settings: updated });
     setIsSaving(true);
     try {
       const resProject = await api.updateProjectSettings(project.id, {
@@ -70,6 +71,8 @@ const CanvasSettingsPanelComponent: React.FC<CanvasSettingsPanelProps> = ({
       setTimeout(() => setSaveSuccess(false), 1800);
     } catch (err: any) {
       console.error("Failed to save canvas settings:", err);
+      setSettings(current);
+      onProjectUpdated(project);
     } finally {
       setIsSaving(false);
     }

@@ -18,6 +18,7 @@ import {
   PanelRight,
   Palette,
   MessageSquare,
+  ChevronDown,
 } from "lucide-react";
 import { formatTimecode } from "../../utils/formatters";
 import { api } from "../../services/api";
@@ -99,6 +100,8 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
   setEditAspectRatio,
   savingEdit,
 }) => {
+  const [showSceneDirection, setShowSceneDirection] = React.useState(false);
+  const [showPromptDirective, setShowPromptDirective] = React.useState(false);
   const cardStatusClass = isSceneGenerating
     ? "is-generating"
     : isCompleted
@@ -123,8 +126,16 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
     >
       {/* ── Card Header ─────────────────────────────────────────────── */}
       <div className="sb-card-header">
-        {/* Left: checkbox + scene number + timecode */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        {(scene.suggested_motion || scene.suggested_transition) && (
+          <div className="sb-card-direction-line">
+            {scene.suggested_motion && <span><Camera size={11} />{scene.suggested_motion}</span>}
+            {scene.suggested_transition && <span><Layers size={11} />{scene.suggested_transition}</span>}
+          </div>
+        )}
+
+        <div className="sb-card-header-row">
+          {/* Left: checkbox + scene number + timecode */}
+          <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={() => onToggleSelect(scene.id)}
@@ -145,25 +156,10 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
             {formatTimecode(scene.start)} → {formatTimecode(scene.end)}
             <span className="ml-1.5 opacity-50">({scene.duration.toFixed(1)}s)</span>
           </span>
+          </div>
 
-          {scene.suggested_motion && (
-            <span className="hidden lg:inline-flex items-center gap-1 text-[10px] font-medium"
-              style={{ color: "var(--sb-text-muted)" }}>
-              <Camera size={10} />
-              {scene.suggested_motion}
-            </span>
-          )}
-          {scene.suggested_transition && (
-            <span className="hidden xl:inline-flex items-center gap-1 text-[10px] font-medium"
-              style={{ color: "var(--sb-text-muted)" }}>
-              <Layers size={10} />
-              {scene.suggested_transition}
-            </span>
-          )}
-        </div>
-
-        {/* Right: status badge + quick header actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Right: status badge + quick header actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
           {isCompleted && (
             <span className="sb-card-badge success">
               <CheckCircle2 size={11} /> Ready
@@ -201,6 +197,7 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
             <PanelRight size={12} />
             <span className="hidden sm:inline">Details</span>
           </button>
+          </div>
         </div>
       </div>
 
@@ -339,8 +336,16 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
           {/* Scene Direction */}
           {scene.visual_description && (
             <div className="sb-scene-direction">
-              <div className="sb-field-label">Scene Direction</div>
-              <div className="sb-direction-text">{scene.visual_description}</div>
+              <button
+                type="button"
+                className="sb-collapse-trigger"
+                onClick={() => setShowSceneDirection((visible) => !visible)}
+                aria-expanded={showSceneDirection}
+              >
+                <span className="sb-field-label">Scene Direction</span>
+                <ChevronDown size={14} className={showSceneDirection ? "rotate-180" : ""} />
+              </button>
+              {showSceneDirection && <div className="sb-direction-text">{scene.visual_description}</div>}
             </div>
           )}
 
@@ -348,11 +353,17 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
           {scene.image_prompt && (
             <div className="sb-prompt-section">
               <div className="sb-prompt-header">
-                <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="sb-collapse-trigger"
+                  onClick={() => setShowPromptDirective((visible) => !visible)}
+                  aria-expanded={showPromptDirective}
+                >
                   <Sparkles size={11} style={{ color: "var(--sb-accent)" }} />
                   <span className="sb-field-label accent">Prompt Directive ({sceneAspectRatio})</span>
-                </div>
-                <div className="sb-prompt-actions">
+                  <ChevronDown size={14} className={showPromptDirective ? "rotate-180" : ""} />
+                </button>
+                {showPromptDirective && <div className="sb-prompt-actions">
                   <button
                     type="button"
                     onClick={() => onCopyPrompt(scene.id, scene.image_prompt || "")}
@@ -380,21 +391,29 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
                     <Palette size={11} />
                     <span>Variations</span>
                   </button>
-                </div>
+                </div>}
               </div>
-              <div className="sb-prompt-block">{scene.image_prompt}</div>
+              {showPromptDirective && <div className="sb-prompt-block">{scene.image_prompt}</div>}
             </div>
           )}
 
           {/* No prompt yet */}
           {!scene.image_prompt && (
             <div className="sb-prompt-section">
-              <div className="sb-field-label">Prompt Directive</div>
-              <div className="sb-prompt-block">
+              <button
+                type="button"
+                className="sb-collapse-trigger"
+                onClick={() => setShowPromptDirective((visible) => !visible)}
+                aria-expanded={showPromptDirective}
+              >
+                <span className="sb-field-label">Prompt Directive</span>
+                <ChevronDown size={14} className={showPromptDirective ? "rotate-180" : ""} />
+              </button>
+              {showPromptDirective && <div className="sb-prompt-block">
                 <span style={{ color: "var(--sb-text-muted)", fontStyle: "italic" }}>
                   No prompt synthesized yet. Generate the storyboard first.
                 </span>
-              </div>
+              </div>}
             </div>
           )}
         </div>

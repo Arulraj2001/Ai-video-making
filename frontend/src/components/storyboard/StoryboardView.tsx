@@ -104,6 +104,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   // Variations modal
   const [variationsModalScene, setVariationsModalScene] = useState<Scene | null>(null);
   const [variations, setVariations] = useState<SceneVariationItem[]>([]);
+  const [variationsByScene, setVariationsByScene] = useState<Record<string, SceneVariationItem[]>>({});
   const [variationsLoading, setVariationsLoading] = useState(false);
   const [variationsError, setVariationsError] = useState<string | null>(null);
 
@@ -124,6 +125,12 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   useEffect(() => {
     setScenes(project.scenes || []);
   }, [project.scenes]);
+
+  useEffect(() => {
+    setVariationsByScene({});
+    setVariations([]);
+    setVariationsModalScene(null);
+  }, [project.id]);
 
   // Load model catalog and provider usage on mount
   useEffect(() => {
@@ -256,13 +263,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
 
   // Helper to apply single scene updates
   const applySingleScene = (sceneId: string, updatedScene: Scene) => {
-    setScenes((prev) => {
-      const next = prev.map((s) => (s.id === sceneId ? updatedScene : s));
-      if (onProjectUpdated) {
-        onProjectUpdated((p) => ({ ...p, scenes: next }));
-      }
-      return next;
-    });
+    setScenes((previous) => previous.map((scene) => (scene.id === sceneId ? updatedScene : scene)));
+    onProjectUpdated?.((previous) => ({
+      ...previous,
+      scenes: previous.scenes.map((scene) => (scene.id === sceneId ? updatedScene : scene)),
+    }));
   };
 
   // Helper to apply scene collection
@@ -515,10 +520,17 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   };
 
   // 10. Variations Modal
-  const handleOpenVariations = async (scene: Scene) => {
+  const handleOpenVariations = async (scene: Scene, forceGenerate = false) => {
     setVariationsModalScene(scene);
-    setVariations([]);
     setVariationsError(null);
+
+    const cachedVariations = variationsByScene[scene.id];
+    if (!forceGenerate && cachedVariations?.length) {
+      setVariations(cachedVariations);
+      return;
+    }
+
+    setVariations([]);
     setVariationsLoading(true);
 
     try {
@@ -527,7 +539,9 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         provider: selectedProvider,
         model_id: selectedModelId,
       });
-      setVariations(res.variations || []);
+      const nextVariations = res.variations || [];
+      setVariations(nextVariations);
+      setVariationsByScene((previous) => ({ ...previous, [scene.id]: nextVariations }));
     } catch (err: any) {
       setVariationsError(err.message || "Failed to generate variations");
     } finally {
@@ -828,7 +842,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         variationsLoading={variationsLoading}
         variationsError={variationsError}
         onApplyVariation={handleApplyVariation}
-        onRerollVariations={handleOpenVariations}
+        onRerollVariations={(scene) => handleOpenVariations(scene, true)}
         projectAspectRatio={projectAspectRatio}
       />
 

@@ -50,7 +50,7 @@ export const AdminDashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [stats]);
+  }, []);
 
   useEffect(() => {
     loadData(false);

@@ -177,7 +177,7 @@ class PlatformService:
             else:
                 tier = "free"
 
-            usage_resp = usage_svc.get_usage(uid)
+            usage_resp = usage_svc.get_usage(uid, has_byok=has_byok, entitlement=ent)
             proj_count = user_projects_count.get(uid, 0)
 
             email = f"{uid}@user.scenoraedits.com" if not ("@" in uid) else uid

@@ -122,7 +122,7 @@ class UsageService:
             logger.debug(f"Entitlement check for user '{uid}': {e}")
             return None
 
-    def get_usage(self, uid: str) -> UsageResponse:
+    def get_usage(self, uid: str, has_byok: Optional[bool] = None, entitlement: Optional[Any] = None) -> UsageResponse:
         """Retrieves current usage and calculates remaining allowance."""
         period = self.get_current_period_key()
         reset_date = self.get_next_reset_time()
@@ -131,8 +131,10 @@ class UsageService:
 
         current = record.freeTierGenerations
         remaining = max(0, limit - current)
-        has_byok = self.check_has_byok(uid)
-        entitlement = self.check_has_active_entitlement(uid)
+        if has_byok is None:
+            has_byok = self.check_has_byok(uid)
+        if entitlement is None:
+            entitlement = self.check_has_active_entitlement(uid)
         has_entitlement = bool(entitlement)
 
         tier = "free"

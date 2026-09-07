@@ -35,6 +35,8 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
   const [isDeletingMusic, setIsDeletingMusic] = useState(false);
   const [isDraggingMusic, setIsDraggingMusic] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const settingsRef = useRef<AudioSettings>(current);
+  const saveRequestRef = useRef(0);
 
   const voiceFileInputRef = useRef<HTMLInputElement>(null);
   const musicFileInputRef = useRef<HTMLInputElement>(null);
@@ -50,21 +52,30 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
       setLocalMusicVol(merged.music_volume ?? 0.25);
       setLocalMusicFadeIn(merged.music_fade_in ?? 1.0);
       setLocalMusicFadeOut(merged.music_fade_out ?? 2.0);
+      settingsRef.current = merged;
     }
   }, [project.audio_settings]);
 
   const saveSettings = async (newSettings: AudioSettings) => {
+    const requestId = ++saveRequestRef.current;
     setSettings(newSettings);
+    settingsRef.current = newSettings;
+    onProjectUpdated({ ...project, audio_settings: newSettings });
     setIsSaving(true);
     try {
       const updated = await api.updateProjectSettings(project.id, {
         audio_settings: newSettings,
       });
-      onProjectUpdated(updated);
+      if (requestId === saveRequestRef.current) onProjectUpdated(updated);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1800);
     } catch (err: any) {
       console.error("Failed to save audio settings:", err);
+      if (requestId === saveRequestRef.current) {
+        settingsRef.current = current;
+        setSettings(current);
+        onProjectUpdated(project);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -74,7 +85,7 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
     key: K,
     value: AudioSettings[K]
   ) => {
-    const updated = { ...settings, [key]: value };
+    const updated = { ...settingsRef.current, [key]: value };
     saveSettings(updated);
   };
 
