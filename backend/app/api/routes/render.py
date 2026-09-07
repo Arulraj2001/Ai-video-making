@@ -1,11 +1,12 @@
 from pathlib import Path
 import subprocess
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import FileResponse
 
 from app.schemas.render import RenderRequest, RenderJobResponse, RenderJobListResponse
 from app.services.render_service import render_service, RESOLUTIONS, get_ffmpeg_executable
-from app.services.project_service import STORAGE_DIR
+from app.services.project_service import STORAGE_DIR, project_service
+from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/projects", tags=["render"])
 
@@ -40,13 +41,20 @@ def _to_response(job, project_id: str) -> RenderJobResponse:
     status_code=status.HTTP_202_ACCEPTED,
     summary="Enqueue a video render job",
 )
-def create_render_job(project_id: str, req: RenderRequest):
+def create_render_job(
+    project_id: str,
+    req: RenderRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Initiates a background render job for the specified project."""
+    if not project_service.get_project(project_id, owner_id=current_user.uid):
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
     try:
         job = render_service.create_render_job(
             project_id=project_id,
             resolution=req.resolution,
             aspect_ratio_override=req.aspect_ratio,
+            owner_id=current_user.uid,
         )
         return _to_response(job, project_id)
     except ValueError as e:
@@ -60,8 +68,14 @@ def create_render_job(project_id: str, req: RenderRequest):
     response_model=RenderJobResponse,
     summary="Poll status of a render job",
 )
-def get_render_status(project_id: str, job_id: str):
+def get_render_status(
+    project_id: str,
+    job_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Returns the current progress, status, and stage of a render job."""
+    if not project_service.get_project(project_id, owner_id=current_user.uid):
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
     job = render_service.get_job(job_id)
     if not job or job.project_id != project_id:
         raise HTTPException(status_code=404, detail=f"Render job '{job_id}' not found.")
@@ -75,9 +89,12 @@ def get_render_status(project_id: str, job_id: str):
 def download_rendered_video(
     project_id: str,
     job_id: str,
-    format: str = Query("mp4", description="Output format: mp4, 720p, mp3, webm, gif")
+    format: str = Query("mp4", description="Output format: mp4, 720p, mp3, webm, gif"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Downloads the completed video or transcoded audio/video in requested format."""
+    if not project_service.get_project(project_id, owner_id=current_user.uid):
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
     job = render_service.get_job(job_id)
     if not job or job.project_id != project_id:
         raise HTTPException(status_code=404, detail=f"Render job '{job_id}' not found.")
@@ -195,8 +212,14 @@ def download_rendered_video(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a render job and its output files",
 )
-def delete_render_job(project_id: str, job_id: str):
+def delete_render_job(
+    project_id: str,
+    job_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Deletes a render job and cleans up its media files from storage."""
+    if not project_service.get_project(project_id, owner_id=current_user.uid):
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
     job = render_service.get_job(job_id)
     if not job or job.project_id != project_id:
         raise HTTPException(status_code=404, detail=f"Render job '{job_id}' not found.")
@@ -210,8 +233,13 @@ def delete_render_job(project_id: str, job_id: str):
     response_model=RenderJobListResponse,
     summary="List all render jobs for a project",
 )
-def list_project_renders(project_id: str):
+def list_project_renders(
+    project_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Returns all render jobs initiated for the given project."""
+    if not project_service.get_project(project_id, owner_id=current_user.uid):
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
     jobs = render_service.list_jobs_for_project(project_id)
     return RenderJobListResponse(
         jobs=[_to_response(j, project_id) for j in jobs]
@@ -224,14 +252,20 @@ def list_project_renders(project_id: str):
     status_code=status.HTTP_202_ACCEPTED,
     summary="Retry a failed render job",
 )
-def retry_render_job(project_id: str, job_id: str):
+def retry_render_job(
+    project_id: str,
+    job_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Retries a previously failed render job using identical configuration."""
+    if not project_service.get_project(project_id, owner_id=current_user.uid):
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
     job = render_service.get_job(job_id)
     if not job or job.project_id != project_id:
         raise HTTPException(status_code=404, detail=f"Render job '{job_id}' not found.")
 
     try:
-        new_job = render_service.retry_render_job(job_id)
+        new_job = render_service.retry_render_job(job_id, owner_id=current_user.uid)
         return _to_response(new_job, project_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retry render: {e}")

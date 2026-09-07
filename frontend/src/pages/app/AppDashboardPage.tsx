@@ -13,6 +13,8 @@ export const AppDashboardPage: React.FC = () => {
   const {
     projects,
     activeProject,
+    projectsLoading,
+    projectsError,
     selectProject,
     setIsCreateModalOpen,
     setIsRestoreModalOpen,
@@ -106,7 +108,21 @@ export const AppDashboardPage: React.FC = () => {
           )}
         </div>
 
-        {projects.length === 0 ? (
+        {projectsLoading ? (
+          <Card variant="default" className="p-10 text-center">
+            <p className="text-sm text-[var(--color-text-muted)]">Loading your projects...</p>
+          </Card>
+        ) : projectsError ? (
+          <Card variant="default" className="p-10 text-center">
+            <p className="text-sm text-[var(--color-danger)]">{projectsError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="app-action-link mt-3"
+            >
+              Try again
+            </button>
+          </Card>
+        ) : projects.length === 0 ? (
           <EmptyState
             onOpenImport={() => setIsCreateModalOpen(true)}
             onCreateProject={() => setIsCreateModalOpen(true)}

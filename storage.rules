@@ -2,10 +2,32 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // User project assets: images, audio, renders
-    // Only the authenticated creator matching userId can read and write
-    match /users/{userId}/projects/{projectId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Persistent project images and references remain user-owned and size-limited.
+    match /users/{userId}/projects/{projectId}/images/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+                            && request.auth.uid == userId
+                            && request.resource.size <= 20 * 1024 * 1024
+                            && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/projects/{projectId}/references/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+                            && request.auth.uid == userId
+                            && request.resource.size <= 20 * 1024 * 1024
+                            && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/projects/{projectId}/audio/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+                            && request.auth.uid == userId
+                            && request.resource.size <= 50 * 1024 * 1024
+                            && request.resource.contentType.matches('audio/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Phase 17: Payment proof uploads

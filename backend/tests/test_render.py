@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -68,7 +70,7 @@ def test_enqueue_render_invalid_project():
         "/api/projects/proj_non_existent/render",
         json={"resolution": "1080x1920"}
     )
-    assert response.status_code == 400
+    assert response.status_code == 404
 
 
 def test_get_render_job_status(project_with_scenes):
@@ -180,8 +182,14 @@ def test_render_download_formats_and_deletion():
     from app.models.render import RenderJobModel
 
     # Create dummy completed render job
+    project_res = client.post(
+        "/api/projects",
+        json={"name": "Render Download Test", "description": "Testing owned downloads"}
+    )
+    assert project_res.status_code == 201
+    project_id = project_res.json()["id"]
     dummy_job = RenderJobModel(
-        project_id="test_proj_dl",
+        project_id=project_id,
         status="completed",
         resolution="1080x1920",
         output_path="test_renders/dummy.mp4",
@@ -195,17 +203,46 @@ def test_render_download_formats_and_deletion():
 
     try:
         # 1. Download default MP4
-        res_mp4 = client.get(f"/api/projects/test_proj_dl/render/{dummy_job.id}/download")
+        res_mp4 = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download")
         assert res_mp4.status_code == 200
         assert res_mp4.headers["content-type"] == "video/mp4"
 
         # 2. Delete render job
-        del_res = client.delete(f"/api/projects/test_proj_dl/render/{dummy_job.id}")
+        del_res = client.delete(f"/api/projects/{project_id}/render/{dummy_job.id}")
         assert del_res.status_code == 204
         assert render_service.get_job(dummy_job.id) is None
     finally:
         if dummy_file.exists():
             dummy_file.unlink(missing_ok=True)
+        if dummy_file.parent.exists():
+            dummy_file.parent.rmdir()
+        client.delete(f"/api/projects/{project_id}")
+
+
+def test_expired_local_render_is_removed():
+    from app.services.project_service import STORAGE_DIR
+    from app.models.render import RenderJobModel
+
+    old_time = (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat()
+    dummy_job = RenderJobModel(
+        project_id="expired_render_project",
+        status="completed",
+        output_path="test_renders/expired.mp4",
+        output_filename="expired.mp4",
+        created_at=old_time,
+        updated_at=old_time,
+    )
+    render_service._jobs[dummy_job.id] = dummy_job
+    dummy_file = STORAGE_DIR / "test_renders" / "expired.mp4"
+    dummy_file.parent.mkdir(parents=True, exist_ok=True)
+    dummy_file.write_bytes(b"expired")
+
+    try:
+        assert render_service.cleanup_expired_renders() == 1
+        assert render_service.get_job(dummy_job.id) is None
+        assert not dummy_file.exists()
+    finally:
+        dummy_file.unlink(missing_ok=True)
         if dummy_file.parent.exists():
             dummy_file.parent.rmdir()
 

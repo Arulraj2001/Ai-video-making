@@ -5,11 +5,12 @@ import os
 import re
 import shutil
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from app.models.render import RenderJobModel
+from app.configuration.config import settings
 from app.services.project_service import project_service, STORAGE_DIR
 
 logger = logging.getLogger(__name__)
@@ -252,6 +253,33 @@ class RenderService:
         self.renders_root = STORAGE_DIR / "renders"
         self.renders_root.mkdir(parents=True, exist_ok=True)
         self._load_jobs_from_disk()
+        self.cleanup_expired_renders()
+        project_service.cleanup_temp_files()
+
+    @staticmethod
+    def _parse_timestamp(value: Optional[str]) -> Optional[datetime]:
+        if not value:
+            return None
+        try:
+            timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            return None
+
+    def cleanup_expired_renders(self, now: Optional[datetime] = None) -> int:
+        """Deletes completed local renders after the configured free-tier retention window."""
+        current_time = now or datetime.now(timezone.utc)
+        cutoff = current_time - timedelta(hours=settings.RENDER_RETENTION_HOURS)
+        expired_jobs = []
+        for job in list(self._jobs.values()):
+            created_at = self._parse_timestamp(job.created_at)
+            if job.status == "completed" and created_at and created_at < cutoff:
+                expired_jobs.append(job)
+
+        for job in expired_jobs:
+            self.delete_job(job.id)
+
+        return len(expired_jobs)
 
     def _get_project_renders_dir(self, project_id: str) -> Path:
         pdir = STORAGE_DIR / "projects" / project_id / "renders"
@@ -325,13 +353,15 @@ class RenderService:
             logger.error(f"Failed to persist render jobs for {project_id}: {e}")
 
     def get_job(self, job_id: str) -> Optional[RenderJobModel]:
+        self.cleanup_expired_renders()
         return self._jobs.get(job_id)
 
     def list_jobs_for_project(self, project_id: str) -> List[RenderJobModel]:
+        self.cleanup_expired_renders()
         return [j for j in self._jobs.values() if j.project_id == project_id]
 
     def delete_job(self, job_id: str) -> bool:
-        job = self.get_job(job_id)
+        job = self._jobs.get(job_id)
         if not job:
             return False
         if job.output_path:
@@ -359,9 +389,10 @@ class RenderService:
         project_id: str,
         resolution: Optional[str] = None,
         aspect_ratio_override: Optional[str] = None,
+        owner_id: Optional[str] = None,
     ) -> RenderJobModel:
         """Validates project and enqueues a background render job."""
-        project = project_service.get_project(project_id)
+        project = project_service.get_project(project_id, owner_id=owner_id)
         if not project:
             raise ValueError(f"Project '{project_id}' not found.")
 
@@ -412,7 +443,7 @@ class RenderService:
 
         return job
 
-    def retry_render_job(self, job_id: str) -> RenderJobModel:
+    def retry_render_job(self, job_id: str, owner_id: Optional[str] = None) -> RenderJobModel:
         """Retries a failed render job using identical resolution and settings."""
         old_job = self.get_job(job_id)
         if not old_job:
@@ -422,6 +453,7 @@ class RenderService:
             project_id=old_job.project_id,
             resolution=old_job.resolution,
             aspect_ratio_override=old_job.aspect_ratio,
+            owner_id=owner_id,
         )
 
     async def _run_render_worker(self, job_id: str):

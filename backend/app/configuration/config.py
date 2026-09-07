@@ -81,6 +81,8 @@ class Settings:
     
     # Root storage directory (supports persistent volume mounts e.g. /var/data on Render)
     STORAGE_DIR: str = os.getenv("STORAGE_DIR", "storage")
+    # Rendered videos remain local only and are removed after this many hours.
+    RENDER_RETENTION_HOURS: int = max(1, int(os.getenv("RENDER_RETENTION_HOURS", "24")))
 
     # Firebase Backend Configuration
     FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID", "scenoraedits").strip()
