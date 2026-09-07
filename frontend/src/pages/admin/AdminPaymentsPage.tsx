@@ -11,45 +11,72 @@ import {
   RefreshCw,
   X,
   Image as ImageIcon,
+  Copy,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 
 export const AdminPaymentsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
-  const [payments, setPayments] = useState<PaymentResponse[]>([]);
+  const [allPayments, setAllPayments] = useState<PaymentResponse[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [copiedRefId, setCopiedRefId] = useState<string | null>(null);
 
   // Proof preview modal
-  const [viewingProofPaymentId, setViewingProofPaymentId] = useState<string | null>(null);
+  const [viewingProofPayment, setViewingProofPayment] = useState<PaymentResponse | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [loadingProof, setLoadingProof] = useState<boolean>(false);
 
-  const loadPayments = useCallback(async () => {
+  // Structured rejection modal
+  const [rejectingPayment, setRejectingPayment] = useState<PaymentResponse | null>(null);
+  const [rejectReason, setRejectReason] = useState<string>("");
+
+  const loadPayments = useCallback(async (force: boolean = false) => {
     try {
-      setLoading(true);
+      if (allPayments.length === 0) setLoading(true);
       setFeedback(null);
-      const data = await api.getAdminPayments(statusFilter);
-      setPayments(data);
+      const data = await api.getAdminPayments("all", force);
+      setAllPayments(data);
     } catch (err: any) {
       setFeedback({ type: "error", text: err?.message || "Failed to load payments." });
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [allPayments.length]);
 
   useEffect(() => {
-    loadPayments();
+    loadPayments(false);
   }, [loadPayments]);
 
+  const filteredPayments = allPayments.filter((p) => {
+    if (statusFilter === "all") return true;
+    return p.status === statusFilter;
+  });
+
+  const pendingCount = allPayments.filter((p) => p.status === "pending").length;
+  const approvedCount = allPayments.filter((p) => p.status === "approved").length;
+  const rejectedCount = allPayments.filter((p) => p.status === "rejected").length;
+
+  const handleCopyRef = (paymentId: string, ref: string) => {
+    navigator.clipboard.writeText(ref);
+    setCopiedRefId(paymentId);
+    setTimeout(() => setCopiedRefId(null), 2000);
+  };
+
   const handleApprove = async (paymentId: string) => {
-    if (!window.confirm(`Approve payment ${paymentId} and activate a 1-year entitlement?`)) return;
+    if (!window.confirm(`Approve payment ${paymentId} and activate a 1-year entitlement for this user?`)) return;
 
     try {
       setProcessingId(paymentId);
       const res = await api.approveAdminPayment(paymentId);
       setFeedback({ type: "success", text: res.message });
-      await loadPayments();
+      if (viewingProofPayment?.payment_id === paymentId) {
+        setViewingProofPayment(null);
+        setProofUrl(null);
+      }
+      await loadPayments(true);
     } catch (err: any) {
       setFeedback({ type: "error", text: err?.message || "Payment approval failed." });
     } finally {
@@ -57,15 +84,26 @@ export const AdminPaymentsPage: React.FC = () => {
     }
   };
 
-  const handleReject = async (paymentId: string) => {
-    const reason = window.prompt("Enter rejection reason:", "Unable to verify transaction details on bank statement.");
-    if (!reason || !reason.trim()) return;
+  const handleOpenRejectModal = (payment: PaymentResponse) => {
+    setRejectingPayment(payment);
+    setRejectReason("Transaction details could not be verified in bank statement.");
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectingPayment) return;
+    const paymentId = rejectingPayment.payment_id;
+    const reason = rejectReason.trim() || "Transaction could not be verified.";
 
     try {
       setProcessingId(paymentId);
-      const res = await api.rejectAdminPayment(paymentId, reason.trim());
+      const res = await api.rejectAdminPayment(paymentId, reason);
       setFeedback({ type: "success", text: res.message });
-      await loadPayments();
+      setRejectingPayment(null);
+      if (viewingProofPayment?.payment_id === paymentId) {
+        setViewingProofPayment(null);
+        setProofUrl(null);
+      }
+      await loadPayments(true);
     } catch (err: any) {
       setFeedback({ type: "error", text: err?.message || "Payment rejection failed." });
     } finally {
@@ -73,19 +111,27 @@ export const AdminPaymentsPage: React.FC = () => {
     }
   };
 
-  const handleOpenProof = async (paymentId: string) => {
+  const handleOpenProof = async (payment: PaymentResponse) => {
     try {
-      setViewingProofPaymentId(paymentId);
+      setViewingProofPayment(payment);
       setLoadingProof(true);
-      const res = await api.getAdminProofUrl(paymentId);
+      const res = await api.getAdminProofUrl(payment.payment_id);
       setProofUrl(res.proof_url);
     } catch (err: any) {
       alert("Failed to load proof: " + (err?.message || "Not found"));
-      setViewingProofPaymentId(null);
+      setViewingProofPayment(null);
     } finally {
       setLoadingProof(false);
     }
   };
+
+  const REJECTION_PRESETS = [
+    "Transaction details could not be verified in bank statement.",
+    "Incorrect payment amount received.",
+    "Unclear or illegible proof screenshot uploaded.",
+    "Duplicate submission or already processed.",
+    "Invalid transaction reference / UTR number provided.",
+  ];
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
@@ -98,7 +144,7 @@ export const AdminPaymentsPage: React.FC = () => {
           variant="secondary"
           size="sm"
           leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}
-          onClick={loadPayments}
+          onClick={() => loadPayments(true)}
         >
           Refresh Payments
         </Button>
@@ -110,30 +156,39 @@ export const AdminPaymentsPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 p-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-subtle)] text-xs w-fit">
+      {/* Filter Tabs with Live Count Badges */}
+      <div className="flex flex-wrap items-center gap-2 p-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-subtle)] text-xs w-fit">
         {[
-          { id: "all", label: "All Payments" },
-          { id: "pending", label: "⏳ Pending" },
-          { id: "approved", label: "✅ Approved" },
-          { id: "rejected", label: "❌ Rejected" },
+          { id: "all", label: "All Payments", count: allPayments.length },
+          { id: "pending", label: "Pending Review", count: pendingCount, highlight: pendingCount > 0 },
+          { id: "approved", label: "Approved", count: approvedCount },
+          { id: "rejected", label: "Rejected", count: rejectedCount },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setStatusFilter(tab.id)}
-            className={`px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-2 ${
               statusFilter === tab.id
                 ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-xs"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
-            {tab.label}
+            <span>{tab.label}</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                tab.highlight
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                  : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]"
+              }`}
+            >
+              {tab.count}
+            </span>
           </button>
         ))}
       </div>
 
       {/* Payments Table */}
-      {loading && payments.length === 0 ? (
+      {loading && allPayments.length === 0 ? (
         <LoadingState message="Loading payment records..." />
       ) : (
         <Card variant="admin" className="p-0 overflow-hidden">
@@ -153,14 +208,14 @@ export const AdminPaymentsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border-subtle)]">
-                {payments.length === 0 ? (
+                {filteredPayments.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="p-8 text-center text-xs text-[var(--color-text-muted)]">
                       No payments found under the "{statusFilter}" filter.
                     </td>
                   </tr>
                 ) : (
-                  payments.map((p) => {
+                  filteredPayments.map((p) => {
                     let statusBadge = (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                         PENDING
@@ -194,8 +249,22 @@ export const AdminPaymentsPage: React.FC = () => {
                         <td className="p-3.5 font-bold font-mono text-[var(--color-text)]">
                           {p.currency === "INR" ? `₹${p.amount}` : `$${p.amount}`}
                         </td>
-                        <td className="p-3.5 font-mono text-[11px] text-[var(--color-text)]">
-                          {p.reference}
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--color-text)]">
+                            <span className="font-semibold">{p.reference}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyRef(p.payment_id, p.reference)}
+                              className="p-1 rounded hover:bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors cursor-pointer"
+                              title="Copy Reference / UTR"
+                            >
+                              {copiedRefId === p.payment_id ? (
+                                <Check size={12} className="text-emerald-400" />
+                              ) : (
+                                <Copy size={12} />
+                              )}
+                            </button>
+                          </div>
                         </td>
                         <td className="p-3.5 text-[var(--color-text-muted)]">
                           {new Date(p.submitted_at).toLocaleDateString()}
@@ -204,7 +273,7 @@ export const AdminPaymentsPage: React.FC = () => {
                           {p.proof_storage_path ? (
                             <button
                               type="button"
-                              onClick={() => handleOpenProof(p.payment_id)}
+                              onClick={() => handleOpenProof(p)}
                               className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-primary)] hover:underline cursor-pointer"
                             >
                               <ImageIcon size={13} />
@@ -218,7 +287,10 @@ export const AdminPaymentsPage: React.FC = () => {
                           <div className="flex flex-col gap-0.5">
                             {statusBadge}
                             {p.rejection_reason && (
-                              <span className="text-[10px] text-red-500 max-w-[140px] truncate" title={p.rejection_reason}>
+                              <span
+                                className="text-[10px] text-red-500 max-w-[140px] truncate"
+                                title={p.rejection_reason}
+                              >
                                 {p.rejection_reason}
                               </span>
                             )}
@@ -242,7 +314,7 @@ export const AdminPaymentsPage: React.FC = () => {
                                 variant="secondary"
                                 className="text-xs py-1 px-2.5 text-red-500 hover:bg-red-500/10 font-bold"
                                 disabled={processingId === p.payment_id}
-                                onClick={() => handleReject(p.payment_id)}
+                                onClick={() => handleOpenRejectModal(p)}
                               >
                                 <XCircle size={13} className="mr-1 inline" />
                                 Reject
@@ -265,12 +337,15 @@ export const AdminPaymentsPage: React.FC = () => {
       )}
 
       {/* ─── PROOF VIEWING MODAL ──────────────────────────────────────────────── */}
-      {viewingProofPaymentId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-2xl max-w-xl w-full p-6 relative">
+      {viewingProofPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-fade-in">
+          <div
+            className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl w-full p-6 relative flex flex-col"
+            style={{ width: "min(1100px, 92vw)", maxHeight: "calc(100vh - 32px)" }}
+          >
             <button
               onClick={() => {
-                setViewingProofPaymentId(null);
+                setViewingProofPayment(null);
                 setProofUrl(null);
               }}
               className="absolute top-4 right-4 p-1.5 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-card-subtle)] transition-colors cursor-pointer"
@@ -279,30 +354,79 @@ export const AdminPaymentsPage: React.FC = () => {
               <X size={18} />
             </button>
 
-            <h3 className="text-base font-bold text-[var(--color-text)] mb-3 font-display">
-              Payment Proof Screenshot ({viewingProofPaymentId})
-            </h3>
+            <div className="mb-4">
+              <h3 className="text-base font-bold text-[var(--color-text)] font-display">
+                Payment Proof Screenshot
+              </h3>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-secondary)] mt-1">
+                <span>Ref: <strong className="font-mono text-[var(--color-text)]">{viewingProofPayment.reference}</strong></span>
+                <span>·</span>
+                <span>Amount: <strong className="text-[var(--color-text)]">{viewingProofPayment.currency} {viewingProofPayment.amount}</strong></span>
+                <span>·</span>
+                <span>User: <span className="font-mono">{viewingProofPayment.uid}</span></span>
+              </div>
+            </div>
 
             {loadingProof ? (
               <div className="py-12">
                 <LoadingState message="Retrieving secure proof image..." />
               </div>
             ) : proofUrl ? (
-              <div className="space-y-4">
-                <div className="rounded-xl overflow-hidden border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)] max-h-[460px] flex items-center justify-center">
+              <div className="space-y-4 min-h-0">
+                <div
+                  className="rounded-xl overflow-auto border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)] flex items-center justify-center p-3"
+                  style={{ maxHeight: "calc(100vh - 230px)", minHeight: "180px" }}
+                >
                   <img
                     src={proofUrl}
                     alt="Payment Proof"
-                    className="max-h-[460px] object-contain w-auto"
+                    className="h-auto w-auto max-w-full object-contain rounded-lg"
+                    style={{ maxHeight: "calc(100vh - 250px)" }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-                  <span>Authorized Administrator View Only</span>
+
+                <a
+                  href={proofUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex text-xs font-semibold text-[var(--color-primary)] hover:underline cursor-pointer"
+                >
+                  Open full image in a new tab
+                </a>
+
+                <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border-subtle)]">
+                  {viewingProofPayment.status === "pending" ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold"
+                        disabled={processingId === viewingProofPayment.payment_id}
+                        onClick={() => handleApprove(viewingProofPayment.payment_id)}
+                      >
+                        <CheckCircle2 size={13} className="mr-1.5 inline" />
+                        Approve & Activate
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="text-red-500 hover:bg-red-500/10 text-xs font-bold"
+                        disabled={processingId === viewingProofPayment.payment_id}
+                        onClick={() => handleOpenRejectModal(viewingProofPayment)}
+                      >
+                        <XCircle size={13} className="mr-1.5 inline" />
+                        Reject Payment
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-[var(--color-text-muted)]">Status: {viewingProofPayment.status.toUpperCase()}</span>
+                  )}
+
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="ghost"
                     onClick={() => {
-                      setViewingProofPaymentId(null);
+                      setViewingProofPayment(null);
                       setProofUrl(null);
                     }}
                   >
@@ -313,6 +437,88 @@ export const AdminPaymentsPage: React.FC = () => {
             ) : (
               <p className="text-xs text-red-500 py-6">Could not load proof image.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── STRUCTURED REJECTION MODAL ────────────────────────────────────────── */}
+      {rejectingPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 relative">
+            <button
+              onClick={() => setRejectingPayment(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-card-subtle)] transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-2.5 text-red-500">
+              <AlertTriangle size={20} />
+              <h3 className="text-base font-bold text-[var(--color-text)] font-display">
+                Reject Payment Submission
+              </h3>
+            </div>
+
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Rejecting payment <strong className="font-mono text-[var(--color-text)]">{rejectingPayment.payment_id}</strong> (Ref: {rejectingPayment.reference}). Select a preset reason or enter custom guidance to help the creator correct their payment:
+            </p>
+
+            {/* Presets */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                Common Rejection Reasons
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {REJECTION_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setRejectReason(preset)}
+                    className={`text-left text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      rejectReason === preset
+                        ? "bg-red-500/15 border-red-500/40 text-red-300 font-semibold"
+                        : "bg-[var(--color-surface-sunken)] border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom reason input */}
+            <div>
+              <label className="block text-xs font-bold text-[var(--color-text)] mb-1">
+                Rejection Note for Creator *
+              </label>
+              <textarea
+                rows={3}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter detailed reason for rejection..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text)] focus:outline-none focus:border-red-500 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[var(--color-border-subtle)]">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setRejectingPayment(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-xs font-bold"
+                disabled={processingId === rejectingPayment.payment_id || !rejectReason.trim()}
+                onClick={handleConfirmReject}
+              >
+                {processingId === rejectingPayment.payment_id ? "Rejecting..." : "Confirm Rejection"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

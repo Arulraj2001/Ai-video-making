@@ -16,21 +16,21 @@ export const AdminUsersPage: React.FC = () => {
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadUsers = useCallback(async () => {
+  const loadUsers = useCallback(async (force: boolean = false) => {
     try {
-      setLoading(true);
+      if (users.length === 0) setLoading(true);
       setErrorMsg(null);
-      const data = await api.getAdminUsers();
+      const data = await api.getAdminUsers(force);
       setUsers(data);
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to load creator accounts.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [users.length]);
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(false);
   }, [loadUsers]);
 
   const filteredUsers = users.filter((u) => {
@@ -54,7 +54,7 @@ export const AdminUsersPage: React.FC = () => {
           variant="secondary"
           size="sm"
           leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}
-          onClick={loadUsers}
+          onClick={() => loadUsers(true)}
         >
           Refresh Users
         </Button>

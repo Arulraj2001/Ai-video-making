@@ -37,6 +37,7 @@ import type {
 class ApiService {
 
   private baseUrl: string;
+  private _adminCache: Map<string, { data: any; timestamp: number }> = new Map();
 
   constructor() {
     this.baseUrl = API_BASE_URL.replace(/\/$/, "");
@@ -105,8 +106,9 @@ class ApiService {
   }
 
   // Projects endpoints
-  async listProjects(): Promise<Project[]> {
-    return this.request<Project[]>("/api/projects");
+  async listProjects(summary: boolean = false): Promise<Project[]> {
+    const qs = summary ? "?summary=true" : "";
+    return this.request<Project[]>(`/api/projects${qs}`);
   }
 
   async getProject(id: string): Promise<Project> {
@@ -133,6 +135,22 @@ class ApiService {
     return this.request<Project>("/api/projects/import", {
       method: "POST",
       body: formData,
+    });
+  }
+
+  // Ingest voiceover and Clipchamp captions into an EXISTING project
+  async ingestProjectMedia(projectId: string, formData: FormData): Promise<Project> {
+    return this.request<Project>(`/api/projects/${encodeURIComponent(projectId)}/ingest`, {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  // Update scenes from raw captions for an existing project
+  async updateCaptions(projectId: string, rawCaptions: string): Promise<Project> {
+    return this.request<Project>(`/api/projects/${encodeURIComponent(projectId)}/captions`, {
+      method: "POST",
+      body: JSON.stringify({ raw_captions: rawCaptions }),
     });
   }
 
@@ -821,31 +839,73 @@ class ApiService {
     }
   }
 
-  // Admin Portal & Central Control methods (Phase 18)
-  async getAdminDashboard(): Promise<AdminDashboardStats> {
-    return this.request<AdminDashboardStats>("/api/admin/dashboard");
+  // Admin Portal & Central Control methods (Phase 18) with SWR In-Memory Caching
+  invalidateAdminCache(): void {
+    this._adminCache.clear();
   }
 
-  async getAdminUsers(): Promise<AdminUserSummary[]> {
-    return this.request<AdminUserSummary[]>("/api/admin/users");
+  async getAdminDashboard(force: boolean = false): Promise<AdminDashboardStats> {
+    const key = "dashboard";
+    const cached = this._adminCache.get(key);
+    if (!force && cached && Date.now() - cached.timestamp < 15000) {
+      return cached.data;
+    }
+    const data = await this.request<AdminDashboardStats>("/api/admin/dashboard");
+    this._adminCache.set(key, { data, timestamp: Date.now() });
+    return data;
   }
 
-  async getAdminPayments(status?: string): Promise<PaymentResponse[]> {
+  async getAdminUsers(force: boolean = false): Promise<AdminUserSummary[]> {
+    const key = "users";
+    const cached = this._adminCache.get(key);
+    if (!force && cached && Date.now() - cached.timestamp < 15000) {
+      return cached.data;
+    }
+    const data = await this.request<AdminUserSummary[]>("/api/admin/users");
+    this._adminCache.set(key, { data, timestamp: Date.now() });
+    return data;
+  }
+
+  async getAdminPayments(status?: string, force: boolean = false): Promise<PaymentResponse[]> {
+    const key = `payments_${status || "all"}`;
+    const cached = this._adminCache.get(key);
+    if (!force && cached && Date.now() - cached.timestamp < 15000) {
+      return cached.data;
+    }
     const url = status && status !== "all"
       ? `/api/admin/payments?status=${encodeURIComponent(status)}`
       : "/api/admin/payments";
-    return this.request<PaymentResponse[]>(url);
+    const data = await this.request<PaymentResponse[]>(url);
+    this._adminCache.set(key, { data, timestamp: Date.now() });
+    return data;
   }
 
   async getAdminProofUrl(paymentId: string): Promise<{ payment_id: string; proof_url: string; storage_path?: string }> {
-    return this.request<{ payment_id: string; proof_url: string; storage_path?: string }>(
+    const res = await this.request<{ payment_id: string; proof_url: string; storage_path?: string }>(
       `/api/admin/payments/${encodeURIComponent(paymentId)}/proof-url`
     );
+    if (res.proof_url) {
+      res.proof_url = new URL(res.proof_url, this.baseUrl).toString();
+    }
+    try {
+      const currentUser = auth ? auth.currentUser : null;
+      if (currentUser && res.proof_url) {
+        const token = await currentUser.getIdToken();
+        if (token) {
+          const sep = res.proof_url.includes("?") ? "&" : "?";
+          res.proof_url = `${res.proof_url}${sep}token=${encodeURIComponent(token)}`;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return res;
   }
 
   async approveAdminPayment(
     paymentId: string
   ): Promise<{ message: string; payment: PaymentResponse; entitlement: EntitlementResponse }> {
+    this.invalidateAdminCache();
     return this.request<{ message: string; payment: PaymentResponse; entitlement: EntitlementResponse }>(
       `/api/admin/payments/${encodeURIComponent(paymentId)}/approve`,
       { method: "POST" }
@@ -856,6 +916,7 @@ class ApiService {
     paymentId: string,
     reason: string
   ): Promise<{ message: string; payment: PaymentResponse }> {
+    this.invalidateAdminCache();
     return this.request<{ message: string; payment: PaymentResponse }>(
       `/api/admin/payments/${encodeURIComponent(paymentId)}/reject`,
       {
@@ -865,23 +926,45 @@ class ApiService {
     );
   }
 
-  async getAdminConfig(): Promise<PlatformConfig> {
-    return this.request<PlatformConfig>("/api/admin/config");
+  async getAdminConfig(force: boolean = false): Promise<PlatformConfig> {
+    const key = "config";
+    const cached = this._adminCache.get(key);
+    if (!force && cached && Date.now() - cached.timestamp < 15000) {
+      return cached.data;
+    }
+    const data = await this.request<PlatformConfig>("/api/admin/config");
+    this._adminCache.set(key, { data, timestamp: Date.now() });
+    return data;
   }
 
   async updateAdminConfig(config: Partial<PlatformConfig>): Promise<PlatformConfig> {
+    this.invalidateAdminCache();
     return this.request<PlatformConfig>("/api/admin/config", {
       method: "PUT",
       body: JSON.stringify(config),
     });
   }
 
-  async getAdminUsage(): Promise<AdminUsageStats> {
-    return this.request<AdminUsageStats>("/api/admin/usage");
+  async getAdminUsage(force: boolean = false): Promise<AdminUsageStats> {
+    const key = "usage";
+    const cached = this._adminCache.get(key);
+    if (!force && cached && Date.now() - cached.timestamp < 15000) {
+      return cached.data;
+    }
+    const data = await this.request<AdminUsageStats>("/api/admin/usage");
+    this._adminCache.set(key, { data, timestamp: Date.now() });
+    return data;
   }
 
-  async getAdminAuditLogs(limit: number = 50): Promise<AuditLogEntry[]> {
-    return this.request<AuditLogEntry[]>(`/api/admin/audit-logs?limit=${limit}`);
+  async getAdminAuditLogs(limit: number = 50, force: boolean = false): Promise<AuditLogEntry[]> {
+    const key = `audit_${limit}`;
+    const cached = this._adminCache.get(key);
+    if (!force && cached && Date.now() - cached.timestamp < 15000) {
+      return cached.data;
+    }
+    const data = await this.request<AuditLogEntry[]>(`/api/admin/audit-logs?limit=${limit}`);
+    this._adminCache.set(key, { data, timestamp: Date.now() });
+    return data;
   }
 
   getMediaUrl(urlPath?: string): string {

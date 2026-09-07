@@ -131,16 +131,62 @@ export const AdminSettingsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[var(--color-text)] mb-1">
-                UPI QR Code Asset Reference
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-[var(--color-text)]">
+                  UPI QR Code Asset Reference (Direct Image Link)
+                </label>
+                {upiQrUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setUpiQrUrl("")}
+                    className="text-[11px] text-red-500 hover:underline cursor-pointer"
+                  >
+                    Clear Link
+                  </button>
+                )}
+              </div>
               <input
-                type="text"
-                required
+                type="url"
+                placeholder="https://example.com/assets/upi_qr.png"
                 value={upiQrUrl}
                 onChange={(e) => setUpiQrUrl(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text)] font-mono focus:outline-none focus:border-[var(--color-primary)]"
               />
+              <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                Paste the direct URL to your official UPI QR code image (hosted link). If left blank, creators will pay via UPI ID directly with zero fallback image.
+              </p>
+
+              {upiQrUrl.trim() && (
+                <div className="mt-2.5 p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] flex items-center gap-4">
+                  <div className="w-20 h-20 bg-white rounded-lg p-1.5 border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                    <img
+                      src={upiQrUrl.trim()}
+                      alt="QR Preview"
+                      className="max-h-full max-w-full object-contain"
+                      onError={(e) => {
+                        (e.target as any).style.display = "none";
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="font-bold text-[var(--color-text)] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Live QR Image Preview
+                    </div>
+                    <p className="text-[11px] text-[var(--color-text-secondary)]">
+                      This official QR code will be displayed directly to creators on the Upgrade page.
+                    </p>
+                    <a
+                      href={upiQrUrl.trim()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-[var(--color-primary)] hover:underline inline-block"
+                    >
+                      Open Link in New Tab ↗
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

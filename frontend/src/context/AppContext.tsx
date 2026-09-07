@@ -13,6 +13,7 @@ interface AppContextType {
   projectsLoading: boolean;
   projectsError: string | null;
   createProject: (input: ProjectCreateInput) => Promise<Project>;
+  ingestProjectMedia: (projectId: string, formData: FormData) => Promise<Project>;
   deleteProject: (id: string) => Promise<void>;
   selectProject: (id: string) => void;
   updateScene: (projectId: string, sceneId: string, update: SceneUpdateInput) => Promise<Scene>;
@@ -56,6 +57,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loading: projectsLoading,
     error: projectsError,
     createProject,
+    ingestProjectMedia,
     updateScene,
     deleteProject,
     selectProject,
@@ -102,6 +104,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         projectsLoading,
         projectsError,
         createProject,
+        ingestProjectMedia,
         deleteProject,
         selectProject,
         updateScene,

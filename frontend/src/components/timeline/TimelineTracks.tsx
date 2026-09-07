@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import type { Project } from "../../types/project";
 import { api } from "../../services/api";
 
@@ -14,7 +14,7 @@ interface TimelineTracksProps {
   onUploadImage?: (sceneId: string, file: File) => Promise<void>;
 }
 
-export const TimelineTracks: React.FC<TimelineTracksProps> = ({
+export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
   project,
   currentTime,
   totalDuration,
@@ -33,6 +33,30 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
   // Time ruler tick marks (every 1 second or 5 seconds depending on zoom)
   const tickStep = pixelsPerSecond < 40 ? 5 : pixelsPerSecond < 80 ? 2 : 1;
   const numTicks = Math.ceil(totalDuration / tickStep) + 2;
+
+  // Memoized ruler ticks to eliminate allocation thrashing on 60fps playhead updates
+  const rulerTicks = useMemo(() => {
+    return Array.from({ length: numTicks })
+      .map((_, i) => {
+        const tickTime = i * tickStep;
+        const leftPos = tickTime * pixelsPerSecond;
+        if (leftPos > trackWidth) return null;
+        const mins = Math.floor(tickTime / 60);
+        const secs = tickTime % 60;
+        const label = `${mins}:${secs.toString().padStart(2, "0")}`;
+        return { i, leftPos, label };
+      })
+      .filter((t): t is { i: number; leftPos: number; label: string } => t !== null);
+  }, [numTicks, tickStep, pixelsPerSecond, trackWidth]);
+
+  // Memoized waveform bars to avoid array re-allocations during playback
+  const pseudoWaveformBars = useMemo(() => {
+    const count = Math.min(200, Math.floor((totalDuration * pixelsPerSecond) / 8));
+    return Array.from({ length: count }).map((_, i) => ({
+      i,
+      height: 6 + ((i * 23 + 11) % 16),
+    }));
+  }, [totalDuration, pixelsPerSecond]);
 
   // --- Drag-to-Scrub on Ruler & Playhead Needle ---
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -213,44 +237,34 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
             }}
             title="Click or drag along ruler to scrub playhead"
           >
-            {Array.from({ length: numTicks }).map((_, i) => {
-              const tickTime = i * tickStep;
-              const leftPos = tickTime * pixelsPerSecond;
-              if (leftPos > trackWidth) return null;
-
-              const mins = Math.floor(tickTime / 60);
-              const secs = tickTime % 60;
-              const label = `${mins}:${secs.toString().padStart(2, "0")}`;
-
-              return (
-                <div
-                  key={i}
+            {rulerTicks.map((tick) => (
+              <div
+                key={tick.i}
+                style={{
+                  position: "absolute",
+                  left: `${tick.leftPos}px`,
+                  top: 0,
+                  bottom: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                  paddingLeft: "4px",
+                  borderLeft: "1px solid var(--border-subtle)",
+                  pointerEvents: "none",
+                }}
+              >
+                <span
                   style={{
-                    position: "absolute",
-                    left: `${leftPos}px`,
-                    top: 0,
-                    bottom: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "flex-end",
-                    paddingLeft: "4px",
-                    borderLeft: "1px solid var(--border-subtle)",
-                    pointerEvents: "none",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.68rem",
+                    color: "var(--text-muted)",
+                    marginBottom: "4px",
                   }}
                 >
-                  <span
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "0.68rem",
-                      color: "var(--text-muted)",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    {label}
-                  </span>
-                </div>
-              );
-            })}
+                  {tick.label}
+                </span>
+              </div>
+            ))}
           </div>
 
           {/* 2. Track 1: Image Track (Master Timeline Rule Enforced with Trimming) */}
@@ -810,24 +824,19 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "3px", overflow: "hidden" }}>
-                  {Array.from({
-                    length: Math.min(200, Math.floor((totalDuration * pixelsPerSecond) / 8)),
-                  }).map((_, i) => {
-                    const pseudoRandomHeight = 6 + ((i * 23 + 11) % 16);
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          width: "3px",
-                          height: `${pseudoRandomHeight}px`,
-                          background: project.audio_settings?.music_muted
-                            ? "rgba(239, 68, 68, 0.5)"
-                            : "rgba(168, 85, 247, 0.6)",
-                          borderRadius: "1px",
-                        }}
-                      />
-                    );
-                  })}
+                  {pseudoWaveformBars.map((bar) => (
+                    <div
+                      key={bar.i}
+                      style={{
+                        width: "3px",
+                        height: `${bar.height}px`,
+                        background: project.audio_settings?.music_muted
+                          ? "rgba(239, 68, 68, 0.5)"
+                          : "rgba(168, 85, 247, 0.6)",
+                        borderRadius: "1px",
+                      }}
+                    />
+                  ))}
                 </div>
                 <span
                   style={{
@@ -871,3 +880,6 @@ export const TimelineTracks: React.FC<TimelineTracksProps> = ({
     </div>
   );
 };
+
+export const TimelineTracks = React.memo(TimelineTracksComponent);
+

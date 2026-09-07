@@ -22,11 +22,11 @@ export const AdminPricingPage: React.FC = () => {
   const [enabled, setEnabled] = useState<boolean>(true);
   const [description, setDescription] = useState<string>("");
 
-  const loadConfig = useCallback(async () => {
+  const loadConfig = useCallback(async (force: boolean = false) => {
     try {
-      setLoading(true);
+      if (!config) setLoading(true);
       setFeedback(null);
-      const data = await api.getAdminConfig();
+      const data = await api.getAdminConfig(force);
       setConfig(data);
       setPlanName(data.yearly_plan_name);
       setPriceInr(data.yearly_plan_price_inr);
@@ -40,10 +40,10 @@ export const AdminPricingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [config]);
 
   useEffect(() => {
-    loadConfig();
+    loadConfig(false);
   }, [loadConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,7 +100,7 @@ export const AdminPricingPage: React.FC = () => {
           variant="secondary"
           size="sm"
           leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}
-          onClick={loadConfig}
+          onClick={() => loadConfig(true)}
         >
           Reset to Server
         </Button>
@@ -253,6 +253,11 @@ export const AdminPricingPage: React.FC = () => {
             <div className="pt-3 border-t border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] space-y-1">
               <div>Free Tier Allowance: <strong>{freeLimit} gens/month</strong></div>
               <div>Payment Methods: India UPI + Buy Me a Coffee</div>
+              <div className="pt-1">
+                <a href="/admin/settings" className="text-[11px] text-[var(--color-primary)] hover:underline">
+                  Configure UPI ID & QR Code link in Settings →
+                </a>
+              </div>
             </div>
           </Card>
         </div>

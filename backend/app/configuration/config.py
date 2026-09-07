@@ -115,7 +115,7 @@ class Settings:
         "Unlimited AI scene generation, priority cloud rendering, multi-aspect export, and Video Bible consistency for 1 full year."
     )
     PAYMENT_UPI_ID: str = os.getenv("PAYMENT_UPI_ID", "scenoraedits@upi")
-    PAYMENT_UPI_QR_URL: str = os.getenv("PAYMENT_UPI_QR_URL", "/assets/payments/upi_qr.png")
+    PAYMENT_UPI_QR_URL: str = os.getenv("PAYMENT_UPI_QR_URL", "")
     PAYMENT_BMC_URL: str = os.getenv("PAYMENT_BMC_URL", "https://buymeacoffee.com/scenoraedits")
     PAYMENTS_STORAGE_BACKEND: str = os.getenv("PAYMENTS_STORAGE_BACKEND", "firestore").strip().lower()
 

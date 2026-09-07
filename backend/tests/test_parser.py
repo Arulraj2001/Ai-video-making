@@ -199,3 +199,36 @@ def test_api_import_project_and_edit_scene():
     # 3. Clean up
     del_res = client.delete(f"/api/projects/{proj_id}")
     assert del_res.status_code == 204
+
+def test_api_ingest_into_existing_project():
+    # 1. Create empty project with just a name (simulates New Project modal)
+    create_res = client.post("/api/projects", json={"name": "Existing Empty Project"})
+    assert create_res.status_code == 201
+    proj = create_res.json()
+    proj_id = proj["id"]
+    assert len(proj["scenes"]) == 0
+    assert proj["audio_file"] is None
+
+    # 2. Ingest audio and captions into this existing project
+    audio_bytes = b"test audio voice narration"
+    files = {"audio_file": ("narration.mp3", io.BytesIO(audio_bytes), "audio/mpeg")}
+    data = {"raw_captions": SAMPLE_STANDARD}
+
+    ingest_res = client.post(f"/api/projects/{proj_id}/ingest", data=data, files=files)
+    assert ingest_res.status_code == 200
+    updated = ingest_res.json()
+    assert updated["id"] == proj_id  # CRITICAL: Same project ID, no duplicate created!
+    assert updated["name"] == "Existing Empty Project"
+    assert updated["audio_file"]["filename"] == "narration.mp3"
+    assert len(updated["scenes"]) == 2
+    assert updated["scenes"][0]["start"] == 0.0
+
+    # 3. Verify retrieval reflects populated scenes
+    get_res = client.get(f"/api/projects/{proj_id}")
+    assert get_res.status_code == 200
+    assert len(get_res.json()["scenes"]) == 2
+
+    # 4. Clean up
+    del_res = client.delete(f"/api/projects/{proj_id}")
+    assert del_res.status_code == 204
+

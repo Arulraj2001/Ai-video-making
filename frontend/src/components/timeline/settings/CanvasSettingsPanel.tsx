@@ -32,7 +32,7 @@ const CANVAS_PRESETS = [
   },
 ];
 
-export const CanvasSettingsPanel: React.FC<CanvasSettingsPanelProps> = ({
+const CanvasSettingsPanelComponent: React.FC<CanvasSettingsPanelProps> = ({
   project,
   onProjectUpdated,
 }) => {
@@ -206,3 +206,12 @@ export const CanvasSettingsPanel: React.FC<CanvasSettingsPanelProps> = ({
     </div>
   );
 };
+
+export const CanvasSettingsPanel = React.memo(
+  CanvasSettingsPanelComponent,
+  (prev, next) =>
+    prev.project.id === next.project.id &&
+    JSON.stringify(prev.project.canvas_settings) ===
+      JSON.stringify(next.project.canvas_settings)
+);
+

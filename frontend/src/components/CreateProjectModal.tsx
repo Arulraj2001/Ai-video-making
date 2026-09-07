@@ -50,11 +50,16 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
               <FolderPlus size={18} />
             </div>
-            <h3 className="text-lg font-bold font-display" style={{ color: "var(--text-primary)" }}>Create Video Project</h3>
+            <div>
+              <h3 className="text-lg font-bold font-display" style={{ color: "var(--text-primary)" }}>Create Video Project</h3>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                Name your project. Next, you'll import your voiceover audio and Clipchamp captions to generate your timeline.
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}

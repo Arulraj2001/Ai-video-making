@@ -44,7 +44,45 @@ export const HomePage: React.FC = () => {
                 View 5-Stage Pipeline
               </Button>
             </div>
+          </div>
+        </SiteContainer>
+      </section>
 
+      {/* ─── PRICING TEASER SECTION ────────────────────────────────────────── */}
+      <section className="py-16 bg-[var(--color-surface-sunken)] border-y border-[var(--color-border-subtle)]">
+        <SiteContainer>
+          <div className="max-w-4xl mx-auto text-center space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase bg-[var(--color-primary-subtle)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+              Transparent Creator Pricing
+            </div>
+
+            <h3 className="text-2xl sm:text-3xl font-bold font-display text-[var(--text)]">
+              One Yearly Pass. 365 Days of Unlimited AI Video Production.
+            </h3>
+
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-xl mx-auto">
+              Start with 5 free generations each month or unlock the complete all-access pass for unlimited AI storyboarding and cinema rendering.
+            </p>
+
+            <div className="pt-6 flex flex-wrap gap-4 justify-center">
+              <Button
+                variant="primary"
+                size="md"
+                rightIcon={<ArrowRight size={16} />}
+                onClick={() => navigate("/pricing")}
+                className="font-bold px-6 shadow-xs"
+              >
+                View Plans & Features (₹2,999 / $49 yr)
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => navigate("/app")}
+                className="font-semibold px-6"
+              >
+                Try Free Tier
+              </Button>
+            </div>
           </div>
         </SiteContainer>
       </section>

@@ -39,7 +39,7 @@ class PlatformConfigRepository:
             ),
             free_generation_limit=getattr(settings, "FREE_GENERATION_LIMIT", 5),
             payment_upi_id=getattr(settings, "PAYMENT_UPI_ID", "scenoraedits@upi"),
-            payment_upi_qr_url=getattr(settings, "PAYMENT_UPI_QR_URL", "/assets/payments/upi_qr.png"),
+            payment_upi_qr_url=getattr(settings, "PAYMENT_UPI_QR_URL", ""),
             payment_bmc_url=getattr(settings, "PAYMENT_BMC_URL", "https://buymeacoffee.com/scenoraedits"),
             allow_registration=True,
             maintenance_mode=False,

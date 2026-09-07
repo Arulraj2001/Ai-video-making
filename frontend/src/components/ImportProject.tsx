@@ -1,11 +1,12 @@
 import React, { useState, useRef } from "react";
 import { UploadCloud, Music, Sparkles, AlertTriangle, CheckCircle2, ArrowRight, ArrowLeft } from "lucide-react";
 import { api } from "../services/api";
-import type { Scene } from "../types";
+import type { Scene, Project } from "../types";
 
-interface ImportProjectProps {
+export interface ImportProjectProps {
   onSuccess: (project: any) => void;
   onCancel: () => void;
+  targetProject?: Project | null;
 }
 
 const SAMPLE_CAPTIONS = `00:00 - 00:05
@@ -20,9 +21,9 @@ The holographic artifact flickers, revealing coordinate vectors pointing toward 
 00:18 - 00:24
 With her cybernetic optic glowing cyan, she prepares her grav-bike for an ascent into the stratosphere.`;
 
-export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCancel }) => {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCancel, targetProject }) => {
+  const [name, setName] = useState(targetProject?.name || "");
+  const [description, setDescription] = useState(targetProject?.description || "");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [rawCaptions, setRawCaptions] = useState("");
   const [dragActive, setDragActive] = useState(false);
@@ -96,7 +97,7 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    if (!targetProject && !name.trim()) {
       setGeneralError("Please enter a project name.");
       return;
     }
@@ -109,22 +110,28 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
       setSubmitting(true);
       setGeneralError(null);
 
-      // 1. Create project with audio and captions via FormData
       const formData = new FormData();
-      formData.append("name", name.trim());
-      if (description.trim()) {
-        formData.append("description", description.trim());
-      }
       if (audioFile) {
         formData.append("audio_file", audioFile);
       }
       formData.append("raw_captions", rawCaptions.trim());
 
-      const project = await api.importProject(formData);
+      let project: any;
+      if (targetProject) {
+        // Ingest media directly into existing project without creating duplicate
+        project = await api.ingestProjectMedia(targetProject.id, formData);
+      } else {
+        // Create new project
+        formData.append("name", name.trim());
+        if (description.trim()) {
+          formData.append("description", description.trim());
+        }
+        project = await api.importProject(formData);
+      }
 
       onSuccess(project);
     } catch (err: any) {
-      setGeneralError(err.message || "Failed to import project");
+      setGeneralError(err.message || "Failed to process audio and captions");
     } finally {
       setSubmitting(false);
     }
@@ -139,18 +146,27 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
           className="btn-secondary text-xs py-1.5 px-3"
         >
           <ArrowLeft size={14} />
-          <span>Back to Dashboard</span>
+          <span>{targetProject ? "Back to Studio" : "Back to Dashboard"}</span>
         </button>
-        <span className="badge badge-info text-xs">Stage 1 Ingestion</span>
+        <div className="flex items-center gap-2">
+          {targetProject && (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold meta-mono bg-[var(--color-primary-subtle)] text-[var(--color-primary)] border border-[var(--color-border-subtle)]">
+              Project: {targetProject.name}
+            </span>
+          )}
+          <span className="badge badge-info text-xs">Stage 1 Ingestion</span>
+        </div>
       </div>
 
       <div className="studio-card p-6 sm:p-8">
         <div className="mb-6">
           <h2 className="text-xl sm:text-2xl font-bold font-display" style={{ color: "var(--text-primary)" }}>
-            Import Voiceover & Clipchamp Captions
+            {targetProject ? "Ingest Voiceover & Clipchamp Captions" : "Import Voiceover & Clipchamp Captions"}
           </h2>
           <p className="text-xs sm:text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Upload your narration voice track and paste your Clipchamp timestamped captions to generate structured Master Timeline scenes.
+            {targetProject
+              ? `Upload your voiceover track and paste timestamped captions to generate the Master Timeline for ${targetProject.name}.`
+              : "Upload your narration voice track and paste your Clipchamp timestamped captions to generate structured Master Timeline scenes."}
           </p>
         </div>
 
@@ -169,35 +185,37 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 1. Project Name & Description */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                Project Name <span style={{ color: "var(--accent-danger)" }}>*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Cyberpunk Detective Ep. 1"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input-text"
-              />
-            </div>
+          {/* 1. Project Name & Description (Only shown when creating a brand new project) */}
+          {!targetProject && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  Project Name <span style={{ color: "var(--accent-danger)" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Cyberpunk Detective Ep. 1"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input-text"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                Description (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Brief project notes or storyline..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="input-text"
-              />
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  Description (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Brief project notes or storyline..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="input-text"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 2. Audio Upload */}
           <div>
@@ -415,10 +433,16 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
 
             <button
               type="submit"
-              disabled={submitting || !name.trim() || !rawCaptions.trim()}
+              disabled={submitting || (!targetProject && !name.trim()) || !rawCaptions.trim()}
               className="btn-primary text-xs py-2 px-5"
             >
-              <span>{submitting ? "Building Project Timeline..." : "Create Project & Master Timeline"}</span>
+              <span>
+                {submitting
+                  ? "Building Master Timeline..."
+                  : targetProject
+                  ? "Generate Master Timeline"
+                  : "Create Project & Master Timeline"}
+              </span>
               <ArrowRight size={14} />
             </button>
           </div>

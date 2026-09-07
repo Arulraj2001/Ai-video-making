@@ -247,3 +247,17 @@ class ProjectResponse(BaseModel):
     owner_id: Optional[str] = None
     created_at: str
     updated_at: str
+
+class ProjectSummaryResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = ""
+    aspect_ratio: str = "16:9"
+    scene_count: int = 0
+    total_duration: float = 0.0
+    thumbnail_url: Optional[str] = None
+    canvas_settings: Optional[CanvasSettingsSchema] = None
+    owner_id: Optional[str] = None
+    created_at: str
+    updated_at: str
+

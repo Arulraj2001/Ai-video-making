@@ -27,7 +27,7 @@ const COLOR_SWATCHES = [
   { label: "Hot Pink", value: "#FF4081" },
 ];
 
-export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
+const CaptionsSettingsPanelComponent: React.FC<CaptionsSettingsPanelProps> = ({
   project,
   onProjectUpdated,
 }) => {
@@ -414,3 +414,12 @@ export const CaptionsSettingsPanel: React.FC<CaptionsSettingsPanelProps> = ({
     </div>
   );
 };
+
+export const CaptionsSettingsPanel = React.memo(
+  CaptionsSettingsPanelComponent,
+  (prev, next) =>
+    prev.project.id === next.project.id &&
+    JSON.stringify(prev.project.caption_settings) ===
+      JSON.stringify(next.project.caption_settings)
+);
+

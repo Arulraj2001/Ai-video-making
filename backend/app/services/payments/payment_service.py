@@ -87,7 +87,7 @@ class PaymentService:
                     "Unlimited AI scene generation, priority cloud rendering, multi-aspect export, and Video Bible consistency for 1 full year."
                 ),
                 upi_id=getattr(settings, "PAYMENT_UPI_ID", "scenoraedits@upi"),
-                upi_qr_url=getattr(settings, "PAYMENT_UPI_QR_URL", "/assets/payments/upi_qr.png"),
+                upi_qr_url=getattr(settings, "PAYMENT_UPI_QR_URL", ""),
                 bmc_url=getattr(settings, "PAYMENT_BMC_URL", "https://buymeacoffee.com/scenoraedits"),
                 features=features,
             )

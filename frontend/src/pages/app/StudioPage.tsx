@@ -105,7 +105,14 @@ export const StudioPage: React.FC<StudioPageProps> = ({ projectId }) => {
       <div className="studio-container flex-1">
         {viewMode === "import" ? (
           <ImportProject
-            onSuccess={() => { setViewMode("studio"); refreshProjects(); }}
+            targetProject={activeProject}
+            onSuccess={(updatedProject) => {
+              if (updatedProject) {
+                applyProjectUpdate(updatedProject);
+              }
+              setViewMode("studio");
+              refreshProjects();
+            }}
             onCancel={() => setViewMode("studio")}
           />
         ) : (

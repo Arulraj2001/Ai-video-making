@@ -12,7 +12,6 @@ import type {
 } from "../../services/api";
 import {
   Sparkles,
-  CheckCircle2,
   Clock,
   QrCode,
   Coffee,
@@ -20,6 +19,8 @@ import {
   Check,
   Upload,
   ShieldCheck,
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 
 
@@ -131,7 +132,7 @@ export const UpgradePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
         <LoadingState message="Loading ScenoraEdits subscription options..." />
       </div>
     );
@@ -139,12 +140,14 @@ export const UpgradePage: React.FC = () => {
 
   const hasActiveMembership = entitlement && entitlement.is_active;
   const pendingPayment = payments.find((p) => p.status === "pending");
+  const rejectedPayment = payments.find((p) => p.status === "rejected");
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16">
+    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 pt-16 sm:pt-20 pb-16 space-y-8">
       <PageHeader
         title="Upgrade to Pro Yearly"
         subtitle="One annual pass for unlimited AI scene generation, high-speed cloud rendering, and character consistency."
+        className="mb-10 pb-8"
       />
 
       {errorMsg && (
@@ -213,47 +216,96 @@ export const UpgradePage: React.FC = () => {
         </div>
       )}
 
-      {/* ─── PLAN OVERVIEW CARD ─────────────────────────────────────────────── */}
+      {/* ─── REJECTED PAYMENT BANNER ───────────────────────────────────────── */}
+      {!hasActiveMembership && !pendingPayment && rejectedPayment && (
+        <div className="p-6 rounded-2xl bg-[var(--color-surface)] border-2 border-red-500/50 shadow-sm space-y-2">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+              <AlertTriangle size={28} />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--color-text)]">
+                  Previous Payment Submission Rejected
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-red-500/10 text-red-500 border border-red-500/20">
+                  ACTION REQUIRED
+                </span>
+              </div>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Reference submitted: <span className="font-mono font-bold text-[var(--color-text)]">{rejectedPayment.reference}</span> ·{" "}
+                Date: {new Date(rejectedPayment.submitted_at).toLocaleDateString()}
+              </p>
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300">
+                <strong>Admin Reason: </strong>{rejectedPayment.rejection_reason || "Payment could not be verified by admin."}
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)] pt-1">
+                Please verify your transaction details in your banking app and submit your corrected reference/screenshot below.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PLAN OVERVIEW & PAYMENT SECTION ─────────────────────────────── */}
       {plan && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          <Card className="md:col-span-1 p-6 flex flex-col justify-between border-2 border-[var(--color-primary)]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* ─── LEFT COLUMN: PLAN OVERVIEW ───────────────────────────────── */}
+          <Card className="lg:col-span-3 p-6 flex flex-col justify-between border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/[0.04] via-transparent to-transparent shadow-sm">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-primary)]">
+                <span className="text-[10px] font-extrabold meta-mono uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                  <Sparkles size={13} />
                   ALL-ACCESS PASS
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold meta-mono bg-amber-500/15 text-amber-500 border border-amber-500/30">
                   365 DAYS
                 </span>
               </div>
+
               <div>
-                <h2 className="text-2xl font-bold font-display text-[var(--color-text)]">{plan.name}</h2>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-3xl font-black text-[var(--color-text)] font-display">
+                <h2 className="text-2xl font-bold font-display tracking-tight text-[var(--color-text)]">
+                  {plan.name}{" "}
+                  <span className="text-amber-500 font-semibold text-base block sm:inline">
+                    (Yearly)
+                  </span>
+                </h2>
+
+                <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-[var(--color-border-subtle)]">
+                  <span className="text-3xl sm:text-4xl font-black text-[var(--color-text)] font-display tracking-tight">
                     {method === "upi" ? `₹${plan.price_inr.toLocaleString()}` : `$${plan.price_usd}`}
                   </span>
-                  <span className="text-xs meta-mono text-[var(--color-text-muted)]">/ year</span>
+                  <span className="text-xs meta-mono font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                    {method === "upi" ? "INR / 1 Year" : "USD / 1 Year"}
+                  </span>
                 </div>
               </div>
+
               <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                 {plan.description}
               </p>
-              <div className="pt-3 border-t border-[var(--color-border-subtle)] space-y-2">
+
+              <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-2.5">
+                <div className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+                  What's Included
+                </div>
                 {plan.features.map((feat, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-[var(--color-text)]">
-                    <CheckCircle2 size={14} className="text-[var(--color-primary)] shrink-0 mt-0.5" />
-                    <span>{feat}</span>
+                  <div key={i} className="flex items-start gap-2.5 text-xs text-[var(--color-text)]">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <Check size={11} strokeWidth={3} />
+                    </div>
+                    <span className="leading-snug">{feat}</span>
                   </div>
                 ))}
               </div>
             </div>
           </Card>
 
-          {/* ─── PAYMENT & SUBMISSION SECTION ─────────────────────────────────── */}
-          <Card className="md:col-span-2 p-6 space-y-6">
+          {/* ─── RIGHT COLUMN: PAYMENT & SUBMISSION SECTION ───────────────── */}
+          <Card className="lg:col-span-9 p-6 space-y-6 shadow-sm border border-[var(--color-border)]">
             <div>
               <h3 className="text-base font-bold text-[var(--color-text)] flex items-center gap-2">
-                <Sparkles size={16} className="text-[var(--color-primary)]" />
+                <Sparkles size={17} className="text-amber-500" />
                 Select Payment Method
               </h3>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
@@ -261,22 +313,26 @@ export const UpgradePage: React.FC = () => {
               </p>
             </div>
 
-            {/* Method Tabs */}
+            {/* Method Switcher Tabs */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setMethod("upi")}
                 className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
                   method === "upi"
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]/30 shadow-xs"
+                    ? "border-amber-500 bg-amber-500/10 shadow-xs"
                     : "border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border)]"
                 }`}
               >
-                <div className="w-9 h-9 rounded-lg bg-[var(--color-surface-sunken)] flex items-center justify-center text-[var(--color-primary)] shrink-0">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                  method === "upi" ? "bg-amber-500 text-white" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                }`}>
                   <QrCode size={18} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[var(--color-text)]">India UPI / QR</div>
+                  <div className={`text-xs font-bold ${method === "upi" ? "text-amber-500" : "text-[var(--color-text)]"}`}>
+                    India UPI / QR
+                  </div>
                   <div className="text-[11px] meta-mono text-[var(--color-text-muted)]">
                     ₹{plan.price_inr.toLocaleString()} INR
                   </div>
@@ -288,15 +344,19 @@ export const UpgradePage: React.FC = () => {
                 onClick={() => setMethod("buymeacoffee")}
                 className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
                   method === "buymeacoffee"
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]/30 shadow-xs"
+                    ? "border-amber-500 bg-amber-500/10 shadow-xs"
                     : "border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border)]"
                 }`}
               >
-                <div className="w-9 h-9 rounded-lg bg-[var(--color-surface-sunken)] flex items-center justify-center text-amber-500 shrink-0">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                  method === "buymeacoffee" ? "bg-amber-500 text-white" : "bg-[var(--color-surface-sunken)] text-amber-500"
+                }`}>
                   <Coffee size={18} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[var(--color-text)]">Buy Me a Coffee</div>
+                  <div className={`text-xs font-bold ${method === "buymeacoffee" ? "text-amber-500" : "text-[var(--color-text)]"}`}>
+                    Buy Me a Coffee
+                  </div>
                   <div className="text-[11px] meta-mono text-[var(--color-text-muted)]">
                     ${plan.price_usd} USD (Intl)
                   </div>
@@ -304,42 +364,100 @@ export const UpgradePage: React.FC = () => {
               </button>
             </div>
 
-            {/* Method Instructions */}
+            {/* Method Payment Box */}
             {method === "upi" ? (
-              <div className="p-4 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] meta-mono font-bold uppercase text-[var(--color-text-muted)]">
-                      Official UPI ID
-                    </span>
-                    <div className="text-sm font-bold font-mono text-[var(--color-text)]">
-                      {plan.upi_id}
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/30 space-y-4">
+                {/* Hero QR & Payee Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-4 sm:p-5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-xs">
+                  {plan.upi_qr_url && plan.upi_qr_url.trim() !== "" && (
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 bg-white p-1.5 rounded-xl flex items-center justify-center shadow-xs border border-gray-200 overflow-hidden">
+                      <img
+                        src={plan.upi_qr_url}
+                        alt="Scan to pay with UPI"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 w-full space-y-3 text-center sm:text-left">
+                    <div className="space-y-1.5">
+                      <span className="block text-xs font-bold text-[var(--color-text)]">
+                        {plan.upi_qr_url && plan.upi_qr_url.trim() !== ""
+                          ? "Scan QR or pay via UPI"
+                          : "Pay via UPI"}
+                      </span>
+                      <div className="text-2xl font-black text-[var(--color-text)] font-display leading-none">
+                        ₹{plan.price_inr.toLocaleString()}{" "}
+                        <span className="text-xs font-mono font-normal text-[var(--color-text-muted)]">INR</span>
+                      </div>
+                      <div className="px-3 py-2 rounded-lg bg-[var(--color-card-subtle)] border border-amber-500/30 inline-block max-w-full">
+                        <span className="text-xs font-mono font-bold text-[var(--color-primary)] break-all select-all" title="UPI ID">
+                          {plan.upi_id}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center sm:justify-start gap-2 pt-1">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap px-3.5 py-2"
+                        onClick={handleCopyUpi}
+                      >
+                        {copiedUpi ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                        <span>{copiedUpi ? "Copied!" : "Copy UPI ID"}</span>
+                      </Button>
+                      <a
+                        href={`upi://pay?pa=${encodeURIComponent(plan.upi_id)}&pn=ScenoraEdits&am=${plan.price_inr}&cu=INR&tn=Scenora%20Pro%20Yearly`}
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+                      >
+                        Open UPI App
+                      </a>
                     </div>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="shrink-0 flex items-center gap-1.5 text-xs font-bold"
-                    onClick={handleCopyUpi}
-                  >
-                    {copiedUpi ? <Check size={14} /> : <Copy size={14} />}
-                    {copiedUpi ? "Copied!" : "Copy UPI ID"}
-                  </Button>
                 </div>
-                <div className="text-[11px] text-[var(--color-text-secondary)] space-y-1">
-                  <p>1. Open Google Pay, PhonePe, Paytm, or BHIM app.</p>
-                  <p>2. Send <strong>₹{plan.price_inr.toLocaleString()}</strong> to the UPI ID above.</p>
-                  <p>3. Copy the 12-digit UTR / UPI Reference ID and paste it in the form below.</p>
+
+                {/* 3-Step Guide */}
+                <div className="space-y-2 pt-1 border-t border-[var(--color-border-subtle)]">
+                  <div className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+                    How to complete payment
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      1
+                    </div>
+                    <p className="leading-snug">
+                      {plan.upi_qr_url && plan.upi_qr_url.trim() !== ""
+                        ? "Scan the QR code above or pay to the UPI ID"
+                        : "Pay to the UPI ID above"}{" "}
+                      using <strong>Google Pay, PhonePe, Paytm, or BHIM</strong>.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      2
+                    </div>
+                    <p className="leading-snug">
+                      Complete the transfer of <strong>₹{plan.price_inr.toLocaleString()} INR</strong>.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      3
+                    </div>
+                    <p className="leading-snug">
+                      Copy the 12-digit <strong>UTR / UPI Reference ID</strong> from your transaction receipt and submit below.
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-xs">
                   <div>
-                    <span className="text-[10px] meta-mono font-bold uppercase text-[var(--color-text-muted)]">
-                      International Payment
+                    <span className="text-[10px] meta-mono font-bold uppercase tracking-wider text-amber-500">
+                      International Membership
                     </span>
-                    <div className="text-sm font-bold text-[var(--color-text)]">
+                    <div className="text-base font-bold text-[var(--color-text)]">
                       Buy Me a Coffee · ${plan.price_usd} USD
                     </div>
                   </div>
@@ -347,22 +465,43 @@ export const UpgradePage: React.FC = () => {
                     href={plan.bmc_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors"
+                    aria-label="Open Buy Me a Coffee payment page in a new tab"
+                    title="Open Buy Me a Coffee page"
+                    className="inline-flex w-full sm:w-auto min-h-10 items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-bold shadow-sm hover:shadow-md cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 whitespace-nowrap"
                   >
                     <Coffee size={14} />
                     Open BMC Page
+                    <ExternalLink size={14} />
                   </a>
                 </div>
-                <div className="text-[11px] text-[var(--color-text-secondary)] space-y-1">
-                  <p>1. Click the button above to visit our Buy Me a Coffee page.</p>
-                  <p>2. Pay the yearly supporter amount (${plan.price_usd} USD).</p>
-                  <p>3. Enter your supporter display name or order receipt ID below.</p>
+                <div className="space-y-2 pt-1 border-t border-[var(--color-border-subtle)]">
+                  <div className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+                    How to complete payment
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      1
+                    </div>
+                    <p className="leading-snug">Click the button above to visit our official Buy Me a Coffee page.</p>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      2
+                    </div>
+                    <p className="leading-snug">Pay the yearly supporter membership of <strong>${plan.price_usd} USD</strong>.</p>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
+                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      3
+                    </div>
+                    <p className="leading-snug">Enter your supporter display name or order receipt ID in the form below.</p>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Submission Form */}
-            <form onSubmit={handleSubmitPayment} className="space-y-4 pt-2">
+            <form onSubmit={handleSubmitPayment} className="space-y-4 pt-1">
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text)] mb-1">
                   {method === "upi" ? "UPI Reference / UTR Number *" : "Supporter Name / Receipt ID *"}
@@ -373,7 +512,7 @@ export const UpgradePage: React.FC = () => {
                   placeholder={method === "upi" ? "e.g. 423589012345" : "e.g. John Doe / Order #12345"}
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-500/60 bg-[var(--color-surface)] text-xs text-[var(--color-text)] focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 font-mono"
                 />
               </div>
 
@@ -382,9 +521,9 @@ export const UpgradePage: React.FC = () => {
                   Upload Payment Screenshot / Proof (Optional, max 5MB)
                 </label>
                 <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text)] hover:border-[var(--color-border-subtle)] cursor-pointer">
+                  <label className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border-2 border-amber-500/60 bg-[var(--color-surface)] text-xs text-[var(--color-text)] hover:border-amber-500 cursor-pointer transition-colors">
                     <Upload size={14} className="text-[var(--color-text-muted)]" />
-                    <span>{proofFile ? proofFile.name : "Choose screenshot (JPG/PNG/WebP)..."}</span>
+                    <span className="truncate max-w-[200px]">{proofFile ? proofFile.name : "Choose screenshot (JPG/PNG/WebP)..."}</span>
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -410,7 +549,7 @@ export const UpgradePage: React.FC = () => {
                   variant="primary"
                   size="md"
                   disabled={submitting}
-                  className="w-full font-bold flex items-center justify-center gap-2"
+                  className="w-full font-bold flex items-center justify-center gap-2 py-2.5 shadow-sm"
                 >
                   {submitting ? "Submitting Verification..." : "Submit Payment for Review"}
                 </Button>

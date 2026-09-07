@@ -33,14 +33,14 @@ export const AdminDashboardPage: React.FC = () => {
   const [actionMsg, setActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (force: boolean = false) => {
     try {
-      setLoading(true);
+      if (!stats) setLoading(true);
       setActionMsg(null);
       const [statsData, pendingData, logsData] = await Promise.all([
-        api.getAdminDashboard(),
-        api.getAdminPayments("pending").catch(() => []),
-        api.getAdminAuditLogs(6).catch(() => []),
+        api.getAdminDashboard(force),
+        api.getAdminPayments("pending", force).catch(() => []),
+        api.getAdminAuditLogs(6, force).catch(() => []),
       ]);
       setStats(statsData);
       setPendingPayments(pendingData);
@@ -50,10 +50,10 @@ export const AdminDashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stats]);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
   }, [loadData]);
 
   const handleApprove = async (paymentId: string) => {
@@ -104,7 +104,7 @@ export const AdminDashboardPage: React.FC = () => {
           variant="secondary"
           size="sm"
           leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}
-          onClick={loadData}
+          onClick={() => loadData(true)}
         >
           Refresh Data
         </Button>

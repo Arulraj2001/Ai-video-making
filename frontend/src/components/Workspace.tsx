@@ -255,8 +255,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <h3 className="text-lg font-bold font-display mb-1" style={{ color: "var(--text-primary)" }}>
                 No Audio or Captions Ingested Yet
               </h3>
-              <p className="text-xs mb-6 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
-                Import your voiceover narration file (MP3/WAV) and paste Clipchamp timestamped captions to generate the Master Timeline.
+              <p className="text-xs mb-2 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
+                Import your voiceover narration file (MP3/WAV) and paste Clipchamp timestamped captions to generate the Master Timeline for{" "}
+                <strong style={{ color: "var(--text-primary)" }}>{project.name}</strong>.
+              </p>
+              <p className="text-[11px] mb-6 max-w-sm mx-auto" style={{ color: "var(--text-muted)" }}>
+                Your timeline scenes will be generated directly into this project.
               </p>
               <button onClick={onOpenImport} className="btn-primary text-xs py-2 px-5 mx-auto">
                 <UploadCloud size={15} />

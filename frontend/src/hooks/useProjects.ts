@@ -4,18 +4,21 @@ import type { Project, ProjectCreateInput, SceneUpdateInput, Scene } from "../ty
 
 type ProjectUpdate = Project | ((previous: Project) => Project);
 
+let cachedProjectsList: Project[] | null = null;
+
 export function useProjects(userId?: string | null, authLoading?: boolean) {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(() => cachedProjectsList || []);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(() => !cachedProjectsList);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProjects = useCallback(async () => {
     if (authLoading) return;
     try {
-      setLoading(true);
+      if (!cachedProjectsList) setLoading(true);
       setError(null);
       const list = await api.listProjects();
+      cachedProjectsList = list;
       setProjects(list);
       if (list.length > 0) {
         setActiveProject((prev) => (prev && list.some((p) => p.id === prev.id) ? list.find((p) => p.id === prev.id)! : list[0]));
@@ -39,6 +42,7 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     try {
       setError(null);
       const newProject = await api.createProject(input);
+      cachedProjectsList = [newProject, ...(cachedProjectsList || [])];
       setProjects((prev) => [newProject, ...prev]);
       setActiveProject(newProject);
       return newProject;
@@ -52,11 +56,28 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     try {
       setError(null);
       const newProject = await api.importProject(formData);
+      cachedProjectsList = [newProject, ...(cachedProjectsList || [])];
       setProjects((prev) => [newProject, ...prev]);
       setActiveProject(newProject);
       return newProject;
     } catch (err: any) {
       setError(err.message || "Failed to import project");
+      throw err;
+    }
+  };
+
+  const ingestProjectMedia = async (projectId: string, formData: FormData): Promise<Project> => {
+    try {
+      setError(null);
+      const updated = await api.ingestProjectMedia(projectId, formData);
+      cachedProjectsList = (cachedProjectsList || []).map((p) => (p.id === projectId ? updated : p));
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+      if (activeProject?.id === projectId) {
+        setActiveProject(updated);
+      }
+      return updated;
+    } catch (err: any) {
+      setError(err.message || "Failed to ingest project media");
       throw err;
     }
   };
@@ -102,6 +123,7 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     try {
       setError(null);
       await api.deleteProject(id);
+      cachedProjectsList = (cachedProjectsList || []).filter((p) => p.id !== id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
       setActiveProject((prev) => (prev?.id === id ? null : prev));
     } catch (err: any) {
@@ -151,6 +173,7 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     error,
     createProject,
     importProject,
+    ingestProjectMedia,
     uploadAudio,
     updateScene,
     deleteProject,

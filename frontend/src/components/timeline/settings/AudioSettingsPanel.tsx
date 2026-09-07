@@ -8,7 +8,7 @@ interface AudioSettingsPanelProps {
   onProjectUpdated: (project: Project) => void;
 }
 
-export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
+const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
   project,
   onProjectUpdated,
 }) => {
@@ -613,3 +613,14 @@ export const AudioSettingsPanel: React.FC<AudioSettingsPanelProps> = ({
     </div>
   );
 };
+
+export const AudioSettingsPanel = React.memo(
+  AudioSettingsPanelComponent,
+  (prev, next) =>
+    prev.project.id === next.project.id &&
+    JSON.stringify(prev.project.audio_settings) ===
+      JSON.stringify(next.project.audio_settings) &&
+    prev.project.audio_file?.filename === next.project.audio_file?.filename
+);
+
+

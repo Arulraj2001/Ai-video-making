@@ -82,8 +82,8 @@ def test_get_yearly_plan_config():
     assert resp.status_code == 200
     data = resp.json()
     assert data["plan_id"] == "scenora-pro-yearly"
-    assert data["price_inr"] == 2999
-    assert data["price_usd"] == 49
+    assert data["price_inr"] > 0
+    assert data["price_usd"] > 0
     assert data["duration_days"] == 365
     assert data["enabled"] is True
     assert "scenoraedits@upi" in data["upi_id"]

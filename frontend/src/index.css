@@ -2098,6 +2098,7 @@ li {
   .lg\:col-span-6 { grid-column: span 6 / span 6 !important; }
   .lg\:col-span-7 { grid-column: span 7 / span 7 !important; }
   .lg\:col-span-8 { grid-column: span 8 / span 8 !important; }
+  .lg\:col-span-9 { grid-column: span 9 / span 9 !important; }
   .lg\:col-span-12 { grid-column: span 12 / span 12 !important; }
   .lg\:w-auto { width: auto !important; }
   .lg\:text-left { text-align: left !important; }
@@ -3040,6 +3041,103 @@ button .text-white,
 .sb-sidebar.is-collapsed .sb-nav-label {
   opacity: 0;
   width: 0;
+}
+
+/* ─── Pro Navigation Item & Badge (Senior SaaS Pattern) ──────────────── */
+.sb-nav-item.is-pro-item {
+  color: var(--color-text-secondary);
+}
+
+.sb-nav-item.is-pro-item:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, #f59e0b 8%, var(--color-card-subtle));
+  border-color: color-mix(in srgb, #f59e0b 25%, var(--color-border-subtle));
+}
+
+.sb-nav-item.is-pro-item.is-active {
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 35%, transparent);
+  font-weight: 700;
+}
+
+.sb-nav-item.is-pro-item::before {
+  background: #f59e0b;
+}
+
+.sb-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1.5px 6px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
+  background: color-mix(in srgb, #f59e0b 15%, transparent);
+  color: #f59e0b;
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.sb-nav-item:hover .sb-pro-badge {
+  background: color-mix(in srgb, #f59e0b 22%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 50%, transparent);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+.sb-nav-item.is-active .sb-pro-badge {
+  background: #f59e0b;
+  color: #000;
+  border-color: #f59e0b;
+  font-weight: 900;
+}
+
+/* ─── Sidebar Upgrade Card (Footer SaaS Widget) ───────────────────────── */
+.sb-upgrade-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.03) 100%), var(--color-surface);
+  border: 1px solid color-mix(in srgb, #f59e0b 25%, var(--color-border-subtle));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+}
+
+.sb-upgrade-card:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(217, 119, 6, 0.07) 100%), var(--color-surface);
+  border-color: color-mix(in srgb, #f59e0b 50%, transparent);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.12);
+  transform: translateY(-1px);
+}
+
+.sb-upgrade-card-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin: 0 auto;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+  color: #f59e0b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.sb-upgrade-card-collapsed:hover {
+  background: color-mix(in srgb, #f59e0b 24%, transparent);
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
 }
 
 .sb-sidebar-footer {

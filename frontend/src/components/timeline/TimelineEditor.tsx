@@ -738,8 +738,12 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           </div>
 
           {/* Tab Content */}
-          {activeTab === "scene" && (
-            <div id="timeline-panel-scene" role="tabpanel" aria-labelledby="timeline-tab-scene">
+            <div
+              id="timeline-panel-scene"
+              role="tabpanel"
+              aria-labelledby="timeline-tab-scene"
+              style={{ display: activeTab === "scene" ? "block" : "none" }}
+            >
               {selectedScene ? (
                 <SceneInspector
                   project={project}
@@ -766,34 +770,42 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                 </div>
               )}
             </div>
-          )}
 
-          {activeTab === "captions" && (
-            <div id="timeline-panel-captions" role="tabpanel" aria-labelledby="timeline-tab-captions">
+            <div
+              id="timeline-panel-captions"
+              role="tabpanel"
+              aria-labelledby="timeline-tab-captions"
+              style={{ display: activeTab === "captions" ? "block" : "none" }}
+            >
               <CaptionsSettingsPanel
                 project={project}
                 onProjectUpdated={onProjectUpdated}
               />
             </div>
-          )}
 
-          {activeTab === "audio" && (
-            <div id="timeline-panel-audio" role="tabpanel" aria-labelledby="timeline-tab-audio">
+            <div
+              id="timeline-panel-audio"
+              role="tabpanel"
+              aria-labelledby="timeline-tab-audio"
+              style={{ display: activeTab === "audio" ? "block" : "none" }}
+            >
               <AudioSettingsPanel
                 project={project}
                 onProjectUpdated={onProjectUpdated}
               />
             </div>
-          )}
 
-          {activeTab === "canvas" && (
-            <div id="timeline-panel-canvas" role="tabpanel" aria-labelledby="timeline-tab-canvas">
+            <div
+              id="timeline-panel-canvas"
+              role="tabpanel"
+              aria-labelledby="timeline-tab-canvas"
+              style={{ display: activeTab === "canvas" ? "block" : "none" }}
+            >
               <CanvasSettingsPanel
                 project={project}
                 onProjectUpdated={onProjectUpdated}
               />
             </div>
-          )}
         </div>
       </div>
 

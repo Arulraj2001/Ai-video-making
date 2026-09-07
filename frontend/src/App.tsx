@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { RouterProvider, useRouter, matchRoute } from "./router/Router";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider } from "./context/AppContext";
@@ -32,15 +32,15 @@ import { AccountPage } from "./pages/app/AccountPage";
 import { HelpPage } from "./pages/app/HelpPage";
 import { UpgradePage } from "./pages/app/UpgradePage";
 
-// Admin Pages
-import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
-import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
-import { AdminPaymentsPage } from "./pages/admin/AdminPaymentsPage";
-import { AdminPricingPage } from "./pages/admin/AdminPricingPage";
-import { AdminUsagePage } from "./pages/admin/AdminUsagePage";
-import { AdminContentPage } from "./pages/admin/AdminContentPage";
-import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
-import { AdminAccessDenied } from "./pages/admin/AdminAccessDenied";
+// Admin Pages (Lazy Loaded for minimal initial bundle)
+const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage").then((m) => ({ default: m.AdminDashboardPage })));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
+const AdminPaymentsPage = lazy(() => import("./pages/admin/AdminPaymentsPage").then((m) => ({ default: m.AdminPaymentsPage })));
+const AdminPricingPage = lazy(() => import("./pages/admin/AdminPricingPage").then((m) => ({ default: m.AdminPricingPage })));
+const AdminUsagePage = lazy(() => import("./pages/admin/AdminUsagePage").then((m) => ({ default: m.AdminUsagePage })));
+const AdminContentPage = lazy(() => import("./pages/admin/AdminContentPage").then((m) => ({ default: m.AdminContentPage })));
+const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage").then((m) => ({ default: m.AdminSettingsPage })));
+const AdminAccessDenied = lazy(() => import("./pages/admin/AdminAccessDenied").then((m) => ({ default: m.AdminAccessDenied })));
 
 function RedirectToSignIn({ returnUrl }: { returnUrl: string }) {
   const { replace } = useRouter();
@@ -89,7 +89,9 @@ function AppContent() {
     if (!isAdmin) {
       return (
         <AdminLayout>
-          <AdminAccessDenied />
+          <Suspense fallback={<div className="p-8"><LoadingState message="Loading..." /></div>}>
+            <AdminAccessDenied />
+          </Suspense>
         </AdminLayout>
       );
     }
@@ -102,7 +104,13 @@ function AppContent() {
     else if (path === "/admin/content") adminContent = <AdminContentPage />;
     else if (path === "/admin/settings") adminContent = <AdminSettingsPage />;
 
-    return <AdminLayout>{adminContent}</AdminLayout>;
+    return (
+      <AdminLayout>
+        <Suspense fallback={<div className="p-8"><LoadingState message="Loading administrative view..." /></div>}>
+          {adminContent}
+        </Suspense>
+      </AdminLayout>
+    );
   }
 
   // 4. Authenticated App Shell Routes (/app/*)

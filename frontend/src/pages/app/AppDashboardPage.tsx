@@ -1,15 +1,20 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "../../router/Router";
 import { useApp } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
+import { useUsage } from "../../hooks/useUsage";
+import { api, type PaymentResponse } from "../../services/api";
 import { PageHeader } from "../../components/ui/Headers";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { EmptyState } from "../../components/EmptyState";
-import { Film, Plus, Sliders, Calendar, Cpu, ArrowRight } from "lucide-react";
+import { Film, Plus, Sliders, Calendar, Cpu, ArrowRight, Sparkles, Clock, AlertTriangle } from "lucide-react";
 
 export const AppDashboardPage: React.FC = () => {
   const { navigate } = useRouter();
+  const { user } = useAuth();
+  const { usage } = useUsage();
   const {
     projects,
     activeProject,
@@ -20,12 +25,31 @@ export const AppDashboardPage: React.FC = () => {
     setIsRestoreModalOpen,
   } = useApp();
 
+  const [payments, setPayments] = useState<PaymentResponse[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    let mounted = true;
+    api
+      .getUserPayments()
+      .then((data) => {
+        if (mounted) setPayments(data);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
   const handleOpenStudio = (projectId: string) => {
     selectProject(projectId);
     navigate(`/app/studio/${projectId}`);
   };
 
   const totalScenes = projects.reduce((acc, p) => acc + (p.scenes?.length || 0), 0);
+  const isPro = usage?.has_active_entitlement;
+  const pendingPayment = payments.find((p) => p.status === "pending");
+  const rejectedPayment = payments.find((p) => p.status === "rejected");
 
   return (
     <div className="max-w-7xl mx-auto px-6 sm:px-8 py-8 sm:py-10 space-y-8">
@@ -52,6 +76,71 @@ export const AppDashboardPage: React.FC = () => {
           </div>
         }
       />
+
+      {/* Payment & Subscription Notification Banners */}
+      {pendingPayment && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <Clock size={20} className="text-amber-400 shrink-0 mt-0.5 sm:mt-0 animate-pulse" />
+            <div>
+              <h4 className="text-xs font-bold text-amber-300">Payment Verification Under Review (Ref: {pendingPayment.reference})</h4>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Your payment submission is being verified by the admin team. Pro features will unlock automatically upon confirmation.
+              </p>
+            </div>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => navigate("/app/account")} className="shrink-0 text-xs">
+            View Status
+          </Button>
+        </div>
+      )}
+
+      {rejectedPayment && !isPro && !pendingPayment && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <AlertTriangle size={20} className="text-red-400 shrink-0 mt-0.5 sm:mt-0" />
+            <div>
+              <h4 className="text-xs font-bold text-red-300">Payment Submission Rejected</h4>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Reason: {rejectedPayment.rejection_reason || "Payment could not be verified."}
+              </p>
+            </div>
+          </div>
+          <Button variant="primary" size="sm" onClick={() => navigate("/app/upgrade")} className="shrink-0 text-xs font-bold">
+            Re-submit Payment
+          </Button>
+        </div>
+      )}
+
+      {!isPro && !pendingPayment && !rejectedPayment && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 shrink-0">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <h4 className="text-xs font-bold text-[var(--color-text)]">Upgrade to Pro Yearly</h4>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  PRO
+                </span>
+              </div>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Get 365 days of unrestricted creative power with unlimited 1080p/4K Cinema Exports and batch AI generations.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            rightIcon={<ArrowRight size={13} />}
+            onClick={() => navigate("/app/upgrade")}
+            className="shrink-0 text-xs font-bold"
+          >
+            Upgrade Now
+          </Button>
+        </div>
+      )}
 
       {/* Quick Metrics Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

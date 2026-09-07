@@ -376,6 +376,7 @@ class FilesystemProjectRepository(ProjectRepository):
         self.projects_dir = self.storage_dir / "projects"
         self.projects_dir.mkdir(parents=True, exist_ok=True)
         self._memory_cache: Dict[str, ProjectModel] = {}
+        self._loaded: bool = False
         self._load_all()
 
     def _get_project_dir(self, project_id: str) -> Path:
@@ -386,9 +387,12 @@ class FilesystemProjectRepository(ProjectRepository):
     def _get_project_file(self, project_id: str) -> Path:
         return self._get_project_dir(project_id) / "project.json"
 
-    def _load_all(self):
+    def _load_all(self, force: bool = False):
+        if self._loaded and not force:
+            return
         self._memory_cache.clear()
         if not self.projects_dir.exists():
+            self._loaded = True
             return
         for pdir in self.projects_dir.iterdir():
             if pdir.is_dir():
@@ -401,9 +405,11 @@ class FilesystemProjectRepository(ProjectRepository):
                             self._memory_cache[proj.id] = proj
                     except Exception as e:
                         logger.warning(f"Failed to read project from {pfile}: {e}")
+        self._loaded = True
 
     def list_projects(self, owner_id: Optional[str] = None) -> List[ProjectModel]:
-        self._load_all()
+        if not self._loaded:
+            self._load_all()
         all_projs = list(self._memory_cache.values())
         if not owner_id:
             return all_projs

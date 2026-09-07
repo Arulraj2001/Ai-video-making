@@ -1,10 +1,11 @@
 import json
-from typing import List, Optional
+from typing import List, Optional, Union
 from fastapi import APIRouter, UploadFile, File, Form, Body, Request, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from app.schemas.project import (
     ProjectCreate,
     ProjectResponse,
+    ProjectSummaryResponse,
     SceneSchema,
     SceneUpdate,
     AudioFileSchema,
@@ -97,10 +98,45 @@ def _to_project_response(p) -> ProjectResponse:
         updated_at=p.updated_at
     )
 
-@router.get("", response_model=List[ProjectResponse])
-def list_projects(current_user: AuthenticatedUser = Depends(get_current_user)):
+@router.get("", response_model=Union[List[ProjectSummaryResponse], List[ProjectResponse]])
+def list_projects(
+    summary: bool = False,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """Returns list of active projects for the current creator."""
     projects = project_service.list_projects(owner_id=current_user.uid)
+    if summary:
+        summaries = []
+        for p in projects:
+            scenes = p.scenes or []
+            aspect_ratio = getattr(p.canvas_settings, "aspect_ratio", "16:9") if getattr(p, "canvas_settings", None) else "16:9"
+            total_duration = scenes[-1].end if scenes else 0.0
+            thumb = next((s.image_url for s in scenes if getattr(s, "image_url", None)), None)
+
+            cs = None
+            if getattr(p, "canvas_settings", None):
+                cs = CanvasSettingsSchema(
+                    aspect_ratio=p.canvas_settings.aspect_ratio,
+                    resolution=p.canvas_settings.resolution,
+                    fps=p.canvas_settings.fps,
+                )
+
+            summaries.append(
+                ProjectSummaryResponse(
+                    id=p.id,
+                    name=p.name,
+                    description=p.description or "",
+                    aspect_ratio=aspect_ratio,
+                    scene_count=len(scenes),
+                    total_duration=round(total_duration, 2),
+                    thumbnail_url=thumb,
+                    canvas_settings=cs,
+                    owner_id=p.owner_id,
+                    created_at=p.created_at,
+                    updated_at=p.updated_at,
+                )
+            )
+        return summaries
     return [_to_project_response(p) for p in projects]
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -235,6 +271,45 @@ def update_project_captions(
         )
 
     updated = project_service.set_captions_and_scenes(project_id, req.raw_captions, parse_result.scenes)
+    return _to_project_response(updated)
+
+@router.post("/{project_id}/ingest", response_model=ProjectResponse)
+async def ingest_project_media(
+    project_id: str,
+    raw_captions: str = Form(...),
+    audio_file: Optional[UploadFile] = File(None),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Ingests voiceover narration audio and Clipchamp timestamped captions
+    directly into an existing project in a single atomic call.
+    Does not create a duplicate project record.
+    """
+    p = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not p:
+        raise NotFoundException("Project", project_id)
+
+    parse_result = parse_and_validate_captions(raw_captions)
+    if not parse_result.valid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"message": "Caption validation failed", "errors": parse_result.errors}
+        )
+
+    if audio_file:
+        content = await audio_file.read()
+        try:
+            project_service.save_audio(
+                project_id=project_id,
+                filename=audio_file.filename or "audio.mp3",
+                content=content,
+                content_type=audio_file.content_type or "audio/mpeg",
+                owner_id=current_user.uid
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    updated = project_service.set_captions_and_scenes(project_id, raw_captions, parse_result.scenes)
     return _to_project_response(updated)
 
 @router.put("/{project_id}/scenes/{scene_id}", response_model=SceneSchema)

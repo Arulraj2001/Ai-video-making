@@ -17,7 +17,7 @@ class PlatformConfigRecord(BaseModel):
     )
     free_generation_limit: int = 5
     payment_upi_id: str = "scenoraedits@upi"
-    payment_upi_qr_url: str = "/assets/payments/upi_qr.png"
+    payment_upi_qr_url: str = ""
     payment_bmc_url: str = "https://buymeacoffee.com/scenoraedits"
     allow_registration: bool = True
     maintenance_mode: bool = False

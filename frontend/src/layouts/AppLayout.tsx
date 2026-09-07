@@ -29,6 +29,7 @@ import {
   Keyboard,
   ShieldCheck,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,6 +79,13 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       icon: <Sliders size={17} />,
       matchPrefix: "/app/studio",
     },
+    {
+      label: "Upgrade to Pro",
+      to: "/app/upgrade",
+      icon: <Sparkles size={17} />,
+      badge: "PRO",
+      isPro: true,
+    },
   ];
 
   const configNav = [
@@ -106,22 +114,31 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const userDisplayName = user?.displayName || user?.email?.split("@")[0] || "Creator";
   const userInitial = userDisplayName.charAt(0).toUpperCase();
 
-  const renderNavSection = (items: typeof mainNav, label?: string) => (
+  const renderNavSection = (items: typeof mainNav, label?: string, onSelect?: () => void) => (
     <>
       {label && (
         <div className="sb-sidebar-section-label">{label}</div>
       )}
       {items.map((item) => {
         const active = isNavActive(item.to, (item as any).matchPrefix);
+        const isPro = (item as any).isPro;
         return (
           <Link
             key={item.to}
             to={item.to}
-            className={`sb-nav-item ${active ? "is-active" : ""}`}
+            onClick={onSelect}
+            className={`sb-nav-item ${isPro ? "is-pro-item" : ""} ${active ? "is-active" : ""}`}
             title={sidebarCollapsed ? item.label : undefined}
           >
             <span className="sb-nav-icon">{item.icon}</span>
-            <span className="sb-nav-label">{item.label}</span>
+            <span className="sb-nav-label flex-1 flex items-center justify-between min-w-0">
+              <span className="truncate">{item.label}</span>
+              {(item as any).badge && !sidebarCollapsed && (
+                <span className={isPro ? "sb-pro-badge ml-2" : "px-1.5 py-0.5 rounded text-[9px] font-bold meta-mono bg-[var(--color-primary-subtle)] text-[var(--color-primary)] ml-2"}>
+                  {(item as any).badge}
+                </span>
+              )}
+            </span>
           </Link>
         );
       })}
@@ -227,6 +244,35 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
           {/* Footer: user chip + collapse */}
           <div className="sb-sidebar-footer">
+            {!sidebarCollapsed && !usage?.has_active_entitlement && (
+              <Link to="/app/upgrade" className="sb-upgrade-card mb-1" title="Upgrade to ScenoraEdits Pro">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10.5px] font-extrabold tracking-wider uppercase text-amber-500 flex items-center gap-1 font-mono">
+                    <Sparkles size={13} className="text-amber-500" />
+                    Pro Pass
+                  </span>
+                  <span className="sb-pro-badge">365 DAYS</span>
+                </div>
+                <p className="text-[11px] text-[var(--color-text-secondary)] leading-snug mb-2 font-medium">
+                  Unlimited AI generations & priority cloud renders.
+                </p>
+                <div className="flex items-center justify-between text-[11px] font-bold text-amber-500">
+                  <span>Upgrade to Pro</span>
+                  <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                </div>
+              </Link>
+            )}
+
+            {sidebarCollapsed && !usage?.has_active_entitlement && (
+              <Link
+                to="/app/upgrade"
+                className="sb-upgrade-card-collapsed mb-1"
+                title="Upgrade to ScenoraEdits Pro Yearly"
+              >
+                <Sparkles size={16} />
+              </Link>
+            )}
+
             {!sidebarCollapsed && user && (
               <Link to="/app/account" className="sb-user-chip">
                 <div className="sb-user-avatar">
@@ -295,34 +341,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               </div>
 
               <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto">
-                <div className="sb-sidebar-section-label">Main</div>
-                {mainNav.map((item) => (
-                  <Link key={item.to} to={item.to} onClick={() => setMobileNavOpen(false)}
-                    className={`sb-nav-item ${isNavActive(item.to, (item as any).matchPrefix) ? "is-active" : ""}`}>
-                    <span className="sb-nav-icon">{item.icon}</span>
-                    <span className="sb-nav-label">{item.label}</span>
-                  </Link>
-                ))}
-                <div className="sb-sidebar-section-label">Config</div>
-                {configNav.map((item) => (
-                  <Link key={item.to} to={item.to} onClick={() => setMobileNavOpen(false)}
-                    className={`sb-nav-item ${isNavActive(item.to) ? "is-active" : ""}`}>
-                    <span className="sb-nav-icon">{item.icon}</span>
-                    <span className="sb-nav-label">{item.label}</span>
-                  </Link>
-                ))}
-                {miscNav.length > 0 && (
-                  <>
-                    <div className="sb-sidebar-section-label">More</div>
-                    {miscNav.map((item) => (
-                      <Link key={item.to} to={item.to} onClick={() => setMobileNavOpen(false)}
-                        className={`sb-nav-item ${isNavActive(item.to) ? "is-active" : ""}`}>
-                        <span className="sb-nav-icon">{item.icon}</span>
-                        <span className="sb-nav-label">{item.label}</span>
-                      </Link>
-                    ))}
-                  </>
-                )}
+                {renderNavSection(mainNav, "Main", () => setMobileNavOpen(false))}
+                {renderNavSection(configNav, "Config", () => setMobileNavOpen(false))}
+                {miscNav.length > 0 && renderNavSection(miscNav, "More", () => setMobileNavOpen(false))}
               </nav>
 
               <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-2 mt-2">

@@ -13,21 +13,21 @@ export const AdminUsagePage: React.FC = () => {
   const [stats, setStats] = useState<AdminUsageStats | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadUsage = useCallback(async () => {
+  const loadUsage = useCallback(async (force: boolean = false) => {
     try {
-      setLoading(true);
+      if (!stats) setLoading(true);
       setErrorMsg(null);
-      const data = await api.getAdminUsage();
+      const data = await api.getAdminUsage(force);
       setStats(data);
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to load usage statistics.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stats]);
 
   useEffect(() => {
-    loadUsage();
+    loadUsage(false);
   }, [loadUsage]);
 
   if (loading && !stats) {
@@ -57,7 +57,7 @@ export const AdminUsagePage: React.FC = () => {
           variant="secondary"
           size="sm"
           leftIcon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}
-          onClick={loadUsage}
+          onClick={() => loadUsage(true)}
         >
           Refresh Metrics
         </Button>
