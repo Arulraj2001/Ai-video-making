@@ -27,6 +27,7 @@ import type { ApiKeyMetadata, TestApiKeyResponse } from "../../types";
 export const ApiKeysPage: React.FC = () => {
   const [providers, setProviders] = useState<ApiKeyMetadata[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
@@ -50,12 +51,15 @@ export const ApiKeysPage: React.FC = () => {
   const loadProviders = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const res = await api.listApiKeys();
       setProviders(res.providers || []);
     } catch (err: any) {
+      const message = err.message || "Failed to load provider credentials from vault.";
+      setLoadError(message);
       setNotification({
         type: "error",
-        message: err.message || "Failed to load provider credentials from vault.",
+        message,
       });
     } finally {
       setLoading(false);
@@ -182,12 +186,16 @@ export const ApiKeysPage: React.FC = () => {
     return true;
   });
 
+  const configuredCount = providers.filter((p) => p.configured).length;
+  const availableCount = providers.filter((p) => p.has_app_default || p.category === "local_gpu" || p.provider === "pollinations").length;
+  const healthyCount = providers.filter((p) => p.validation_status === "valid").length;
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 animate-fadeIn">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fadeIn">
       {/* Page Header */}
       <PageHeader
-        title="Secure Credential Vault"
-        subtitle="AES-256-GCM authenticated encryption for your personal third-party AI keys."
+        title="AI Connections"
+        subtitle="Connect your own providers when you need more control over generation and inference."
         badge={
           <Badge variant="success" className="px-2.5 py-0.5 text-xs flex items-center gap-1.5 shadow-sm">
             <ShieldCheck size={13} />
@@ -207,13 +215,38 @@ export const ApiKeysPage: React.FC = () => {
         }
       />
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <Card variant="default" className="p-4 border border-[var(--color-border)] bg-[var(--color-surface-elevated)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--color-text-muted)]">Your keys</span>
+            <Key size={15} className="text-[var(--color-primary)]" />
+          </div>
+          <p className="mt-2 text-2xl font-bold font-display text-[var(--color-text)]">{configuredCount}</p>
+          <p className="text-xs text-[var(--color-text-secondary)]">Encrypted credentials saved</p>
+        </Card>
+        <Card variant="default" className="p-4 border border-[var(--color-border)] bg-[var(--color-surface-elevated)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--color-text-muted)]">Ready now</span>
+            <Server size={15} className="text-[var(--color-secondary)]" />
+          </div>
+          <p className="mt-2 text-2xl font-bold font-display text-[var(--color-text)]">{availableCount}</p>
+          <p className="text-xs text-[var(--color-text-secondary)]">Providers with an available route</p>
+        </Card>
+        <Card variant="default" className="p-4 border border-[var(--color-border)] bg-[var(--color-surface-elevated)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--color-text-muted)]">Verified</span>
+            <CheckCircle2 size={15} className="text-[var(--color-success)]" />
+          </div>
+          <p className="mt-2 text-2xl font-bold font-display text-[var(--color-text)]">{healthyCount}</p>
+          <p className="text-xs text-[var(--color-text-secondary)]">Successful connection checks</p>
+        </Card>
+      </div>
+
       {/* Security Guarantee Alert */}
-      <Alert type="success" title="End-to-End Vault Security" className="mb-6 shadow-sm">
+      <Alert type="success" title="Encrypted personal vault" className="mb-6 shadow-sm">
         <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
-          All API keys are encrypted at rest using <strong>AES-256-GCM</strong> authenticated encryption.
-          Every key is cryptographically bound to your user identity with Authenticated Additional Data (AAD).
-          Raw keys are <strong>never stored in plaintext</strong>, never returned to client web browsers, and
-          are decrypted strictly in backend volatile memory during pipeline execution.
+          Keys are encrypted with <strong>AES-256-GCM</strong>, bound to your account, and never returned to the browser in plaintext.
+          Use <strong>Test</strong> after saving to verify the provider without running a billable generation.
         </p>
       </Alert>
 
@@ -240,10 +273,10 @@ export const ApiKeysPage: React.FC = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap border ${
               activeTab === tab.id
-                ? "bg-[var(--color-primary)] text-white shadow-sm"
-                : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm"
+                : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
             }`}
           >
             {tab.label}
@@ -257,6 +290,24 @@ export const ApiKeysPage: React.FC = () => {
           <RefreshCw size={32} className="animate-spin text-[var(--color-primary)]" />
           <p className="text-sm text-[var(--color-text-secondary)]">Loading secure credentials from vault...</p>
         </div>
+      ) : loadError ? (
+        <Card variant="default" className="p-10 text-center border border-[var(--color-error)]/30">
+          <AlertCircle size={28} className="mx-auto mb-3 text-[var(--color-error)]" />
+          <h2 className="text-base font-bold text-[var(--color-text)]">Could not load your connections</h2>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{loadError}</p>
+          <Button variant="outline" size="sm" className="mt-5" onClick={loadProviders} leftIcon={<RefreshCw size={13} />}>
+            Try again
+          </Button>
+        </Card>
+      ) : filteredProviders.length === 0 ? (
+        <Card variant="default" className="p-10 text-center border border-dashed border-[var(--color-border-strong)]">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+            <Key size={22} />
+          </div>
+          <h2 className="text-base font-bold text-[var(--color-text)]">No providers in this view</h2>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">Choose another category or return to all providers.</p>
+          <Button variant="outline" size="sm" className="mt-5" onClick={() => setActiveTab("all")}>Show all providers</Button>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredProviders.map((p) => {
