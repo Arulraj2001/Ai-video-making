@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 from app.schemas.project import (
     SceneSchema,
     SceneUpdate,
@@ -13,10 +13,24 @@ from app.services.project_service import project_service
 from app.services.storyboard_service import storyboard_service
 from app.services.llm.factory import get_llm_provider
 from app.utils.errors import NotFoundError, ValidationError
+from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/storyboard", tags=["Storyboard"])
+def require_owned_project(
+    project_id: str = Path(...),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
+    return project
+
+router = APIRouter(
+    prefix="/projects/{project_id}/storyboard",
+    tags=["Storyboard"],
+    dependencies=[Depends(require_owned_project)],
+)
 
 @router.post("/generate", response_model=StoryboardGenerateResponse)
 async def generate_storyboard_endpoint(

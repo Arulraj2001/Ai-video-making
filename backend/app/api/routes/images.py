@@ -149,6 +149,7 @@ async def generate_scene_image(
     style_mode = request.style_mode if request else None
     provider = request.provider if request else None
     model_id = request.model_id if request else None
+    aspect_ratio = request.aspect_ratio if request else None
 
     try:
         updated_scene = await scene_image_service.generate_scene_image(
@@ -159,6 +160,7 @@ async def generate_scene_image(
             style_mode=style_mode,
             provider_name=provider,
             model_name=model_id,
+            aspect_ratio_override=aspect_ratio,
             user_id=current_user.uid,
         )
         return SceneSchema.model_validate(updated_scene)

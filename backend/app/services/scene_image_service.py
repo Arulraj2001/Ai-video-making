@@ -201,6 +201,7 @@ class SceneImageService:
         style_mode: Optional[str] = None,
         provider_name: Optional[str] = None,
         model_name: Optional[str] = None,
+        aspect_ratio_override: Optional[str] = None,
         generator: Optional[BaseImageGenerator] = None,
         user_id: Optional[str] = None,
     ) -> SceneModel:
@@ -251,7 +252,7 @@ class SceneImageService:
                 effective_prompt = build_scene_prompt(context, source_prompt)
 
                 # 4. Determine aspect ratio and dimensions
-                aspect_ratio = project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO or "16:9"
+                aspect_ratio = aspect_ratio_override or project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO or "16:9"
                 self._validate_aspect_ratio(aspect_ratio, capabilities)
                 width, height = self.get_dimensions_for_aspect_ratio(aspect_ratio)
 

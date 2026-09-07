@@ -12,7 +12,9 @@ Your job is to convert timestamped video captions into a cohesive visual storybo
 For each scene provided, generate:
 1. "visual_description": A detailed explanation of what is visually happening in the shot (subject, framing, action, lighting, mood) understanding the caption's narrative subtext rather than simply illustrating literal words.
 2. "image_prompt": A master generative image prompt formatted for text-to-image models (Midjourney, Stable Diffusion, Flux, Imagen). Every prompt MUST:
-   - Describe the actual visual scene.
+    - Treat the caption as the source of truth for the scene's subject, action, and emotional beat; never replace it with a generic image.
+    - Translate the caption into a concrete single filmable moment with visible subjects, action, setting, and cause-and-effect.
+    - Describe the actual visual scene before adding style language.
    - Strictly incorporate the project's Video Bible style, camera, and lighting.
    - Maintain recurring character consistency (using character visual anchors).
    - Maintain recurring location consistency.
@@ -20,6 +22,8 @@ For each scene provided, generate:
    - Avoid text/words/subtitles inside generated images.
    - Avoid logos/watermarks.
    - Specify composition for the requested aspect ratio.
+    - Include shot size or camera angle, subject placement, depth, and meaningful foreground/background details when supported by the caption.
+    - Keep the prompt concise enough for an image model: one coherent shot, no multiple panels, montage, collage, or unrelated events.
    - Avoid unnecessary aesthetic drift between scenes.
    - Prefer cinematic video-ready composition.
 3. "suggested_motion": Recommended camera or subject movement tailored to scene duration.

@@ -25,8 +25,6 @@ import {
   LayoutGrid,
   ListFilter,
   PanelRight,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { formatTimecode } from "../../utils/formatters";
 import { api } from "../../services/api";
@@ -108,6 +106,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [variationsModalScene, setVariationsModalScene] = useState<Scene | null>(null);
   const [variations, setVariations] = useState<SceneVariationItem[]>([]);
   const [variationsLoading, setVariationsLoading] = useState(false);
+  const [variationsError, setVariationsError] = useState<string | null>(null);
 
   // Graphic template modal
   const [graphicModalScene, setGraphicModalScene] = useState<Scene | null>(null);
@@ -145,6 +144,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [editDescription, setEditDescription] = useState("");
   const [editMotion, setEditMotion] = useState("");
   const [editTransition, setEditTransition] = useState("");
+  const [editAspectRatio, setEditAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
+  const [sceneAspectRatios, setSceneAspectRatios] = useState<Record<string, "16:9" | "9:16" | "1:1">>({});
   const [savingEdit, setSavingEdit] = useState(false);
 
   // Prompt regeneration modal state
@@ -384,7 +385,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     force: boolean = false,
     overrideProvider?: string,
     overrideModel?: string,
-    promptOverride?: string
+    promptOverride?: string,
+    aspectRatioOverride?: "16:9" | "9:16" | "1:1"
   ) => {
     const requestToken = (sceneRequestTokens.current.get(sceneId) || 0) + 1;
     sceneRequestTokens.current.set(sceneId, requestToken);
@@ -400,6 +402,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       const updated = await api.generateSceneImage(project.id, sceneId, {
         force,
         prompt_override: promptOverride || undefined,
+        aspect_ratio: aspectRatioOverride || sceneAspectRatios[sceneId] || projectAspectRatio as "16:9" | "9:16" | "1:1",
         style_mode: styleMode,
         provider: overrideProvider || selectedProvider,
         model_id: overrideModel || selectedModelId,
@@ -464,6 +467,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const handleOpenVariations = async (scene: Scene) => {
     setVariationsModalScene(scene);
     setVariations([]);
+    setVariationsError(null);
     setVariationsLoading(true);
     try {
       const res = await api.generateSceneVariations(project.id, scene.id, {
@@ -473,7 +477,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       });
       setVariations(res.variations);
     } catch (err: any) {
-      setError(err.message || "Failed to generate variations");
+      setVariationsError(err.message || "Failed to generate variations");
     } finally {
       setVariationsLoading(false);
     }
@@ -552,6 +556,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     setEditDescription(scene.visual_description || "");
     setEditMotion(scene.suggested_motion || "");
     setEditTransition(scene.suggested_transition || "");
+    const storedAspect = scene.image_metadata?.aspect_ratio;
+    const aspect = storedAspect === "9:16" || storedAspect === "1:1" || storedAspect === "16:9"
+      ? storedAspect
+      : (projectAspectRatio as "16:9" | "9:16" | "1:1");
+    setEditAspectRatio(aspect);
   };
 
   const cancelEditing = () => {
@@ -569,6 +578,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       });
 
       applySingleScene(sceneId, updated);
+      setSceneAspectRatios((previous) => ({ ...previous, [sceneId]: editAspectRatio }));
       setEditingSceneId(null);
     } catch (err: any) {
       setError(`Scene changes could not be saved: ${err.message || "Unknown error"}`);
@@ -1074,6 +1084,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 const index = scenes.findIndex((s) => s.id === scene.id);
                 const isSelected = selectedSceneIds.has(scene.id);
                 const isEditing = editingSceneId === scene.id;
+                const sceneAspectRatio = sceneAspectRatios[scene.id] || scene.image_metadata?.aspect_ratio || projectAspectRatio;
                 const isCopied = copiedSceneId === scene.id;
                 const isSceneGenerating =
                   generatingSceneIds.has(scene.id) ||
@@ -1085,7 +1096,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 return (
                   <div
                     key={scene.id}
-                    className={`studio-card storyboard-scene-card p-4 sm:p-5 space-y-4 relative overflow-hidden transition-all ${viewLayout === "compact" ? "is-compact" : ""} ${inspectorSceneId === scene.id || isEditing ? "inspector-open" : ""}`}
+                    className={`studio-card storyboard-scene-card p-4 sm:p-5 space-y-4 relative overflow-hidden transition-all ${viewLayout === "compact" ? "is-compact" : ""} ${inspectorSceneId === scene.id || isEditing ? "inspector-open" : ""} ${isEditing ? "is-editing" : ""}`}
                     style={{
                       borderLeft: isSelected ? "4px solid var(--accent-primary)" : undefined,
                     }}
@@ -1136,11 +1147,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                       onClick={() => setInspectorSceneId(inspectorSceneId === scene.id ? null : scene.id)}
                       className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
                       aria-expanded={inspectorSceneId === scene.id}
-                      title={inspectorSceneId === scene.id ? "Hide scene details" : "Show scene details"}
+                      title="Open scene details"
                     >
                       <PanelRight size={12} />
-                      <span>{inspectorSceneId === scene.id ? "Hide details" : "Details"}</span>
-                      {inspectorSceneId === scene.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      <span>Details</span>
+                      <ExternalLink size={11} />
                     </button>
                     {/* Image Status Badge */}
                     {isCompleted && (
@@ -1185,6 +1196,122 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                     borderColor: "var(--border-subtle)",
                   }}
                 >
+
+                  {/* Scene Details Modal */}
+                  {inspectorSceneId && (() => {
+                    const detailScene = scenes.find((candidate) => candidate.id === inspectorSceneId);
+                    if (!detailScene) return null;
+                    const detailIndex = scenes.findIndex((candidate) => candidate.id === detailScene.id);
+                    const detailImageReady = detailScene.image_status === "completed" && Boolean(detailScene.image_url);
+
+                    return (
+                      <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+                        onClick={() => setInspectorSceneId(null)}
+                      >
+                        <div
+                          className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <div className="flex items-start justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+                            <div>
+                              <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-orange-600">
+                                <PanelRight size={14} />
+                                Scene {detailIndex + 1} details
+                              </div>
+                              <h2 className="text-lg font-bold text-slate-900">{detailScene.id}</h2>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setInspectorSceneId(null)}
+                              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                              aria-label="Close scene details"
+                            >
+                              <X size={18} />
+                            </button>
+                          </div>
+
+                          <div className="grid gap-5 p-5 md:grid-cols-[minmax(0,1.25fr)_minmax(220px,0.75fr)]">
+                            <div className="space-y-4">
+                              <section>
+                                <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Caption</div>
+                                <p className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm leading-6 text-slate-800">
+                                  {detailScene.caption || "No caption available."}
+                                </p>
+                              </section>
+
+                              <section>
+                                <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Image prompt</div>
+                                <p className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-700">
+                                  {detailScene.image_prompt || "No image prompt synthesized yet."}
+                                </p>
+                              </section>
+
+                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                {[
+                                  ["Start", formatTimecode(detailScene.start)],
+                                  ["End", formatTimecode(detailScene.end)],
+                                  ["Duration", `${detailScene.duration.toFixed(2)}s`],
+                                  ["Aspect", detailScene.image_metadata?.aspect_ratio || projectAspectRatio],
+                                ].map(([label, value]) => (
+                                  <div key={label} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
+                                    <div className="mt-1 text-xs font-semibold text-slate-800">{value}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <aside className="space-y-3">
+                              {detailImageReady && detailScene.image_url ? (
+                                <img
+                                  src={api.getMediaUrl(detailScene.image_url)}
+                                  alt={`Scene ${detailIndex + 1} visual`}
+                                  className="aspect-video w-full rounded-xl border border-slate-200 object-cover shadow-sm"
+                                />
+                              ) : (
+                                <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-100 text-xs text-slate-500">
+                                  No visual generated
+                                </div>
+                              )}
+
+                              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                                <div className="mb-2 flex items-center justify-between">
+                                  <span className="font-semibold text-slate-500">Status</span>
+                                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${detailImageReady ? "bg-emerald-100 text-emerald-700" : detailScene.image_status === "failed" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
+                                    {detailImageReady ? "Ready" : detailScene.image_status || "Pending"}
+                                  </span>
+                                </div>
+                                <div className="space-y-1.5 border-t border-slate-200 pt-2">
+                                  <div className="flex justify-between gap-3"><span>Motion</span><strong className="text-right text-slate-900">{detailScene.suggested_motion || detailScene.motion || "Not set"}</strong></div>
+                                  <div className="flex justify-between gap-3"><span>Transition</span><strong className="text-right text-slate-900">{detailScene.suggested_transition || detailScene.transition || "Not set"}</strong></div>
+                                  <div className="flex justify-between gap-3"><span>Provider</span><strong className="text-right text-slate-900">{detailScene.image_metadata?.provider || "Not recorded"}</strong></div>
+                                </div>
+                              </div>
+                            </aside>
+                          </div>
+
+                          <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3">
+                            <button
+                              type="button"
+                              onClick={() => { setInspectorSceneId(null); startEditing(detailScene); }}
+                              className="btn-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs"
+                            >
+                              <Edit3 size={13} /> Edit scene
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setInspectorSceneId(null); openRegenModal(detailScene); }}
+                              className="btn-primary inline-flex items-center gap-1.5 px-3 py-2 text-xs"
+                            >
+                              <Wand2 size={13} /> Tweak prompt
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <span className="font-serif font-bold text-base leading-none" style={{ color: "var(--accent-primary)" }}>“</span>
                   <p className="font-medium italic flex-1" style={{ color: "var(--text-primary)" }}>
                     {scene.caption}
@@ -1337,7 +1464,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                             rows={3}
                             value={editPrompt}
                             onChange={(e) => setEditPrompt(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-lg border focus:outline-none font-mono resize-none"
+                            className="scenora-field w-full px-3 py-2 text-xs rounded-lg border focus:outline-none font-mono resize-none"
                             style={{
                               background: "var(--bg-input)",
                               borderColor: "var(--border-default)",
@@ -1357,7 +1484,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                             rows={2}
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-lg border focus:outline-none resize-none"
+                            className="scenora-field w-full px-3 py-2 text-xs rounded-lg border focus:outline-none resize-none"
                             style={{
                               background: "var(--bg-input)",
                               borderColor: "var(--border-default)",
@@ -1378,7 +1505,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                               type="text"
                               value={editMotion}
                               onChange={(e) => setEditMotion(e.target.value)}
-                              className="w-full px-3 py-1.5 text-xs rounded-lg border focus:outline-none"
+                              className="scenora-field w-full px-3 py-1.5 text-xs rounded-lg border focus:outline-none"
                               style={{
                                 background: "var(--bg-input)",
                                 borderColor: "var(--border-default)",
@@ -1397,7 +1524,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                               type="text"
                               value={editTransition}
                               onChange={(e) => setEditTransition(e.target.value)}
-                              className="w-full px-3 py-1.5 text-xs rounded-lg border focus:outline-none"
+                              className="scenora-field w-full px-3 py-1.5 text-xs rounded-lg border focus:outline-none"
                               style={{
                                 background: "var(--bg-input)",
                                 borderColor: "var(--border-default)",
@@ -1405,6 +1532,24 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                               }}
                             />
                           </div>
+                        </div>
+
+                        <div className="rounded-lg border border-[var(--color-outline)] bg-[var(--color-surface-sunken)] p-3">
+                          <label className="block text-[11px] font-semibold mb-1.5 text-[var(--color-text-secondary)]">
+                            Image aspect ratio
+                          </label>
+                          <select
+                            value={editAspectRatio}
+                            onChange={(e) => setEditAspectRatio(e.target.value as "16:9" | "9:16" | "1:1")}
+                            className="scenora-field w-full rounded-lg border bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-text)]"
+                          >
+                            <option value="16:9">16:9 Landscape</option>
+                            <option value="9:16">9:16 Portrait</option>
+                            <option value="1:1">1:1 Square</option>
+                          </select>
+                          <p className="mt-1.5 text-[10px] text-[var(--color-text-muted)]">
+                            Saved for this scene and used the next time you generate its image.
+                          </p>
                         </div>
 
                         <div
@@ -1441,7 +1586,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                     <div className="flex items-center justify-between">
                         <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                         <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
-                        Generated Visual ({projectAspectRatio})
+                        Generated Visual ({sceneAspectRatio})
                       </span>
 
                       {/* Single Scene Image Actions */}
@@ -1486,7 +1631,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                       style={{
                         background: "var(--bg-card-subtle)",
                         borderColor: "var(--border-subtle)",
-                        aspectRatio: projectAspectRatio.replace(":", " / "),
+                        aspectRatio: sceneAspectRatio.replace(":", " / "),
                       }}
                     >
                       {isCompleted && scene.image_url ? (
@@ -1511,8 +1656,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                             }
                           />
 
-                          {/* Hover Overlay with Zoom Button */}
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          {/* Keep actions visible without covering the center of the visual. */}
+                          <div className="absolute bottom-3 right-3 z-10 flex items-center gap-2 rounded-xl border border-white/70 bg-slate-950/75 p-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.45)] backdrop-blur-md">
                             <button
                               onClick={() =>
                                 setPreviewImage({
@@ -1522,18 +1667,20 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                                   metadata: scene.image_metadata,
                                 })
                               }
-                              className="p-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white transition-all hover:scale-110"
+                              className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:scale-105 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-900"
                               title="Expand Fullscreen"
+                              aria-label="Expand fullscreen"
                             >
-                              <Maximize2 className="w-4 h-4" />
+                              <Maximize2 className="h-5 w-5" strokeWidth={2.4} />
                             </button>
                             <button
                               onClick={() => handleGenerateSceneImage(scene.id, true)}
                               disabled={isSceneGenerating || generatingAllImages}
-                              className="p-2.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 backdrop-blur-md text-white transition-all hover:scale-110"
+                              className="flex h-10 w-10 items-center justify-center rounded-lg border border-orange-200 bg-orange-500 text-white shadow-sm transition-all hover:scale-105 hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-orange-700"
                               title="Regenerate Visual"
+                              aria-label="Regenerate visual"
                             >
-                              <RefreshCw className="w-4 h-4" />
+                              <RefreshCw className={`h-5 w-5 ${isSceneGenerating ? "animate-spin" : ""}`} strokeWidth={2.4} />
                             </button>
                           </div>
 
@@ -1576,7 +1723,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                               Synthesizing Scene Visual
                             </span>
                             <span className="text-[11px] text-zinc-400 block mt-0.5 font-mono">
-                              {capabilities?.provider?.toUpperCase() || "AI ENGINE"} • {projectAspectRatio}
+                              {capabilities?.provider?.toUpperCase() || "AI ENGINE"} • {sceneAspectRatio}
                             </span>
                           </div>
                           <div className="w-3/4 h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -1985,6 +2132,19 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               Choose the best candidate visual for this scene. Click any variation to apply it directly.
             </p>
 
+            {variationsError && (
+              <div
+                className="rounded-lg border px-3 py-2 text-xs"
+                style={{
+                  color: "var(--color-error-text)",
+                  background: "var(--color-error-subtle)",
+                  borderColor: "rgba(239, 68, 68, 0.28)",
+                }}
+              >
+                <strong>Variation generation failed:</strong> {variationsError}
+              </div>
+            )}
+
             {variationsLoading ? (
               <div className="py-16 text-center space-y-3">
                 <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
@@ -1992,7 +2152,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
               </div>
             ) : variations.length === 0 ? (
               <div className="py-12 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                No variations available. Click below to generate candidates.
+                {variationsError ? "No candidate images were returned. Use Retry below to try again." : "No variations available. Click below to generate candidates."}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

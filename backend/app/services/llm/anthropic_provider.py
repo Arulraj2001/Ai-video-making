@@ -32,8 +32,10 @@ class AnthropicProvider(BaseLLMProvider):
         }
 
         prompt_text = (
-            f"You are an expert AI video storyboard director.\n"
+            f"You are an expert AI video storyboard director and text-to-image prompt writer.\n"
+            f"For each scene, treat the caption as the source of truth. Convert it into one concrete, filmable moment with a visible subject, action, setting, emotional beat, shot size or camera angle, depth, and purposeful composition. Do not produce generic mood imagery, multiple events, collages, or literal text inside the image.\n"
             f"Generate visual descriptions, image prompts, suggested motion, and suggested transitions for the following scenes.\n"
+            f"Every image_prompt must begin with the caption's actual scene action, then add only relevant Video Bible identities, style, lighting, camera, and composition.\n"
             f"Target aspect ratio: {aspect_ratio}\n"
             f"Visual Context: {json.dumps(visual_context)}\n"
             f"Scenes: {json.dumps(scenes)}\n"
@@ -76,7 +78,7 @@ class AnthropicProvider(BaseLLMProvider):
         }
 
         prompt_text = (
-            f"Regenerate a single visual storyboard scene.\n"
+            f"Regenerate a single visual storyboard scene as one concrete, filmable image. Treat the caption as the source of truth for the subject, action, setting, and emotional beat. Preserve relevant Video Bible identities and add a clear shot size, camera angle, depth, lighting, and composition. Avoid generic imagery, multiple events, collage layouts, and text inside the image.\n"
             f"Target aspect ratio: {aspect_ratio}\n"
             f"Custom instructions: {instructions}\n"
             f"Visual Context: {json.dumps(visual_context)}\n"

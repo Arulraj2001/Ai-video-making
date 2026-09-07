@@ -181,6 +181,7 @@ export interface ImageProviderHealth {
 export interface GenerateImageInput {
   force?: boolean;
   prompt_override?: string;
+  aspect_ratio?: "16:9" | "9:16" | "1:1";
   /** Art style mode: photorealistic | cinematic | anime | manga | 3d | cartoon | flat | sketch | lineart | stickfigure | documentary | watercolor */
   style_mode?: string;
   provider?: string;

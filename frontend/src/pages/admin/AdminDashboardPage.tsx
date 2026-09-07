@@ -193,7 +193,7 @@ export const AdminDashboardPage: React.FC = () => {
           </Card>
         ) : (
           <Card variant="admin" className="p-0 overflow-hidden">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse app-data-table">
               <thead>
                 <tr className="border-b border-[var(--color-border)] bg-[var(--color-card-subtle)] text-[var(--color-text-secondary)] font-bold meta-mono uppercase">
                   <th className="p-3">User UID</th>
@@ -259,7 +259,7 @@ export const AdminDashboardPage: React.FC = () => {
               No audit logs recorded yet.
             </div>
           ) : (
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse app-data-table">
               <thead>
                 <tr className="border-b border-[var(--color-border)] bg-[var(--color-card-subtle)] text-[var(--color-text-secondary)] font-bold meta-mono uppercase">
                   <th className="p-3">Timestamp</th>

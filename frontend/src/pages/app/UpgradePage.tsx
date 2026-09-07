@@ -427,7 +427,7 @@ export const UpgradePage: React.FC = () => {
             Your Payment Submissions
           </h3>
           <div className="overflow-hidden rounded-xl border border-[var(--color-border-subtle)]">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs app-data-table">
               <thead className="bg-[var(--color-surface-sunken)] border-b border-[var(--color-border-subtle)] text-[var(--color-text-muted)] meta-mono uppercase tracking-wider">
                 <tr>
                   <th className="p-3 font-semibold">Payment ID</th>

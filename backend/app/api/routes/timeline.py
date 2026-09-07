@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, UploadFile, File, Query, status
 from typing import List, Optional
 from datetime import datetime, timezone
 
@@ -13,8 +13,22 @@ from app.schemas.project import (
 from app.models.scene import SceneModel
 from app.services.project_service import project_service
 from app.api.routes.projects import _to_project_response
+from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 
-router = APIRouter(prefix="/projects/{project_id}/timeline", tags=["timeline"])
+def require_owned_project(
+    project_id: str = Path(...),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+    return project
+
+router = APIRouter(
+    prefix="/projects/{project_id}/timeline",
+    tags=["timeline"],
+    dependencies=[Depends(require_owned_project)],
+)
 
 @router.put("/scenes/{scene_id}", response_model=ProjectResponse)
 def update_timeline_scene(

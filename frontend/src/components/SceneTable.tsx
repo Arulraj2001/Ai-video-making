@@ -132,7 +132,7 @@ export const SceneTable: React.FC<SceneTableProps> = ({
 
       {/* Scenes Table */}
       <div className="overflow-x-auto border-y" style={{ borderColor: "var(--border-subtle)" }}>
-        <table className="timeline-table">
+        <table className="timeline-table app-data-table">
           <thead>
             <tr>
               <th className="w-24">Scene</th>

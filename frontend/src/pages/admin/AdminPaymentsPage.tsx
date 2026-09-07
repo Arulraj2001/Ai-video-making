@@ -138,7 +138,7 @@ export const AdminPaymentsPage: React.FC = () => {
       ) : (
         <Card variant="admin" className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse app-data-table">
               <thead>
                 <tr className="border-b border-[var(--color-border)] bg-[var(--color-card-subtle)] text-[var(--color-text-secondary)] font-bold meta-mono uppercase tracking-wider">
                   <th className="p-3.5">Payment ID</th>

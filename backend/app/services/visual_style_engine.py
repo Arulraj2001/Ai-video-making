@@ -232,12 +232,16 @@ def build_scene_prompt(context: Dict[str, Any], scene_prompt: Optional[str] = No
 
     # 1. Scene subject / action / meaning (FIRST!)
     scene_meaning = (
-        context.get("visual_description")
+        scene_prompt
+        or context.get("visual_description")
         or context.get("caption")
-        or scene_prompt
         or "A clearly visualized scene"
     ).strip().rstrip(".")
     sections.append(f"Scene: {scene_meaning}.")
+
+    caption = (context.get("caption") or "").strip().rstrip(".")
+    if caption and caption.lower() not in scene_meaning.lower():
+        sections.append(f"Caption intent: {caption}.")
 
     # 2-4. Relevant entities (Character, Location, Object)
     for entity in context.get("entities", []):

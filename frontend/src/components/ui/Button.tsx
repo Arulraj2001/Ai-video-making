@@ -34,19 +34,19 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       primary: {
         background: "var(--color-primary)",
         color: "#FFFFFF",
-        border: "1px solid transparent",
+        border: "1px solid var(--color-primary)",
         boxShadow: "none",
       },
       ai: {
         background: "var(--color-primary)",
         color: "#FFFFFF",
-        border: "1px solid transparent",
+        border: "1px solid var(--color-primary)",
         boxShadow: "none",
       },
       secondary: {
         backgroundColor: "var(--color-surface)",
         color: "var(--color-text)",
-        border: "1.5px solid var(--color-border)",
+        border: "1.5px solid var(--color-outline)",
         boxShadow: "none",
       },
       ghost: {
@@ -57,7 +57,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       danger: {
         backgroundColor: "var(--color-error)",
         color: "#FFFFFF",
-        border: "1px solid transparent",
+        border: "1px solid var(--color-error)",
         boxShadow: "none",
       },
       outline: {
@@ -68,18 +68,18 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       success: {
         backgroundColor: "var(--color-success)",
         color: "#FFFFFF",
-        border: "1px solid transparent",
+        border: "1px solid var(--color-success)",
       },
       "neu-primary": {
         background: "var(--color-primary)",
         color: "#FFFFFF",
-        border: "1px solid transparent",
+        border: "1px solid var(--color-primary)",
         boxShadow: "none",
       },
       "neu-secondary": {
         backgroundColor: "var(--color-surface)",
         color: "var(--color-text)",
-        border: "1.5px solid var(--color-border)",
+        border: "1.5px solid var(--color-outline)",
         boxShadow: "none",
       },
       "neu-ghost": {

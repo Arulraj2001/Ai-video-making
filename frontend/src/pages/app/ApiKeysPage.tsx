@@ -262,7 +262,7 @@ export const ApiKeysPage: React.FC = () => {
       )}
 
       {/* Category Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-[var(--color-border)] mb-6 overflow-x-auto pb-2">
+      <div className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--surface-alt)] p-1.5 mb-6 overflow-x-auto shadow-sm">
         {[
           { id: "all", label: "All Providers" },
           { id: "multimodal", label: "Multimodal & Unified" },
@@ -273,10 +273,11 @@ export const ApiKeysPage: React.FC = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap border ${
+            aria-pressed={activeTab === tab.id}
+            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-1 ${
               activeTab === tab.id
-                ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm"
-                : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                ? "bg-[var(--color-surface-elevated)] text-[var(--color-text)] border-[var(--color-primary)] shadow-sm"
+                : "border-transparent bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-elevated)]/70 hover:text-[var(--color-text)]"
             }`}
           >
             {tab.label}
@@ -504,91 +505,110 @@ export const ApiKeysPage: React.FC = () => {
         <Modal
           isOpen={true}
           onClose={handleCloseModal}
+          size="lg"
           title={
             <div className="flex items-center gap-2">
-              <Key size={18} className="text-[var(--color-primary)]" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+                <Key size={17} />
+              </div>
               <span>
-                {editingProvider.configured ? "Update" : "Add"} {editingProvider.label} Key
+                {editingProvider.configured ? "Update" : "Connect"} {editingProvider.label}
               </span>
             </div>
           }
-          description="Your credentials will be encrypted with AES-256-GCM before saving to your personal vault."
+          description="Add a provider connection for your personal workspace."
         >
-          <form onSubmit={handleSaveKey} className="space-y-4 pt-2">
+          <form onSubmit={handleSaveKey} className="space-y-5">
             {modalError && (
-              <Alert type="error" className="mb-2">
+              <Alert type="error">
                 {modalError}
               </Alert>
             )}
 
-            <div>
-              <Input
-                label={`${editingProvider.label} API Key`}
-                type={showSecret ? "text" : "password"}
-                placeholder="Enter secret API key..."
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                autoFocus
-                required
-                rightElement={
-                  <button
-                    type="button"
-                    onClick={() => setShowSecret(!showSecret)}
-                    className="cursor-pointer hover:text-[var(--color-text)] transition-colors"
-                  >
-                    {showSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                }
-              />
-              <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
-                Your key will be AES-256-GCM encrypted and never visible in plaintext again.
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary-subtle)] p-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm">
+                {editingProvider.category === "image" ? <Layers size={18} /> : <Sparkles size={18} />}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-[var(--color-text)]">{editingProvider.label}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                  {editingProvider.description || "Use this provider for your workspace generation pipeline."}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-sunken)] p-4 shadow-sm sm:p-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label={`${editingProvider.label} API Key`}
+                  type={showSecret ? "text" : "password"}
+                  placeholder="Paste your secret key"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  autoFocus
+                  required
+                  className="bg-[var(--color-surface)] border-[var(--color-border-strong)] font-mono text-xs shadow-sm"
+                  rightElement={
+                    <button
+                      type="button"
+                      onClick={() => setShowSecret(!showSecret)}
+                      aria-label={showSecret ? "Hide API key" : "Show API key"}
+                      className="cursor-pointer hover:text-[var(--color-text)] transition-colors"
+                    >
+                      {showSecret ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  }
+                />
+                <Input
+                  label="Connection label (optional)"
+                  placeholder="e.g. Production images"
+                  value={labelInput}
+                  onChange={(e) => setLabelInput(e.target.value)}
+                  className="bg-[var(--color-surface)] border-[var(--color-border-strong)] shadow-sm"
+                />
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+                The key is encrypted before storage and only a masked hint will be shown after saving.
+              </p>
+              {editingProvider.provider === "cloudflare" && (
+                <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+                  <Input
+                    label="Cloudflare Account ID"
+                    placeholder="e.g. 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d"
+                    value={accountIdInput}
+                    onChange={(e) => setAccountIdInput(e.target.value)}
+                    required
+                    className="bg-[var(--color-surface)] border-[var(--color-border-strong)] font-mono text-xs shadow-sm"
+                  />
+                  <p className="mt-1.5 text-[11px] text-[var(--color-text-muted)]">
+                    Required for Cloudflare Workers AI edge inference.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-success)]/25 bg-[var(--color-success-subtle)] p-4 text-xs text-[var(--color-text-secondary)]">
+              <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[var(--color-success)]" />
+              <p className="leading-relaxed">
+                This connection is tied to your account. ScenoraEdits does not display or return the complete secret after it is saved.
               </p>
             </div>
 
-            {editingProvider.provider === "cloudflare" && (
-              <div>
-                <Input
-                  label="Cloudflare Account ID"
-                  placeholder="e.g. 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d"
-                  value={accountIdInput}
-                  onChange={(e) => setAccountIdInput(e.target.value)}
-                  required
-                />
-                <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
-                  Required for Cloudflare Workers AI edge inference.
-                </p>
+            <div className="flex flex-col-reverse gap-3 border-t border-[var(--color-border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-[11px] text-[var(--color-text-muted)]">AES-256-GCM encrypted</span>
+              <div className="flex items-center justify-end gap-3">
+                <Button type="button" variant="outline" onClick={handleCloseModal} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={saving}
+                  leftIcon={saving ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                >
+                  {saving ? "Encrypting..." : "Save connection"}
+                </Button>
               </div>
-            )}
-
-            <div>
-              <Input
-                label="Custom Label (Optional)"
-                placeholder="e.g. Personal Production Key"
-                value={labelInput}
-                onChange={(e) => setLabelInput(e.target.value)}
-              />
-            </div>
-
-            <div className="p-3 bg-[var(--color-surface-elevated)] rounded-md border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] flex items-start gap-2">
-              <Lock size={15} className="shrink-0 text-[var(--color-primary)] mt-0.5" />
-              <span>
-                Keys are authenticated against your personal UID via AES-GCM Authenticated Additional Data (AAD).
-                They cannot be extracted or transferred between accounts.
-              </span>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-              <Button type="button" variant="outline" onClick={handleCloseModal} disabled={saving}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={saving}
-                leftIcon={saving ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-              >
-                {saving ? "Encrypting & Saving..." : "Save to Vault"}
-              </Button>
             </div>
           </form>
         </Modal>

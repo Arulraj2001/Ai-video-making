@@ -86,6 +86,7 @@ class GenerateImageRequest(BaseModel):
     )
     provider: Optional[str] = Field(default=None, description="Provider override: pollinations, huggingface, cloudflare, mock")
     model_id: Optional[str] = Field(default=None, description="Specific model ID override")
+    aspect_ratio: Optional[str] = Field(default=None, pattern=r"^(16:9|9:16|1:1)$", description="Per-image aspect ratio override")
 
 class ModelCatalogItem(BaseModel):
     id: str

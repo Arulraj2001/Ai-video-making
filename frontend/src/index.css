@@ -94,6 +94,8 @@
   --color-card-interactive: var(--white);
   --color-card-border: var(--border);
   --color-card-hover: var(--white);
+  --color-outline: rgba(255, 107, 0, 0.28);
+  --color-outline-strong: rgba(255, 107, 0, 0.48);
 
   --color-modal: var(--white);
   --color-modal-backdrop: rgba(26, 26, 26, 0.5);
@@ -291,6 +293,8 @@
   --color-card-interactive: #20222A;
   --color-card-border: var(--border);
   --color-card-hover: #22242D;
+  --color-outline: rgba(255, 145, 77, 0.42);
+  --color-outline-strong: rgba(255, 145, 77, 0.68);
 
   --color-modal: var(--white);
   --color-modal-backdrop: rgba(0, 0, 0, 0.75);
@@ -900,6 +904,45 @@ a {
     linear-gradient(to right, var(--neu-grid) 1px, transparent 1px),
     linear-gradient(to bottom, var(--neu-grid) 1px, transparent 1px);
   background-size: 32px 32px;
+}
+
+/* Shared outlined data tables */
+.app-data-table {
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--color-card);
+}
+
+.app-data-table thead {
+  background: var(--color-card-subtle);
+  border-bottom: 1px solid var(--color-outline);
+}
+
+.app-data-table th,
+.app-data-table td {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.app-data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.app-data-table tbody tr:hover {
+  background: var(--color-primary-subtle);
+}
+
+.scenora-field {
+  border: 1px solid var(--color-outline) !important;
+}
+
+.scenora-field:hover {
+  border-color: var(--color-outline-strong) !important;
+}
+
+.scenora-field:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-subtle);
 }
 
 .schematic-dot-grid {
@@ -1724,6 +1767,9 @@ a {
 
 .storyboard-card-inspector { display: none; min-width: 0; }
 .storyboard-scene-card.inspector-open .storyboard-card-inspector { display: block; }
+.storyboard-scene-card.is-editing .storyboard-card-body {
+  grid-template-columns: minmax(0, 1fr);
+}
 
 .storyboard-thumbnail { width: 100%; min-height: 120px; }
 

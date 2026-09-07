@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, Depends, Path, UploadFile, File, HTTPException, status
 from app.schemas.video_bible import (
     VideoBibleSchema,
     VideoBibleUpdate,
@@ -20,8 +20,22 @@ from app.schemas.video_bible import (
 from app.services.project_service import project_service
 from app.services.visual_context import build_visual_context
 from app.utils.errors import NotFoundException
+from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 
-router = APIRouter(prefix="/projects/{project_id}/bible", tags=["video-bible"])
+def require_owned_project(
+    project_id: str = Path(...),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not project:
+        raise NotFoundException("Project", project_id)
+    return project
+
+router = APIRouter(
+    prefix="/projects/{project_id}/bible",
+    tags=["video-bible"],
+    dependencies=[Depends(require_owned_project)],
+)
 
 def _serialize_ref(ref) -> Optional[ReferenceImageSchema]:
     if not ref:

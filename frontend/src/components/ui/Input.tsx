@@ -33,10 +33,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             id={inputId}
             ref={ref}
-            className={`w-full px-4 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`scenora-field w-full px-4 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed ${
               error
                 ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-                : "border-[var(--border)] hover:border-[var(--border-strong)]"
+                : "border-[var(--color-outline)] hover:border-[var(--color-outline-strong)]"
             } ${leftElement ? "pl-10" : ""} ${rightElement ? "pr-10" : ""} ${className}`}
             style={{ fontFamily: "var(--font-sans)" }}
             {...props}
@@ -81,10 +81,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           id={textareaId}
           ref={ref}
-          className={`w-full px-4 py-3 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed resize-y min-h-[100px] ${
+          className={`scenora-field w-full px-4 py-3 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed resize-y min-h-[100px] ${
             error
               ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-              : "border-[var(--border)] hover:border-[var(--border-strong)]"
+              : "border-[var(--color-outline)] hover:border-[var(--color-outline-strong)]"
           } ${className}`}
           style={{ fontFamily: "var(--font-sans)" }}
           {...props}
@@ -130,10 +130,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           id={selectId}
           ref={ref}
-          className={`w-full px-3.5 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] cursor-pointer disabled:bg-[var(--surface-alt)] disabled:cursor-not-allowed ${
+          className={`scenora-field w-full px-3.5 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] cursor-pointer disabled:bg-[var(--surface-alt)] disabled:cursor-not-allowed ${
             error
               ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-              : "border-[var(--border)] hover:border-[var(--border-strong)]"
+              : "border-[var(--color-outline)] hover:border-[var(--color-outline-strong)]"
           } ${className}`}
           style={{ fontFamily: "var(--font-sans)" }}
           {...props}

@@ -188,6 +188,19 @@ def test_visual_style_engine_resolves_relevant_entities_and_composition(sample_p
     unrelated_context = resolve_scene_context(sample_project_with_bible, unrelated_scene, style_id="cinematic")
     assert unrelated_context["entities"] == []
 
+def test_final_prompt_prioritizes_ai_scene_prompt_and_preserves_caption(sample_project_with_bible):
+    scene = sample_project_with_bible.scenes[0]
+    scene.visual_description = "A generic neon city mood."
+    scene.image_prompt = "Kaelen hides behind a steaming service column as distant sirens approach."
+
+    context = resolve_scene_context(sample_project_with_bible, scene, style_id="cinematic")
+    prompt = build_scene_prompt(context, scene.image_prompt)
+
+    assert prompt.startswith("Scene: Kaelen hides behind a steaming service column")
+    assert "Caption intent:" in prompt
+    assert "slipped into the shadows" in prompt
+    assert "A generic neon city mood" not in prompt
+
 def test_storyboard_api_endpoints(sample_project_with_bible):
     """Test full HTTP API routes for storyboard generation, regeneration, and editing."""
     pid = sample_project_with_bible.id
