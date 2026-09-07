@@ -453,6 +453,12 @@ class ProjectService:
             target.saturation = round(update.saturation, 2)
         if update.color_filter is not None:
             target.color_filter = update.color_filter
+        if update.template_type is not None:
+            target.template_type = update.template_type
+        if update.background is not None:
+            target.background = update.background
+        if update.elements is not None:
+            target.elements = update.elements
 
         project.scenes.sort(key=lambda s: s.start)
         project.updated_at = datetime.now(timezone.utc).isoformat()
@@ -821,8 +827,20 @@ class ProjectService:
             target.contrast = max(0.5, min(2.0, round(update.contrast, 2)))
         if update.saturation is not None:
             target.saturation = max(0.0, min(2.5, round(update.saturation, 2)))
-        if update.color_filter is not None:
-            target.color_filter = update.color_filter
+        if update.template_type is not None:
+            target.template_type = update.template_type
+            if update.template_type != "standard":
+                target.image_url = None
+                target.image_path = None
+                target.image_status = "completed"
+        if update.background is not None:
+            target.background = update.background
+        if update.elements is not None:
+            target.elements = update.elements
+        if update.image_url is not None:
+            target.image_url = update.image_url
+        if update.image_status is not None:
+            target.image_status = update.image_status
 
         new_start = update.start if update.start is not None else target.start
         new_end = update.end if update.end is not None else target.end
@@ -956,10 +974,55 @@ class ProjectService:
             brightness=getattr(target, "brightness", 0.0),
             contrast=getattr(target, "contrast", 1.0),
             saturation=getattr(target, "saturation", 1.0),
-            color_filter=getattr(target, "color_filter", "none")
+            color_filter=getattr(target, "color_filter", "none"),
+            template_type=getattr(target, "template_type", "standard"),
+            background=getattr(target, "background", None),
+            elements=json.loads(json.dumps(getattr(target, "elements", None) or [])) if getattr(target, "elements", None) else None,
         )
 
         project.scenes.insert(target_idx + 1, new_scene)
+        project.updated_at = datetime.now(timezone.utc).isoformat()
+        self._save_to_disk(project)
+        return project
+
+    def add_slide(
+        self,
+        project_id: str,
+        caption: str = "New Slide",
+        duration: float = 4.0,
+        template_type: str = "blank_slide",
+        background: Optional[dict] = None,
+        elements: Optional[list] = None,
+    ) -> ProjectModel:
+        """Appends a new slide template scene to the project timeline."""
+        project = self.get_project(project_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        last_end = max((s.end for s in project.scenes), default=0.0)
+        new_start = round(last_end, 3)
+        new_end = round(new_start + duration, 3)
+
+        existing_ids = {s.id for s in project.scenes}
+        seq = len(project.scenes) + 1
+        new_id = f"scene_{seq:03d}"
+        while new_id in existing_ids:
+            seq += 1
+            new_id = f"scene_{seq:03d}"
+
+        new_scene = SceneModel(
+            id=new_id,
+            start=new_start,
+            end=new_end,
+            duration=round(duration, 3),
+            caption=caption.strip(),
+            template_type=template_type,
+            background=background,
+            elements=elements or [],
+            image_status="completed",
+        )
+        project.scenes.append(new_scene)
+        project.scenes.sort(key=lambda s: s.start)
         project.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_to_disk(project)
         return project

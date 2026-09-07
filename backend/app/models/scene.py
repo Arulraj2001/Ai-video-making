@@ -31,3 +31,7 @@ class SceneModel:
     contrast: float = 1.0  # 0.5 to 2.0 (1.0 default)
     saturation: float = 1.0  # 0.0 to 2.5 (1.0 default)
     color_filter: str = "none"  # "none", "cinematic", "warm", "cyberpunk", "noir", "vivid"
+    # Slide Templates & Canvas Elements
+    template_type: str = "standard"  # "standard", "blank_slide", "title_intro", "quote_slide", "key_takeaway", "split_screen", "outro_cta"
+    background: Optional[dict] = None  # {"type": "color" | "gradient" | "image", "value": "#0f172a"}
+    elements: Optional[list] = None  # list of overlay elements: text, emoji, shapes, badges

@@ -95,13 +95,20 @@ def download_rendered_video(
     current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Downloads the completed video or transcoded audio/video in requested format."""
-    project = project_service.get_project(project_id, owner_id=None)
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
-
     job = render_service.get_job(job_id)
     if not job or job.project_id != project_id:
         raise HTTPException(status_code=404, detail=f"Render job '{job_id}' not found.")
+
+    project = None
+    if current_user and current_user.uid and current_user.uid != getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user"):
+        project = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not project and getattr(job, "owner_id", None):
+        project = project_service.get_project(project_id, owner_id=job.owner_id)
+    if not project:
+        project = project_service.get_project(project_id, owner_id=None)
+
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
 
     # Ownership check:
     # If caller is an authenticated user (not the local fallback user), verify ownership or admin.

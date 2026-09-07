@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import type { Project, CaptionSettings } from "../../../types/project";
 import { api } from "../../../services/api";
-import { Check, Type, Eye, ShieldCheck } from "lucide-react";
+import { Check, Type, Eye, ShieldCheck, UploadCloud, FileText } from "lucide-react";
 
 interface CaptionsSettingsPanelProps {
   project: Project;
@@ -49,6 +49,29 @@ const CaptionsSettingsPanelComponent: React.FC<CaptionsSettingsPanelProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const settingsRef = useRef<CaptionSettings>(current);
   const saveRequestRef = useRef(0);
+
+  const [uploadingSubs, setUploadingSubs] = useState(false);
+  const [uploadSubsMsg, setUploadSubsMsg] = useState<string | null>(null);
+  const srtFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSrtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    try {
+      setUploadingSubs(true);
+      setUploadSubsMsg(null);
+      const text = await file.text();
+      const updated = await api.updateCaptions(project.id, text);
+      onProjectUpdated(updated);
+      setUploadSubsMsg("Subtitles updated successfully!");
+      setTimeout(() => setUploadSubsMsg(null), 3000);
+    } catch (err: any) {
+      setUploadSubsMsg("Error: " + (err.message || "Failed to update captions"));
+    } finally {
+      setUploadingSubs(false);
+      if (srtFileInputRef.current) srtFileInputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     if (project.caption_settings) {
@@ -127,6 +150,40 @@ const CaptionsSettingsPanelComponent: React.FC<CaptionsSettingsPanelProps> = ({
             <span>{settings.enabled ? "Captions Enabled" : "Captions Disabled"}</span>
           </label>
         </div>
+      </div>
+
+      {/* Quick Subtitle File Ingestion Bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <FileText size={15} color="var(--primary)" />
+          <div>
+            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-primary)" }}>
+              Replace Subtitles (.srt, .vtt, .txt)
+            </div>
+            {uploadSubsMsg && (
+              <div style={{ fontSize: "0.7rem", color: uploadSubsMsg.startsWith("Error") ? "var(--accent-danger-text)" : "#10b981" }}>
+                {uploadSubsMsg}
+              </div>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => srtFileInputRef.current?.click()}
+          disabled={uploadingSubs}
+          className="btn-secondary"
+          style={{ fontSize: "0.75rem", padding: "5px 12px", display: "flex", alignItems: "center", gap: "6px" }}
+        >
+          <UploadCloud size={13} />
+          <span>{uploadingSubs ? "Uploading..." : "Upload File"}</span>
+        </button>
+        <input
+          ref={srtFileInputRef}
+          type="file"
+          accept=".srt,.vtt,.txt"
+          onChange={handleSrtUpload}
+          style={{ display: "none" }}
+        />
       </div>
 
       {/* Real-time Subtitle Visual Preview */}

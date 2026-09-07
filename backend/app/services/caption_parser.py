@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 from app.models.scene import SceneModel
 
 TIMESTAMP_REGEX = re.compile(
-    r"^\s*\[?(\d{1,2}(?::\d{1,2}){1,2}(?:[,\.]\d{1,3})?)\s*(?:-->|→|–|—|-|to)\s*(\d{1,2}(?::\d{1,2}){1,2}(?:[,\.]\d{1,3})?)\]?\s*$",
+    r"^\s*\[?(\d{1,2}(?::\d{1,2}){1,2}(?:[,\.]\d{1,3})?)\s*(?:-->|→|–|—|-|to)\s*(\d{1,2}(?::\d{1,2}){1,2}(?:[,\.]\d{1,3})?)(?:\s+[^\]\n]+)?\]?\s*$",
     re.UNICODE
 )
 
@@ -76,10 +76,11 @@ def parse_and_validate_captions(raw_input: str) -> CaptionParseResult:
     errors: List[str] = []
     scenes: List[SceneModel] = []
 
-    if not raw_input or not raw_input.strip():
-        return CaptionParseResult(valid=False, scenes=[], errors=["Input is empty. Please paste Clipchamp captions."])
+    clean_input = raw_input.lstrip("\ufeff")
+    if not clean_input or not clean_input.strip():
+        return CaptionParseResult(valid=False, scenes=[], errors=["Input is empty. Please upload or paste captions."])
 
-    lines = raw_input.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    lines = clean_input.replace("\r\n", "\n").replace("\r", "\n").split("\n")
 
     # Group lines into blocks based on timestamp lines
     raw_blocks: List[Tuple[int, str, str, List[str]]] = []  # (line_num, start_str, end_str, caption_lines)
@@ -92,8 +93,13 @@ def parse_and_validate_captions(raw_input: str) -> CaptionParseResult:
         if not stripped:
             continue
         
-        # Skip pure WebVTT header or SRT index numbers (only numbers)
-        if stripped.upper().startswith("WEBVTT") or (stripped.isdigit() and len(stripped) <= 4):
+        # Skip pure WebVTT header, comments, or SRT index numbers
+        if (
+            stripped.upper().startswith("WEBVTT")
+            or stripped.startswith("NOTE")
+            or stripped.startswith("STYLE")
+            or (stripped.isdigit() and len(stripped) <= 6)
+        ):
             continue
 
         match = TIMESTAMP_REGEX.match(stripped)

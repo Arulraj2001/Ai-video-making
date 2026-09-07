@@ -24,6 +24,50 @@ export interface ImageCrop {
   height: number;
 }
 
+export type SceneTemplateType =
+  | "standard"
+  | "blank_slide"
+  | "title_intro"
+  | "quote_slide"
+  | "key_takeaway"
+  | "split_screen"
+  | "outro_cta";
+
+export interface SceneBackground {
+  type: "color" | "gradient" | "image";
+  value?: string;
+  gradient_stops?: string[];
+  direction?: "vertical" | "horizontal" | "radial";
+}
+
+export interface SceneElement {
+  id: string;
+  type: "text" | "emoji" | "shape" | "badge";
+  content: string;
+  x: number; // percentage (0 - 100) or pixels
+  y: number; // percentage (0 - 100) or pixels
+  width?: number;
+  height?: number;
+  font_size?: number;
+  font_weight?: "normal" | "bold";
+  color?: string;
+  bg_color?: string;
+  opacity?: number;
+  rotation?: number;
+  border_radius?: number;
+  padding?: number;
+  align?: "left" | "center" | "right";
+  shape?: "rectangle" | "pill" | "circle";
+}
+
+export interface TTSVoice {
+  id: string;
+  name: string;
+  gender: string;
+  locale: string;
+  style: string;
+}
+
 export interface CaptionSettings {
   enabled: boolean;
   font_family: string;
@@ -78,6 +122,9 @@ export interface Scene {
   contrast?: number;
   saturation?: number;
   color_filter?: ColorFilter;
+  template_type?: SceneTemplateType;
+  background?: SceneBackground | null;
+  elements?: SceneElement[] | null;
 }
 
 export interface AudioFile {
@@ -142,6 +189,9 @@ export interface SceneUpdateInput {
   contrast?: number;
   saturation?: number;
   color_filter?: ColorFilter;
+  template_type?: SceneTemplateType;
+  background?: SceneBackground | null;
+  elements?: SceneElement[] | null;
 }
 
 

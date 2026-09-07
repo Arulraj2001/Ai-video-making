@@ -30,6 +30,10 @@ class SceneSchema(BaseModel):
     contrast: float = Field(default=1.0, description="Contrast adjustment: 0.5 to 2.0")
     saturation: float = Field(default=1.0, description="Saturation adjustment: 0.0 to 2.5")
     color_filter: str = Field(default="none", description="Color filter: none, cinematic, warm, cyberpunk, noir, vivid")
+    # Slide Templates & Canvas Elements
+    template_type: Optional[str] = Field(default="standard", description="Template: standard, blank_slide, title_intro, quote_slide, key_takeaway, split_screen, outro_cta")
+    background: Optional[Dict[str, Any]] = Field(default=None, description="Slide background styling: type (color/gradient/image) and value")
+    elements: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Overlay elements (text, emoji, shape, badge)")
 
     model_config = {"from_attributes": True}
 
@@ -56,12 +60,34 @@ class SceneUpdate(BaseModel):
     contrast: Optional[float] = None
     saturation: Optional[float] = None
     color_filter: Optional[str] = None
+    template_type: Optional[str] = None
+    background: Optional[Dict[str, Any]] = None
+    elements: Optional[List[Dict[str, Any]]] = None
+
+class GenerateVoiceoverRequest(BaseModel):
+    script_text: str = Field(..., min_length=1, description="Narration or script text to synthesize with Edge-TTS")
+    voice: Optional[str] = Field(default="en-US-ChristopherNeural", description="Voice ID from curated catalog")
+    speed: Optional[float] = Field(default=1.0, ge=0.5, le=2.0, description="Speech rate multiplier (0.5x to 2.0x)")
+
+class ImportTTSProjectRequest(BaseModel):
+    name: str = Field(..., min_length=1, description="Project name")
+    description: Optional[str] = Field(default="", description="Project description")
+    script_text: str = Field(..., min_length=1, description="Narration or script text to synthesize")
+    voice: Optional[str] = Field(default="en-US-ChristopherNeural", description="Voice ID from curated catalog")
+    speed: Optional[float] = Field(default=1.0, ge=0.5, le=2.0, description="Speech rate multiplier (0.5x to 2.0x)")
 
 class SplitSceneRequest(BaseModel):
     split_time: float = Field(..., description="Timestamp in seconds at which to split the scene")
 
 class DuplicateSceneRequest(BaseModel):
     pass
+
+class AddSlideRequest(BaseModel):
+    caption: str = Field(default="New Slide", description="Slide caption / presentation takeaway")
+    duration: float = Field(default=4.0, ge=0.5, le=60.0, description="Slide duration in seconds")
+    template_type: str = Field(default="blank_slide", description="Slide template layout")
+    background: Optional[Dict[str, Any]] = None
+    elements: Optional[List[Dict[str, Any]]] = None
 
 class ReorderScenesRequest(BaseModel):
     scene_ids: List[str] = Field(..., description="Ordered list of scene IDs defining the new sequence")

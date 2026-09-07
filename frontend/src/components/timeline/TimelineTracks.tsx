@@ -12,6 +12,9 @@ interface TimelineTracksProps {
   onSeek: (time: number) => void;
   onUpdateSceneTimes?: (sceneId: string, start: number, end: number, ripple: boolean) => Promise<void>;
   onUploadImage?: (sceneId: string, file: File) => Promise<void>;
+  onOpenSlideModal?: () => void;
+  onDuplicateScene?: (sceneId: string) => void;
+  onSplitScene?: (sceneId: string, splitTime: number) => void;
 }
 
 export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
@@ -24,6 +27,9 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
   onSeek,
   onUpdateSceneTimes,
   onUploadImage,
+  onOpenSlideModal,
+  onDuplicateScene,
+  onSplitScene,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
@@ -284,16 +290,90 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
                 position: "absolute",
                 left: "8px",
                 top: "4px",
-                fontSize: "0.7rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                color: "var(--primary)",
-                fontWeight: 700,
-                pointerEvents: "none",
-                zIndex: 10,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                zIndex: 20,
               }}
             >
-              📷 Image Track (Master Timing)
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: "var(--primary)",
+                  fontWeight: 700,
+                }}
+              >
+                📷 Visual & Slide Track
+              </span>
+
+              {onOpenSlideModal && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenSlideModal();
+                  }}
+                  style={{
+                    background: "rgba(99, 102, 241, 0.2)",
+                    border: "1px solid rgba(99, 102, 241, 0.4)",
+                    color: "var(--primary)",
+                    borderRadius: "4px",
+                    padding: "1px 7px",
+                    fontSize: "0.68rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                  title="Add blank or template slide (PowerPoint style)"
+                >
+                  + Add Slide
+                </button>
+              )}
+
+              {selectedSceneId && onDuplicateScene && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDuplicateScene(selectedSceneId);
+                  }}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    color: "var(--text-secondary)",
+                    borderRadius: "4px",
+                    padding: "1px 7px",
+                    fontSize: "0.68rem",
+                    cursor: "pointer",
+                  }}
+                  title="Duplicate selected scene (Ctrl+D)"
+                >
+                  Duplicate (Ctrl+D)
+                </button>
+              )}
+
+              {selectedSceneId && onSplitScene && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSplitScene(selectedSceneId, currentTime);
+                  }}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    color: "var(--text-secondary)",
+                    borderRadius: "4px",
+                    padding: "1px 7px",
+                    fontSize: "0.68rem",
+                    cursor: "pointer",
+                  }}
+                  title="Split scene at current playhead position (C)"
+                >
+                  Split (C)
+                </button>
+              )}
             </div>
 
             {scenes.map((scene, idx) => {
@@ -468,8 +548,10 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
                       position: "relative",
                     }}
                   >
-                    {/* Background Image Thumbnail */}
-                    {scene.image_url ? (
+                    {/* Visual Thumbnail */}
+                    {(!scene.template_type || scene.template_type === "standard") &&
+                    !scene.background?.type &&
+                    scene.image_url ? (
                       <img
                         src={api.getMediaUrl(scene.image_url)}
                         alt={scene.caption}
@@ -488,14 +570,39 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
                           width: "100%",
                           height: "100%",
                           display: "flex",
+                          flexDirection: "column",
                           alignItems: "center",
                           justifyContent: "center",
                           color: "var(--text-muted)",
-                          fontSize: "0.75rem",
-                          background: "var(--bg-card-subtle)",
+                          fontSize: "0.72rem",
+                          padding: "4px",
+                          textAlign: "center",
+                          background:
+                            scene.background?.type === "color" && scene.background.value
+                              ? scene.background.value
+                              : scene.background?.type === "gradient" && scene.background.gradient_stops
+                              ? `linear-gradient(135deg, ${scene.background.gradient_stops[0]}, ${scene.background.gradient_stops[1]})`
+                              : scene.template_type === "title_intro"
+                              ? "linear-gradient(135deg, #1e1b4b, #0f172a)"
+                              : scene.template_type === "key_takeaway"
+                              ? "linear-gradient(135deg, #042f2e, #0f172a)"
+                              : scene.template_type === "quote_slide"
+                              ? "linear-gradient(135deg, #18181b, #09090b)"
+                              : "var(--bg-card-subtle)",
                         }}
                       >
-                        {scene.image_status === "generating" ? "⏳ Gen" : "No Visual"}
+                        {scene.template_type && scene.template_type !== "standard" ? (
+                          <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#fff", textTransform: "uppercase" }}>
+                            {scene.template_type.replace("_", " ")}
+                          </span>
+                        ) : (
+                          <span>{scene.image_status === "generating" ? "⏳ Gen" : "No Visual"}</span>
+                        )}
+                        {scene.elements && scene.elements.length > 0 && (
+                          <span style={{ fontSize: "0.6rem", color: "var(--accent-cyan)", marginTop: "2px" }}>
+                            ✦ {scene.elements.length} overlays
+                          </span>
+                        )}
                       </div>
                     )}
 

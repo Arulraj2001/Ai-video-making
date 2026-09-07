@@ -32,6 +32,7 @@ import type {
   ApiKeyListResponse,
   SaveApiKeyPayload,
   TestApiKeyResponse,
+  TTSVoice,
 } from "../types";
 
 class ApiService {
@@ -168,6 +169,42 @@ class ApiService {
   async deleteAudio(projectId: string): Promise<Project> {
     return this.request<Project>(`/api/projects/${projectId}/audio`, {
       method: "DELETE",
+    });
+  }
+
+  // Edge-TTS: Get high-fidelity neural voices
+  async getTTSVoices(): Promise<TTSVoice[]> {
+    return this.request<TTSVoice[]>("/api/tts/voices");
+  }
+
+  // Edge-TTS: Synthesize audio & timestamps for an existing project
+  async generateVoiceover(
+    projectId: string,
+    scriptText: string,
+    voice: string = "en-US-ChristopherNeural",
+    speed: number = 1.0
+  ): Promise<Project> {
+    return this.request<Project>(`/api/projects/${encodeURIComponent(projectId)}/generate-voiceover`, {
+      method: "POST",
+      body: JSON.stringify({
+        script_text: scriptText,
+        voice,
+        speed,
+      }),
+    });
+  }
+
+  // Edge-TTS: Ingest new project with script text
+  async importWithTTS(data: {
+    name: string;
+    script_text: string;
+    description?: string;
+    voice?: string;
+    speed?: number;
+  }): Promise<Project> {
+    return this.request<Project>("/api/projects/import-tts", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 
@@ -488,6 +525,22 @@ class ApiService {
         method: "POST",
       }
     );
+  }
+
+  async addSlide(
+    projectId: string,
+    data: {
+      caption?: string;
+      duration?: number;
+      template_type?: string;
+      background?: any;
+      elements?: any[];
+    }
+  ): Promise<Project> {
+    return this.request<Project>(`/api/projects/${projectId}/timeline/slides`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   async deleteTimelineScene(

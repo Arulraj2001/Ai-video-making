@@ -533,15 +533,20 @@ class FirestoreProjectRepository(ProjectRepository):
             return []
 
     def get_project(self, project_id: str, owner_id: Optional[str] = None) -> Optional[ProjectModel]:
-        if not self.db or not owner_id:
+        if not self.db:
             return None
         try:
-            doc_ref = self._get_collection_ref(owner_id).document(project_id)
-            doc = doc_ref.get()
-            if not doc.exists:
-                return None
-            data = doc.to_dict()
-            return deserialize_project(data, project_id=doc.id)
+            if owner_id:
+                doc_ref = self._get_collection_ref(owner_id).document(project_id)
+                doc = doc_ref.get()
+                if doc.exists:
+                    return deserialize_project(doc.to_dict(), project_id=doc.id)
+            else:
+                # If owner_id is not provided, look up project across user collections
+                docs = list(self.db.collection_group("projects").where("id", "==", project_id).limit(1).stream())
+                if docs:
+                    return deserialize_project(docs[0].to_dict(), project_id=docs[0].id)
+            return None
         except Exception as e:
             logger.error(f"Firestore get_project failed for user {owner_id}, project {project_id}: {e}")
             return None

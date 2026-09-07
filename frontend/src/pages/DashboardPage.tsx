@@ -33,6 +33,7 @@ export const DashboardPage: React.FC = () => {
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"dashboard" | "import">("dashboard");
+  const [importTargetProject, setImportTargetProject] = useState<any | null>(null);
   const [activeStage, setActiveStage] = useState<StudioStage>(() => {
     const stage = new URLSearchParams(window.location.search).get("stage");
     return stage === "script" || stage === "bible" || stage === "storyboard" || stage === "timeline" || stage === "export"
@@ -87,7 +88,10 @@ export const DashboardPage: React.FC = () => {
         isHealthy={isHealthy}
         checkingHealth={checkingHealth}
         onNewProject={() => setIsModalOpen(true)}
-        onOpenImport={() => setViewMode("import")}
+        onOpenImport={() => {
+          setImportTargetProject(null);
+          setViewMode("import");
+        }}
         onRefreshHealth={refetchHealth}
         activeStage={activeStage}
         onChangeStage={handleChangeStage}
@@ -121,11 +125,16 @@ export const DashboardPage: React.FC = () => {
         {/* View Routing */}
         {viewMode === "import" ? (
           <ImportProject
+            targetProject={importTargetProject}
             onSuccess={() => {
               setViewMode("dashboard");
+              setImportTargetProject(null);
               refresh();
             }}
-            onCancel={() => setViewMode("dashboard")}
+            onCancel={() => {
+              setViewMode("dashboard");
+              setImportTargetProject(null);
+            }}
           />
         ) : projectsLoading ? (
           <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-center">
@@ -143,7 +152,10 @@ export const DashboardPage: React.FC = () => {
         ) : projects.length === 0 || !activeProject ? (
           /* Empty project state */
           <EmptyState
-            onOpenImport={() => setViewMode("import")}
+            onOpenImport={() => {
+              setImportTargetProject(null);
+              setViewMode("import");
+            }}
             onCreateProject={() => setIsModalOpen(true)}
             onOpenRestore={() => setIsRestoreOpen(true)}
           />
@@ -154,7 +166,10 @@ export const DashboardPage: React.FC = () => {
             activeStage={activeStage}
             onChangeStage={handleChangeStage}
             onDeleteProject={deleteProject}
-            onOpenImport={() => setViewMode("import")}
+            onOpenImport={() => {
+              setImportTargetProject(activeProject);
+              setViewMode("import");
+            }}
             onUpdateScene={async (sceneId, update) => {
               await updateScene(activeProject.id, sceneId, update);
             }}

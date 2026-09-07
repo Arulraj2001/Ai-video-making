@@ -443,106 +443,280 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             }}
           >
             {activeScene ? (
-              activeScene.image_url ? (
-                <>
-                  {/* Blurred Background Mirror if image_fit === "blur" */}
-                  {activeScene.image_fit === "blur" && (
-                    <img
-                      key={`bg-blur-${activeScene.id}`}
-                      src={api.getMediaUrl(activeScene.image_url)}
-                      alt="Background blur"
-                      aria-hidden="true"
+              (() => {
+                const isTemplate = activeScene.template_type && activeScene.template_type !== "standard";
+                const hasSlideBg = Boolean(activeScene.background && (activeScene.background.type === "gradient" || activeScene.background.type === "color"));
+
+                if (isTemplate || hasSlideBg) {
+                  const bg = activeScene.background;
+                  const bgStyle =
+                    bg?.type === "gradient" && bg.gradient_stops
+                      ? `linear-gradient(${bg.direction === "horizontal" ? "90deg" : "180deg"}, ${bg.gradient_stops[0]} 0%, ${bg.gradient_stops[1]} 100%)`
+                      : bg?.type === "color" && bg.value
+                      ? bg.value
+                      : isTemplate
+                      ? activeScene.template_type === "title_intro"
+                        ? "linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%)"
+                        : activeScene.template_type === "quote_slide"
+                        ? "linear-gradient(180deg, #18181b 0%, #09090b 100%)"
+                        : activeScene.template_type === "key_takeaway"
+                        ? "linear-gradient(180deg, #042f2e 0%, #0f172a 100%)"
+                        : activeScene.template_type === "outro_cta"
+                        ? "linear-gradient(180deg, #311042 0%, #0f172a 100%)"
+                        : activeScene.template_type === "split_screen"
+                        ? "linear-gradient(90deg, #1e293b 50%, #0f172a 50%)"
+                        : "#0f172a"
+                      : null;
+
+                  return (
+                    <div
+                      id="cinema-slide-canvas"
                       style={{
                         position: "absolute",
-                        top: "-10%",
-                        left: "-10%",
-                        width: "120%",
-                        height: "120%",
-                        objectFit: "cover",
-                        filter: `blur(24px) brightness(0.65) ${getCssFilter(activeScene)}`,
-                        pointerEvents: "none",
-                        zIndex: 1,
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: bgStyle || "#0f172a",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "32px",
+                        textAlign: "center",
+                        zIndex: 2,
                       }}
-                    />
-                  )}
-                  {(() => {
-                    const crop = activeScene.image_crop;
-                    const cropClipPath =
-                      crop && typeof crop.width === "number" && typeof crop.height === "number" && crop.width > 5 && crop.height > 5
-                        ? `inset(${crop.y}% ${100 - (crop.x + crop.width)}% ${100 - (crop.y + crop.height)}% ${crop.x}%)`
-                        : undefined;
+                    >
+                      {/* Built-in template layout when no custom elements exist */}
+                      {(!activeScene.elements || activeScene.elements.length === 0) && (
+                        <>
+                          {activeScene.template_type === "title_intro" && (
+                            <div style={{ maxWidth: "480px", display: "flex", flexDirection: "column", alignItems: "center", gap: "14px" }}>
+                              <span style={{ padding: "4px 14px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.08em", background: "rgba(99, 102, 241, 0.9)", color: "#fff" }}>
+                                INTRODUCTION
+                              </span>
+                              <h3 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", lineHeight: 1.3, margin: 0 }}>
+                                {activeScene.caption}
+                              </h3>
+                              <div style={{ width: "48px", height: "3px", background: "var(--accent-cyan)", borderRadius: "2px" }} />
+                            </div>
+                          )}
 
-                    return (
-                      <img
-                        key={activeScene.id}
-                        src={api.getMediaUrl(activeScene.image_url)}
-                        alt={activeScene.caption || "Scene image"}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit:
-                            activeScene.image_fit === "blur"
-                              ? "contain"
-                              : activeScene.image_fit === "fill"
-                              ? "cover"
-                              : ((activeScene.image_fit || "cover") as any),
-                          objectPosition: activeScene.image_position || "center",
-                          filter: getCssFilter(activeScene),
-                          transform: `${getMotionTransform(activeScene.motion, sceneProgress)} scale(${activeScene.image_zoom || 1.0})`,
-                          clipPath: cropClipPath,
-                          transition: isPlaying ? "none" : "transform 0.2s ease-out",
-                          willChange: "transform",
-                          position: "relative",
-                          zIndex: 2,
-                        }}
-                      />
-                    );
-                  })()}
-                </>
-              ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "12px",
-                    color: "var(--text-muted)",
-                    padding: "20px",
-                    textAlign: "center",
-                  }}
-                >
+                          {activeScene.template_type === "quote_slide" && (
+                            <div style={{ maxWidth: "500px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                              <span style={{ color: "#f59e0b", fontSize: "2.8rem", lineHeight: 0.8, fontFamily: "serif" }}>“</span>
+                              <p style={{ fontSize: "1.15rem", fontStyle: "italic", color: "#f4f4f5", margin: 0, lineHeight: 1.4 }}>
+                                {activeScene.caption}
+                              </p>
+                              <span style={{ fontSize: "0.75rem", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: "6px" }}>
+                                — Key Insight
+                              </span>
+                            </div>
+                          )}
+
+                          {activeScene.template_type === "key_takeaway" && (
+                            <div style={{ maxWidth: "480px", padding: "24px", borderRadius: "16px", background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(20, 184, 166, 0.4)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", boxShadow: "0 12px 30px rgba(0,0,0,0.4)" }}>
+                              <span style={{ padding: "4px 12px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, background: "#0d9488", color: "#fff", letterSpacing: "0.05em" }}>
+                                ⚡ KEY TAKEAWAY
+                              </span>
+                              <p style={{ fontSize: "1.05rem", fontWeight: 600, color: "#fff", margin: 0, lineHeight: 1.4 }}>
+                                {activeScene.caption}
+                              </p>
+                            </div>
+                          )}
+
+                          {activeScene.template_type === "outro_cta" && (
+                            <div style={{ maxWidth: "460px", display: "flex", flexDirection: "column", alignItems: "center", gap: "14px" }}>
+                              <span style={{ padding: "4px 12px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, background: "#a855f7", color: "#fff" }}>
+                                FINAL SUMMARY
+                              </span>
+                              <p style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f4f4f5", margin: 0 }}>
+                                {activeScene.caption}
+                              </p>
+                              <div style={{ padding: "10px 24px", borderRadius: "999px", background: "#ec4899", color: "#fff", fontSize: "0.85rem", fontWeight: 700, boxShadow: "0 8px 24px rgba(236, 72, 153, 0.4)" }}>
+                                ▶ SUBSCRIBE & SHARE
+                              </div>
+                            </div>
+                          )}
+
+                          {activeScene.template_type === "split_screen" && (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", width: "100%", maxWidth: "520px" }}>
+                              <div style={{ padding: "16px", borderRadius: "12px", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "left" }}>
+                                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary)", marginBottom: "6px" }}>KEY LESSON</div>
+                                <div style={{ fontSize: "0.85rem", color: "#e2e8f0" }}>{activeScene.caption}</div>
+                              </div>
+                              <div style={{ padding: "16px", borderRadius: "12px", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "left" }}>
+                                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent-cyan)", marginBottom: "6px" }}>ACTIONABLE STEP</div>
+                                <div style={{ fontSize: "0.85rem", color: "#e2e8f0" }}>Apply this insight directly in your project.</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {activeScene.template_type === "blank_slide" && (
+                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>
+                              <span>Blank Slide Canvas · Add Overlays in Inspector</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Standard Image Renderer
+                if (activeScene.image_url) {
+                  return (
+                    <>
+                      {/* Blurred Background Mirror if image_fit === "blur" */}
+                      {activeScene.image_fit === "blur" && (
+                        <img
+                          key={`bg-blur-${activeScene.id}`}
+                          src={api.getMediaUrl(activeScene.image_url)}
+                          alt="Background blur"
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            top: "-10%",
+                            left: "-10%",
+                            width: "120%",
+                            height: "120%",
+                            objectFit: "cover",
+                            filter: `blur(24px) brightness(0.65) ${getCssFilter(activeScene)}`,
+                            pointerEvents: "none",
+                            zIndex: 1,
+                          }}
+                        />
+                      )}
+                      {(() => {
+                        const crop = activeScene.image_crop;
+                        const cropClipPath =
+                          crop && typeof crop.width === "number" && typeof crop.height === "number" && crop.width > 5 && crop.height > 5
+                            ? `inset(${crop.y}% ${100 - (crop.x + crop.width)}% ${100 - (crop.y + crop.height)}% ${crop.x}%)`
+                            : undefined;
+
+                        return (
+                          <img
+                            key={activeScene.id}
+                            src={api.getMediaUrl(activeScene.image_url)}
+                            alt={activeScene.caption || "Scene image"}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit:
+                                activeScene.image_fit === "blur"
+                                  ? "contain"
+                                  : activeScene.image_fit === "fill"
+                                  ? "cover"
+                                  : ((activeScene.image_fit || "cover") as any),
+                              objectPosition: activeScene.image_position || "center",
+                              filter: getCssFilter(activeScene),
+                              transform: `${getMotionTransform(activeScene.motion, sceneProgress)} scale(${activeScene.image_zoom || 1.0})`,
+                              clipPath: cropClipPath,
+                              transition: isPlaying ? "none" : "transform 0.2s ease-out",
+                              willChange: "transform",
+                              position: "relative",
+                              zIndex: 2,
+                            }}
+                          />
+                        );
+                      })()}
+                    </>
+                  );
+                }
+
+                // Fallback placeholder when no visual exists
+                return (
                   <div
                     style={{
-                      width: "56px",
-                      height: "56px",
-                      borderRadius: "50%",
-                      background: "rgba(99, 102, 241, 0.1)",
-                      border: "1px solid rgba(99, 102, 241, 0.3)",
                       display: "flex",
+                      flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "var(--primary)",
-                      fontSize: "24px",
+                      gap: "12px",
+                      color: "var(--text-muted)",
+                      padding: "20px",
+                      textAlign: "center",
                     }}
                   >
-                    🎬
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.95rem" }}>
-                      {activeScene.image_status === "generating"
-                        ? "Generating Scene Visual..."
-                        : "No Image Generated Yet"}
+                    <div
+                      style={{
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "50%",
+                        background: "rgba(99, 102, 241, 0.1)",
+                        border: "1px solid rgba(99, 102, 241, 0.3)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--primary)",
+                        fontSize: "24px",
+                      }}
+                    >
+                      🎬
                     </div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                      Scene ID: {activeScene.id} ({activeScene.start}s - {activeScene.end}s)
+                    <div>
+                      <div style={{ fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.95rem" }}>
+                        {activeScene.image_status === "generating"
+                          ? "Generating Scene Visual..."
+                          : "No Image Generated Yet"}
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                        Scene ID: {activeScene.id} ({activeScene.start.toFixed(1)}s - {activeScene.end.toFixed(1)}s)
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
+                );
+              })()
             ) : (
               <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
                 No scenes on timeline
+              </div>
+            )}
+
+            {/* Custom Overlay Elements Layer */}
+            {activeScene?.elements && activeScene.elements.length > 0 && (
+              <div
+                id="cinema-overlay-elements"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  pointerEvents: "none",
+                  zIndex: 10,
+                }}
+              >
+                {activeScene.elements.map((elem) => {
+                  const alignStyle = elem.align === "left" ? "left" : elem.align === "right" ? "right" : "center";
+                  const hasBg = Boolean(elem.bg_color && elem.bg_color !== "transparent");
+                  return (
+                    <div
+                      key={elem.id}
+                      style={{
+                        position: "absolute",
+                        left: `${elem.x}%`,
+                        top: `${elem.y}%`,
+                        transform: "translate(-50%, -50%)",
+                        fontSize: `${elem.font_size || 32}px`,
+                        fontWeight: elem.font_weight === "bold" ? 700 : 500,
+                        color: elem.color || "#ffffff",
+                        background: hasBg ? elem.bg_color : "transparent",
+                        padding: hasBg ? `${elem.padding || 12}px` : "0",
+                        borderRadius: `${elem.border_radius || 8}px`,
+                        textAlign: alignStyle as any,
+                        maxWidth: elem.width ? `${elem.width}px` : "85%",
+                        wordBreak: "break-word",
+                        whiteSpace: "pre-wrap",
+                        boxShadow: hasBg ? "0 4px 20px rgba(0,0,0,0.5)" : "none",
+                        textShadow: hasBg ? "none" : "0 2px 8px rgba(0,0,0,0.85)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {elem.content}
+                    </div>
+                  );
+                })}
               </div>
             )}
 

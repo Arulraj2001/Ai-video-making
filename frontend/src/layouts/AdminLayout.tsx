@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { Button, IconButton } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import {
+  Home,
   LayoutDashboard,
   Users,
   CreditCard,
@@ -42,6 +43,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   }[preference];
 
   const adminNav = [
+    { label: "Home", to: "/", icon: <Home size={18} /> },
     { label: "Dashboard", to: "/admin", icon: <LayoutDashboard size={18} /> },
     { label: "Users", to: "/admin/users", icon: <Users size={18} /> },
     { label: "Payments", to: "/admin/payments", icon: <CreditCard size={18} /> },

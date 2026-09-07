@@ -6,6 +6,7 @@ from app.schemas.project import (
     SceneSchema,
     SceneUpdate,
     SplitSceneRequest,
+    AddSlideRequest,
     ReorderScenesRequest,
     ProjectResponse,
     TimelineUpdateResponse,
@@ -87,6 +88,29 @@ def duplicate_timeline_scene(
         project = project_service.duplicate_scene(
             project_id=project_id,
             scene_id=scene_id
+        )
+        return _to_project_response(project)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.post("/slides", response_model=ProjectResponse)
+def add_timeline_slide(
+    project_id: str,
+    request: AddSlideRequest
+):
+    """
+    Appends a new slide template scene to the project timeline.
+    """
+    try:
+        project = project_service.add_slide(
+            project_id=project_id,
+            caption=request.caption,
+            duration=request.duration,
+            template_type=request.template_type,
+            background=request.background,
+            elements=request.elements,
         )
         return _to_project_response(project)
     except ValueError as ve:

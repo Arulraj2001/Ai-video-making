@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Film, MessageSquare, Music, Layout, Sliders, Keyboard } from "lucide-react";
-import type { Project, Scene, SceneUpdateInput } from "../../types/project";
+import { Film, MessageSquare, Music, Layout, Sliders, Keyboard, Tag, Plus } from "lucide-react";
+import type { Project, Scene, SceneUpdateInput, SceneTemplateType, SceneBackground, SceneElement } from "../../types/project";
 import { CinemaPreview } from "./CinemaPreview";
 import { TimelineTracks } from "./TimelineTracks";
 import { SceneInspector } from "./SceneInspector";
@@ -8,13 +8,15 @@ import { ExportModal } from "./ExportModal";
 import { CaptionsSettingsPanel } from "./settings/CaptionsSettingsPanel";
 import { AudioSettingsPanel } from "./settings/AudioSettingsPanel";
 import { CanvasSettingsPanel } from "./settings/CanvasSettingsPanel";
+import { SlideTemplateModal } from "./SlideTemplateModal";
+import { OverlayElementsInspector } from "./OverlayElementsInspector";
 import { ConfirmModal } from "../ConfirmModal";
 import { KeyboardShortcutsModal } from "../KeyboardShortcutsModal";
 import { api } from "../../services/api";
 
 interface TimelineEditorProps {
   project: Project;
-  onProjectUpdated: (updatedProject: Project) => void;
+  onProjectUpdated: (updatedProject: Project | ((previous: Project) => Project)) => void;
 }
 
 export const TimelineEditor: React.FC<TimelineEditorProps> = ({
@@ -28,7 +30,8 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   );
   const [pixelsPerSecond, setPixelsPerSecond] = useState(60);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"scene" | "captions" | "audio" | "canvas">("scene");
+  const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"scene" | "overlays" | "captions" | "audio" | "canvas">("scene");
   const [deleteTargetSceneId, setDeleteTargetSceneId] = useState<string | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
@@ -271,6 +274,9 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         contrast: updates.contrast,
         saturation: updates.saturation,
         color_filter: updates.color_filter,
+        template_type: updates.template_type,
+        background: updates.background,
+        elements: updates.elements,
       };
       const updatedProject = await api.updateSceneTimeline(
         project.id,
@@ -291,6 +297,54 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   ) => {
     if (!selectedScene) return;
     await handleUpdateSceneById(selectedScene.id, updates, ripple);
+  };
+
+  const handleApplySlideTemplate = async (
+    templateType: SceneTemplateType,
+    background: SceneBackground,
+    caption?: string
+  ) => {
+    if (!selectedScene) return;
+    await handleUpdateScene({
+      template_type: templateType,
+      background,
+      caption: caption || selectedScene.caption,
+      image_status: "completed",
+    });
+  };
+
+  const handleAddSlide = async (
+    templateType: SceneTemplateType,
+    background: SceneBackground,
+    captionText: string,
+    duration: number = 5.0
+  ) => {
+    try {
+      const prevIds = new Set((project.scenes || []).map((s) => s.id));
+      const updatedProject = await api.addSlide(project.id, {
+        caption: captionText,
+        duration: duration || 5.0,
+        template_type: templateType,
+        background,
+        elements: [],
+      });
+      pushHistorySnapshot(updatedProject.scenes);
+      onProjectUpdated(updatedProject);
+      const newlyCreated = updatedProject.scenes.find((s) => !prevIds.has(s.id));
+      if (newlyCreated) {
+        setSelectedSceneId(newlyCreated.id);
+        handleSeek(newlyCreated.start);
+      }
+    } catch (err: any) {
+      alert("Failed to add slide: " + (err.message || "Unknown error"));
+    }
+  };
+
+  const handleUpdateElements = async (elements: SceneElement[]) => {
+    if (!selectedScene) return;
+    await handleUpdateScene({
+      elements,
+    });
   };
 
   const handleSplitScene = async (sceneId: string, splitTime: number) => {
@@ -385,11 +439,12 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         force: true,
         prompt_override: promptOverride,
       });
-      const updatedScenes = (project.scenes || []).map((s) =>
-        s.id === sceneId ? updatedScene : s
-      );
-      pushHistorySnapshot(updatedScenes);
-      onProjectUpdated({ ...project, scenes: updatedScenes });
+      onProjectUpdated((previous) => {
+        const updatedScenes = (previous.scenes || []).map((scene) =>
+          scene.id === sceneId ? updatedScene : scene
+        );
+        return { ...previous, scenes: updatedScenes };
+      });
     } catch (err: any) {
       alert(err.message || "Regeneration failed");
     }
@@ -398,11 +453,12 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   const handleUploadImage = async (sceneId: string, file: File) => {
     try {
       const updatedScene = await api.uploadReplacementImage(project.id, sceneId, file);
-      const updatedScenes = (project.scenes || []).map((s) =>
-        s.id === sceneId ? updatedScene : s
-      );
-      pushHistorySnapshot(updatedScenes);
-      onProjectUpdated({ ...project, scenes: updatedScenes });
+      onProjectUpdated((previous) => {
+        const updatedScenes = (previous.scenes || []).map((scene) =>
+          scene.id === sceneId ? updatedScene : scene
+        );
+        return { ...previous, scenes: updatedScenes };
+      });
     } catch (err: any) {
       alert(err.message || "Failed to upload image");
     }
@@ -448,8 +504,14 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         e.preventDefault();
         const step = e.shiftKey ? 5 : 1;
         handleSeek(Math.min(totDur, curTime + step));
-      } else if (e.code === "KeyS" && !e.ctrlKey && !e.metaKey) {
-        // Split current active scene at playhead
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
+        // Duplicate selected scene (Ctrl+D / Cmd+D)
+        if (selId) {
+          e.preventDefault();
+          handleDuplicateScene(selId);
+        }
+      } else if ((e.code === "KeyS" || e.code === "KeyC") && !e.ctrlKey && !e.metaKey) {
+        // Split current active scene at playhead (S or C key)
         const activeScene = scenes.find(
           (s) => curTime >= s.start && curTime <= s.end
         );
@@ -474,7 +536,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleUndo, handleRedo, handleTogglePlay, handleSeek, handleSplitScene]);
+  }, [handleUndo, handleRedo, handleTogglePlay, handleSeek, handleSplitScene, handleDuplicateScene]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -630,6 +692,24 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             </button>
           </div>
 
+          {/* Add Slide Template Action */}
+          <button
+            id="timeline-add-slide-btn"
+            onClick={() => setIsSlideModalOpen(true)}
+            className="btn-secondary"
+            title="Add blank or template slide (PowerPoint style)"
+            style={{
+              padding: "6px 12px",
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <Plus size={14} />
+            <span>+ Add Slide</span>
+          </button>
+
           <div
             style={{
               height: "20px",
@@ -700,6 +780,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           >
             {[
               { id: "scene", label: "Scene", icon: <Sliders size={14} /> },
+              { id: "overlays", label: "Overlays", icon: <Tag size={14} /> },
               { id: "captions", label: "Captions", icon: <MessageSquare size={14} /> },
               { id: "audio", label: "Audio", icon: <Music size={14} /> },
               { id: "canvas", label: "Canvas", icon: <Layout size={14} /> },
@@ -735,6 +816,48 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                 </button>
               );
             })}
+          </div>
+
+          {/* Overlays Tab Content */}
+          <div
+            id="timeline-panel-overlays"
+            role="tabpanel"
+            aria-labelledby="timeline-tab-overlays"
+            style={{ display: activeTab === "overlays" ? "block" : "none" }}
+          >
+            {selectedScene ? (
+              <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "12px", borderBottom: "1px solid var(--border-subtle)" }}>
+                  <div>
+                    <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                      Slide Overlays & Templates
+                    </h3>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>
+                      Scene {selectedScene.id} ({selectedScene.start.toFixed(1)}s - {selectedScene.end.toFixed(1)}s)
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsSlideModalOpen(true)}
+                    className="btn-secondary"
+                    style={{ fontSize: "0.75rem", padding: "5px 10px", display: "flex", alignItems: "center", gap: "5px" }}
+                  >
+                    <Layout size={13} />
+                    <span>Slide Templates</span>
+                  </button>
+                </div>
+
+                <OverlayElementsInspector
+                  scene={selectedScene}
+                  onUpdateElements={handleUpdateElements}
+                />
+              </div>
+            ) : (
+              <div className="glass-panel" style={{ padding: "30px", textAlign: "center", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                Select a scene on the timeline to configure overlay elements.
+              </div>
+            )}
           </div>
 
           {/* Tab Content */}
@@ -957,8 +1080,20 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             await handleUpdateSceneById(sceneId, { start: newStart, end: newEnd }, ripple);
           }}
           onUploadImage={handleUploadImage}
+          onOpenSlideModal={() => setIsSlideModalOpen(true)}
+          onDuplicateScene={handleDuplicateScene}
+          onSplitScene={handleSplitScene}
         />
       </div>
+
+      {/* Slide Template Chooser Modal */}
+      <SlideTemplateModal
+        isOpen={isSlideModalOpen}
+        onClose={() => setIsSlideModalOpen(false)}
+        activeScene={selectedScene || undefined}
+        onApplyToCurrentScene={handleApplySlideTemplate}
+        onAddNewSlide={handleAddSlide}
+      />
 
       {/* Phase 7: Export Video Modal */}
       <ExportModal

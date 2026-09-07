@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Union
 from app.models.render import RenderJobModel
 from app.configuration.config import settings
 from app.services.project_service import project_service, STORAGE_DIR
+from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,86 @@ def _hex_to_ass_color(hex_str: str, alpha: int = 0) -> str:
         r, g, b = hex_clean[0:2], hex_clean[2:4], hex_clean[4:6]
         return f"&H{alpha:02X}{b}{g}{r}"
     return f"&H{alpha:02X}FFFFFF"
+
+
+def _hex_to_rgba(hex_str: Optional[str], default_alpha: int = 255) -> tuple:
+    """Convert hex color (#RRGGBB or #RRGGBBAA) to RGBA tuple."""
+    if not hex_str or not isinstance(hex_str, str):
+        return (15, 23, 42, default_alpha)
+    hex_clean = hex_str.lstrip("#")
+    try:
+        if len(hex_clean) == 6:
+            return (int(hex_clean[0:2], 16), int(hex_clean[2:4], 16), int(hex_clean[4:6], 16), default_alpha)
+        elif len(hex_clean) == 8:
+            return (int(hex_clean[0:2], 16), int(hex_clean[2:4], 16), int(hex_clean[4:6], 16), int(hex_clean[6:8], 16))
+    except Exception:
+        pass
+    return (15, 23, 42, default_alpha)
+
+
+def _get_pil_font(size: int = 36, bold: bool = False):
+    """Safely get a truetype or bitmap font of requested size."""
+    font_candidates = [
+        "arialbd.ttf" if bold else "arial.ttf",
+        "segoeuib.ttf" if bold else "segoeui.ttf",
+        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+    ]
+    for cand in font_candidates:
+        try:
+            return ImageFont.truetype(cand, size)
+        except Exception:
+            continue
+    try:
+        return ImageFont.load_default(size=size)
+    except Exception:
+        return ImageFont.load_default()
+
+
+def _wrap_text(text: str, font, max_width: int, draw: ImageDraw.ImageDraw) -> List[str]:
+    """Wraps text so it does not exceed max_width when drawn."""
+    lines = []
+    paragraphs = text.split("\n")
+    for para in paragraphs:
+        words = para.split()
+        if not words:
+            lines.append("")
+            continue
+        cur_line = []
+        for word in words:
+            test_line = " ".join(cur_line + [word])
+            bbox = draw.textbbox((0, 0), test_line, font=font)
+            if (bbox[2] - bbox[0]) <= max_width:
+                cur_line.append(word)
+            else:
+                if cur_line:
+                    lines.append(" ".join(cur_line))
+                    cur_line = [word]
+                else:
+                    lines.append(word)
+        if cur_line:
+            lines.append(" ".join(cur_line))
+    return lines
+
+
+def _create_gradient_image(width: int, height: int, color_start: tuple, color_end: tuple, direction: str = "vertical") -> Image.Image:
+    """Create a smooth 2-stop gradient RGBA image."""
+    base = Image.new("RGBA", (width, height), color_start)
+    draw = ImageDraw.Draw(base)
+    if direction == "horizontal":
+        for x in range(width):
+            ratio = x / max(1, width - 1)
+            r = int(color_start[0] + (color_end[0] - color_start[0]) * ratio)
+            g = int(color_start[1] + (color_end[1] - color_start[1]) * ratio)
+            b = int(color_start[2] + (color_end[2] - color_start[2]) * ratio)
+            draw.line([(x, 0), (x, height)], fill=(r, g, b, 255))
+    else:
+        for y in range(height):
+            ratio = y / max(1, height - 1)
+            r = int(color_start[0] + (color_end[0] - color_start[0]) * ratio)
+            g = int(color_start[1] + (color_end[1] - color_start[1]) * ratio)
+            b = int(color_start[2] + (color_end[2] - color_start[2]) * ratio)
+            draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
+    return base
 
 
 def _generate_ass_subtitles(
@@ -496,7 +577,7 @@ class RenderService:
             total_scenes = len(scenes)
             total_duration = max(s.end for s in scenes)
 
-            # Validate or fallback image paths
+            # Validate or fallback image paths and composite overlays/templates
             scene_image_paths: List[Path] = []
             for idx, sc in enumerate(scenes):
                 img_path = None
@@ -512,19 +593,21 @@ class RenderService:
                     if cand.exists():
                         img_path = cand
 
-                # If missing or not generated, create a clean solid background canvas
-                if not img_path:
-                    fallback_img = temp_dir / f"fallback_{idx:03d}.png"
-                    # Safe command array to generate a solid canvas image
-                    cmd_fallback = [
-                        ffmpeg_exe, "-y",
-                        "-f", "lavfi",
-                        "-i", f"color=c=0x0f172a:s={target_width}x{target_height}:d=1",
-                        "-vframes", "1",
-                        str(fallback_img)
-                    ]
-                    subprocess.run(cmd_fallback, capture_output=True, check=True)
-                    img_path = fallback_img
+                # Check if scene requires compositing (slide template, custom background, or overlay elements)
+                has_elements = bool(getattr(sc, "elements", None))
+                has_bg = bool(getattr(sc, "background", None))
+                is_template = (getattr(sc, "template_type", "standard") or "standard") != "standard"
+
+                if has_elements or has_bg or is_template or not img_path:
+                    comp_img_path = temp_dir / f"composite_{idx:03d}.png"
+                    self._composite_scene_frame(
+                        scene=sc,
+                        base_img_path=img_path,
+                        target_width=target_width,
+                        target_height=target_height,
+                        output_path=comp_img_path
+                    )
+                    img_path = comp_img_path
 
                 scene_image_paths.append(img_path)
 
@@ -978,6 +1061,261 @@ class RenderService:
         filter_parts.append(f"fps={target_fps}")
 
         return ",".join(filter_parts)
+
+    def _composite_scene_frame(
+        self,
+        scene,
+        base_img_path: Optional[Path],
+        target_width: int,
+        target_height: int,
+        output_path: Path,
+    ) -> None:
+        """Composites slide backgrounds, templates, and overlay elements (text, emoji, badges, shapes) onto a scene frame."""
+        scale = target_width / 1080.0
+        bg_info = getattr(scene, "background", None) or {}
+        template_type = (getattr(scene, "template_type", "standard") or "standard").lower()
+
+        # 1. Base Canvas Initialization
+        if isinstance(bg_info, dict) and bg_info.get("type") == "gradient":
+            stops = bg_info.get("gradient_stops", ["#1e1b4b", "#0f172a"])
+            c1 = _hex_to_rgba(stops[0] if len(stops) > 0 else "#1e1b4b")
+            c2 = _hex_to_rgba(stops[1] if len(stops) > 1 else "#0f172a")
+            direction = bg_info.get("direction", "vertical")
+            canvas = _create_gradient_image(target_width, target_height, c1, c2, direction)
+        elif isinstance(bg_info, dict) and bg_info.get("type") == "color":
+            c = _hex_to_rgba(bg_info.get("value", "#0f172a"))
+            canvas = Image.new("RGBA", (target_width, target_height), c)
+        elif base_img_path and base_img_path.exists() and (template_type == "standard" or bg_info.get("type") == "image"):
+            try:
+                img = Image.open(base_img_path).convert("RGBA")
+                img_ratio = img.width / img.height
+                target_ratio = target_width / target_height
+                if img_ratio > target_ratio:
+                    new_height = target_height
+                    new_width = int(target_height * img_ratio)
+                else:
+                    new_width = target_width
+                    new_height = int(target_width / img_ratio)
+                img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                left = (new_width - target_width) // 2
+                top = (new_height - target_height) // 2
+                canvas = img_resized.crop((left, top, left + target_width, top + target_height))
+            except Exception as e:
+                logger.warning(f"Could not load base image for scene frame compositing: {e}")
+                canvas = Image.new("RGBA", (target_width, target_height), (15, 23, 42, 255))
+        else:
+            # Preset slide template background palettes
+            if template_type == "title_intro":
+                canvas = _create_gradient_image(target_width, target_height, (30, 27, 75, 255), (15, 23, 42, 255), "vertical")
+            elif template_type == "quote_slide":
+                canvas = _create_gradient_image(target_width, target_height, (24, 24, 27, 255), (9, 9, 11, 255), "vertical")
+            elif template_type == "key_takeaway":
+                canvas = _create_gradient_image(target_width, target_height, (4, 47, 46, 255), (15, 23, 42, 255), "vertical")
+            elif template_type == "outro_cta":
+                canvas = _create_gradient_image(target_width, target_height, (49, 16, 66, 255), (15, 23, 42, 255), "vertical")
+            elif template_type == "split_screen":
+                canvas = Image.new("RGBA", (target_width, target_height), (15, 23, 42, 255))
+                split_draw = ImageDraw.Draw(canvas)
+                split_draw.rectangle([0, 0, target_width // 2, target_height], fill=(30, 41, 59, 255))
+            else:
+                canvas = Image.new("RGBA", (target_width, target_height), (15, 23, 42, 255))
+
+        # 2. Overlay Layer Creation
+        overlay = Image.new("RGBA", (target_width, target_height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+        caption_text = getattr(scene, "caption", "") or ""
+
+        # 3. Built-in Template Layouts (when no custom elements are provided)
+        elements = getattr(scene, "elements", None) or []
+        if template_type != "standard" and len(elements) == 0:
+            if template_type == "title_intro":
+                # Badge
+                badge_font = _get_pil_font(int(26 * scale), bold=True)
+                badge_text = "INTRODUCTION"
+                bb = draw.textbbox((0, 0), badge_text, font=badge_font)
+                bw, bh = bb[2] - bb[0], bb[3] - bb[1]
+                by = int(target_height * 0.35)
+                draw.rounded_rectangle(
+                    [target_width // 2 - bw // 2 - int(24 * scale), by - int(12 * scale),
+                     target_width // 2 + bw // 2 + int(24 * scale), by + bh + int(12 * scale)],
+                    radius=int(20 * scale),
+                    fill=(79, 70, 229, 230)
+                )
+                draw.text((target_width // 2 - bw // 2, by), badge_text, font=badge_font, fill=(255, 255, 255, 255))
+
+                # Title Text
+                title_font = _get_pil_font(int(52 * scale), bold=True)
+                lines = _wrap_text(caption_text, title_font, int(target_width * 0.85), draw)
+                lh = int(64 * scale)
+                ty = int(target_height * 0.44)
+                for line in lines:
+                    bb = draw.textbbox((0, 0), line, font=title_font)
+                    lw = bb[2] - bb[0]
+                    draw.text((target_width // 2 - lw // 2, ty), line, font=title_font, fill=(255, 255, 255, 255))
+                    ty += lh
+
+            elif template_type == "quote_slide":
+                # Quote mark
+                qm_font = _get_pil_font(int(80 * scale), bold=True)
+                draw.text((int(target_width * 0.12), int(target_height * 0.32)), "\u201C", font=qm_font, fill=(245, 158, 11, 220))
+
+                quote_font = _get_pil_font(int(44 * scale), bold=False)
+                lines = _wrap_text(caption_text, quote_font, int(target_width * 0.78), draw)
+                lh = int(58 * scale)
+                qy = int(target_height * 0.42)
+                for line in lines:
+                    bb = draw.textbbox((0, 0), line, font=quote_font)
+                    lw = bb[2] - bb[0]
+                    draw.text((target_width // 2 - lw // 2, qy), line, font=quote_font, fill=(244, 244, 245, 255))
+                    qy += lh
+
+            elif template_type == "key_takeaway":
+                badge_font = _get_pil_font(int(26 * scale), bold=True)
+                badge_text = "\u26A1 KEY TAKEAWAY"
+                bb = draw.textbbox((0, 0), badge_text, font=badge_font)
+                bw, bh = bb[2] - bb[0], bb[3] - bb[1]
+                by = int(target_height * 0.32)
+                draw.rounded_rectangle(
+                    [target_width // 2 - bw // 2 - int(24 * scale), by - int(12 * scale),
+                     target_width // 2 + bw // 2 + int(24 * scale), by + bh + int(12 * scale)],
+                    radius=int(20 * scale),
+                    fill=(13, 148, 136, 230)
+                )
+                draw.text((target_width // 2 - bw // 2, by), badge_text, font=badge_font, fill=(255, 255, 255, 255))
+
+                card_rect = [int(target_width * 0.08), int(target_height * 0.40), int(target_width * 0.92), int(target_height * 0.65)]
+                draw.rounded_rectangle(card_rect, radius=int(24 * scale), fill=(15, 23, 42, 200), outline=(20, 184, 166, 120), width=int(2 * scale))
+
+                takeaway_font = _get_pil_font(int(46 * scale), bold=True)
+                lines = _wrap_text(caption_text, takeaway_font, int(target_width * 0.75), draw)
+                lh = int(60 * scale)
+                ky = int(target_height * 0.46)
+                for line in lines:
+                    bb = draw.textbbox((0, 0), line, font=takeaway_font)
+                    lw = bb[2] - bb[0]
+                    draw.text((target_width // 2 - lw // 2, ky), line, font=takeaway_font, fill=(255, 255, 255, 255))
+                    ky += lh
+
+            elif template_type == "outro_cta":
+                badge_font = _get_pil_font(int(26 * scale), bold=True)
+                badge_text = "\u2728 FINAL SUMMARY"
+                bb = draw.textbbox((0, 0), badge_text, font=badge_font)
+                bw, bh = bb[2] - bb[0], bb[3] - bb[1]
+                by = int(target_height * 0.32)
+                draw.rounded_rectangle(
+                    [target_width // 2 - bw // 2 - int(24 * scale), by - int(12 * scale),
+                     target_width // 2 + bw // 2 + int(24 * scale), by + bh + int(12 * scale)],
+                    radius=int(20 * scale),
+                    fill=(168, 85, 247, 230)
+                )
+                draw.text((target_width // 2 - bw // 2, by), badge_text, font=badge_font, fill=(255, 255, 255, 255))
+
+                outro_font = _get_pil_font(int(48 * scale), bold=True)
+                lines = _wrap_text(caption_text, outro_font, int(target_width * 0.85), draw)
+                lh = int(62 * scale)
+                oy = int(target_height * 0.42)
+                for line in lines:
+                    bb = draw.textbbox((0, 0), line, font=outro_font)
+                    lw = bb[2] - bb[0]
+                    draw.text((target_width // 2 - lw // 2, oy), line, font=outro_font, fill=(255, 255, 255, 255))
+                    oy += lh
+
+                # CTA button
+                btn_font = _get_pil_font(int(32 * scale), bold=True)
+                btn_text = "\u25B6 SUBSCRIBE & LIKE"
+                bb = draw.textbbox((0, 0), btn_text, font=btn_font)
+                bw, bh = bb[2] - bb[0], bb[3] - bb[1]
+                btn_y = int(target_height * 0.68)
+                draw.rounded_rectangle(
+                    [target_width // 2 - bw // 2 - int(32 * scale), btn_y - int(18 * scale),
+                     target_width // 2 + bw // 2 + int(32 * scale), btn_y + bh + int(18 * scale)],
+                    radius=int(28 * scale),
+                    fill=(236, 72, 153, 240)
+                )
+                draw.text((target_width // 2 - bw // 2, btn_y), btn_text, font=btn_font, fill=(255, 255, 255, 255))
+
+        # 4. Custom Overlay Elements
+        for elem in elements:
+            if not isinstance(elem, dict):
+                continue
+            elem_type = elem.get("type", "text")
+            content = str(elem.get("content", ""))
+
+            # Calculate Coordinates
+            x_raw = float(elem.get("x", 50))
+            y_raw = float(elem.get("y", 50))
+            x = int((x_raw / 100.0) * target_width) if x_raw <= 100 else int(x_raw)
+            y = int((y_raw / 100.0) * target_height) if y_raw <= 100 else int(y_raw)
+
+            if elem_type in ("text", "badge"):
+                font_size = max(18, int(elem.get("font_size", 42) * scale))
+                is_bold = elem.get("font_weight") == "bold" or elem_type == "badge"
+                font = _get_pil_font(font_size, bold=is_bold)
+                color = _hex_to_rgba(elem.get("color", "#ffffff"))
+                bg_color_str = elem.get("bg_color")
+                has_bg = bool(bg_color_str and bg_color_str.lower() != "transparent")
+
+                max_w = int(target_width * 0.85)
+                lines = _wrap_text(content, font, max_w, draw)
+                lh = int(font_size * 1.3)
+                total_h = len(lines) * lh
+                max_lw = 0
+                for l in lines:
+                    bb = draw.textbbox((0, 0), l, font=font)
+                    max_lw = max(max_lw, bb[2] - bb[0])
+
+                pad = int(elem.get("padding", 16) * scale) if has_bg else 0
+                rad = int(elem.get("border_radius", 14 if elem_type == "badge" else 8) * scale)
+
+                top_y = y - (total_h // 2)
+                left_x = x - (max_lw // 2)
+
+                if has_bg:
+                    bg_rgba = _hex_to_rgba(bg_color_str)
+                    draw.rounded_rectangle(
+                        [left_x - pad, top_y - pad, left_x + max_lw + pad, top_y + total_h + pad],
+                        radius=rad,
+                        fill=bg_rgba
+                    )
+
+                align = elem.get("align", "center")
+                cur_y = top_y
+                for l in lines:
+                    bb = draw.textbbox((0, 0), l, font=font)
+                    lw = bb[2] - bb[0]
+                    if align == "left":
+                        lx = left_x
+                    elif align == "right":
+                        lx = left_x + max_lw - lw
+                    else:
+                        lx = left_x + (max_lw - lw) // 2
+                    draw.text((lx, cur_y), l, font=font, fill=color)
+                    cur_y += lh
+
+            elif elem_type == "emoji":
+                size = max(32, int(elem.get("font_size", 72) * scale))
+                font = _get_pil_font(size)
+                bb = draw.textbbox((0, 0), content, font=font)
+                ew = bb[2] - bb[0]
+                eh = bb[3] - bb[1]
+                draw.text((x - ew // 2, y - eh // 2), content, font=font, fill=(255, 255, 255, 255))
+
+            elif elem_type == "shape":
+                shape_kind = elem.get("shape", "rectangle")
+                w = int(elem.get("width", 240) * scale)
+                h = int(elem.get("height", 120) * scale)
+                bg = _hex_to_rgba(elem.get("bg_color", "#4f46e5"))
+                rad = int(elem.get("border_radius", 16) * scale)
+                box = [x - w // 2, y - h // 2, x + w // 2, y + h // 2]
+                if shape_kind == "circle":
+                    draw.ellipse(box, fill=bg)
+                else:
+                    draw.rounded_rectangle(box, radius=rad, fill=bg)
+
+        # 5. Composite overlay into canvas and save
+        final_frame = Image.alpha_composite(canvas, overlay)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        final_frame.convert("RGB").save(str(output_path), "PNG")
 
 
 render_service = RenderService()

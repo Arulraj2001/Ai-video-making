@@ -21,6 +21,7 @@ from app.api.routes.api_keys import router as api_keys_router
 from app.api.routes.usage import router as usage_router
 from app.api.routes.payments import router as payments_router
 from app.api.routes.admin import router as admin_router
+from app.api.routes.tts import router as tts_router
 from app.utils.errors import AppException, app_exception_handler, global_exception_handler
 
 
@@ -125,6 +126,7 @@ app.include_router(api_keys_router, prefix="/api")
 app.include_router(usage_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+app.include_router(tts_router, prefix="/api")
 
 
 @app.get("/health")
