@@ -360,4 +360,24 @@ def test_download_authenticated_and_capability_token():
         client.delete(f"/api/projects/{project_id}", headers={"Authorization": f"Bearer test-token-{owner_uid}"})
 
 
+def test_render_job_reloads_and_recovers_orphans(project_with_scenes):
+    project_id = project_with_scenes["id"]
+    job = render_service.create_render_job(project_id=project_id, resolution="1080x1920")
+    job_id = job.id
 
+    # Verify job is persisted to disk
+    jobs_file = render_service._get_jobs_file(project_id)
+    assert jobs_file.exists()
+
+    # Clear in-memory dictionary to simulate container restart / worker separation
+    render_service._jobs.clear()
+    assert job_id not in render_service._jobs
+
+    # get_job should reload from disk
+    recovered_job = render_service.get_job(job_id)
+    assert recovered_job is not None
+    assert recovered_job.id == job_id
+    assert recovered_job.project_id == project_id
+    # Since it was queued before restart, it should be recovered as interrupted/failed
+    assert recovered_job.status == "failed"
+    assert "restart" in recovered_job.error.lower()

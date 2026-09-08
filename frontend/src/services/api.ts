@@ -90,7 +90,10 @@ class ApiService {
         } catch {
           // Response was not JSON
         }
-        throw new Error(errorMessage);
+        const apiError: any = new Error(errorMessage);
+        apiError.status = response.status;
+        apiError.statusCode = response.status;
+        throw apiError;
       }
 
       if (response.status === 204) {

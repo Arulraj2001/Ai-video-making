@@ -384,11 +384,20 @@ class RenderService:
                         with open(jobs_file, "r", encoding="utf-8") as f:
                             data = json.load(f)
                             for j_data in data:
+                                status = j_data["status"]
+                                stage = j_data.get("stage", "Finalizing...")
+                                error = j_data.get("error")
+                                # If the container restarted while a job was active, the worker is gone
+                                if status in ("queued", "processing"):
+                                    status = "failed"
+                                    stage = "Interrupted"
+                                    error = "Render was interrupted due to a server restart. Please export again."
+
                                 job = RenderJobModel(
                                     id=j_data["id"],
                                     project_id=j_data["project_id"],
-                                    status=j_data["status"],
-                                    stage=j_data.get("stage", "Finalizing..."),
+                                    status=status,
+                                    stage=stage,
                                     progress=j_data.get("progress", 100),
                                     resolution=j_data.get("resolution", DEFAULT_RESOLUTION),
                                     aspect_ratio=j_data.get("aspect_ratio", "9:16"),
@@ -397,7 +406,7 @@ class RenderService:
                                     output_filename=j_data.get("output_filename"),
                                     file_size=j_data.get("file_size"),
                                     duration=j_data.get("duration"),
-                                    error=j_data.get("error"),
+                                    error=error,
                                     created_at=j_data.get("created_at", datetime.now(timezone.utc).isoformat()),
                                     updated_at=j_data.get("updated_at", datetime.now(timezone.utc).isoformat()),
                                 )
@@ -406,7 +415,7 @@ class RenderService:
                         logger.warning(f"Could not load render jobs from {jobs_file}: {e}")
 
     def _save_jobs_for_project(self, project_id: str):
-        """Persists jobs metadata to disk."""
+        """Persists jobs metadata to disk and optionally syncs to Firestore."""
         jobs_file = self._get_jobs_file(project_id)
         project_jobs = [
             {
@@ -435,13 +444,129 @@ class RenderService:
         except Exception as e:
             logger.error(f"Failed to persist render jobs for {project_id}: {e}")
 
+        # Sync to Cloud Firestore if available
+        if not (os.getenv("PYTEST_CURRENT_TEST") and os.getenv("TEST_FIRESTORE") != "1"):
+            try:
+                from app.configuration.firebase import get_firestore_client
+                db = get_firestore_client()
+                if db:
+                    for j_dict in project_jobs:
+                        db.collection("render_jobs").document(j_dict["id"]).set(j_dict, merge=True)
+            except Exception as e:
+                logger.debug(f"Could not sync render jobs to Firestore: {e}")
+
     def get_job(self, job_id: str) -> Optional[RenderJobModel]:
         self.cleanup_expired_renders()
-        return self._jobs.get(job_id)
+        job = self._jobs.get(job_id)
+        if job:
+            return job
+
+        # Fallback 1: check local disk in case saved by another process
+        self._load_jobs_from_disk()
+        job = self._jobs.get(job_id)
+        if job:
+            return job
+
+        # Fallback 2: check Firestore if available
+        if not (os.getenv("PYTEST_CURRENT_TEST") and os.getenv("TEST_FIRESTORE") != "1"):
+            try:
+                from app.configuration.firebase import get_firestore_client
+                db = get_firestore_client()
+                if db:
+                    doc = db.collection("render_jobs").document(job_id).get()
+                    if doc.exists:
+                        j_data = doc.to_dict()
+                        if j_data:
+                            status = j_data.get("status", "failed")
+                            stage = j_data.get("stage", "Interrupted")
+                            error = j_data.get("error")
+                            if status in ("queued", "processing"):
+                                status = "failed"
+                                stage = "Interrupted"
+                                error = "Render was interrupted due to a server restart. Please export again."
+
+                            output_path = j_data.get("output_path")
+                            if status == "completed" and output_path:
+                                p = STORAGE_DIR / output_path
+                                if not p.exists():
+                                    status = "failed"
+                                    stage = "Expired"
+                                    error = "The rendered video file on the server expired after a server restart. Please re-export."
+
+                            reconstructed = RenderJobModel(
+                                id=j_data["id"],
+                                project_id=j_data["project_id"],
+                                status=status,
+                                stage=stage,
+                                progress=j_data.get("progress", 0),
+                                resolution=j_data.get("resolution", DEFAULT_RESOLUTION),
+                                aspect_ratio=j_data.get("aspect_ratio", "9:16"),
+                                motion_preset=j_data.get("motion_preset", "none"),
+                                output_path=output_path,
+                                output_filename=j_data.get("output_filename"),
+                                file_size=j_data.get("file_size"),
+                                duration=j_data.get("duration"),
+                                error=error,
+                                created_at=j_data.get("created_at", datetime.now(timezone.utc).isoformat()),
+                                updated_at=j_data.get("updated_at", datetime.now(timezone.utc).isoformat()),
+                            )
+                            self._jobs[reconstructed.id] = reconstructed
+                            return reconstructed
+            except Exception as e:
+                logger.debug(f"Could not load render job from Firestore: {e}")
+
+        return None
 
     def list_jobs_for_project(self, project_id: str) -> List[RenderJobModel]:
         self.cleanup_expired_renders()
-        return [j for j in self._jobs.values() if j.project_id == project_id]
+        jobs = [j for j in self._jobs.values() if j.project_id == project_id]
+        if not jobs and not (os.getenv("PYTEST_CURRENT_TEST") and os.getenv("TEST_FIRESTORE") != "1"):
+            try:
+                from app.configuration.firebase import get_firestore_client
+                db = get_firestore_client()
+                if db:
+                    docs = db.collection("render_jobs").where("project_id", "==", project_id).stream()
+                    for doc in docs:
+                        j_data = doc.to_dict()
+                        if j_data and j_data["id"] not in self._jobs:
+                            status = j_data.get("status", "failed")
+                            stage = j_data.get("stage", "Interrupted")
+                            error = j_data.get("error")
+                            if status in ("queued", "processing"):
+                                status = "failed"
+                                stage = "Interrupted"
+                                error = "Render was interrupted due to a server restart. Please export again."
+
+                            output_path = j_data.get("output_path")
+                            if status == "completed" and output_path:
+                                p = STORAGE_DIR / output_path
+                                if not p.exists():
+                                    status = "failed"
+                                    stage = "Expired"
+                                    error = "The rendered video file on the server expired after a server restart. Please re-export."
+
+                            reconstructed = RenderJobModel(
+                                id=j_data["id"],
+                                project_id=j_data["project_id"],
+                                status=status,
+                                stage=stage,
+                                progress=j_data.get("progress", 0),
+                                resolution=j_data.get("resolution", DEFAULT_RESOLUTION),
+                                aspect_ratio=j_data.get("aspect_ratio", "9:16"),
+                                motion_preset=j_data.get("motion_preset", "none"),
+                                output_path=output_path,
+                                output_filename=j_data.get("output_filename"),
+                                file_size=j_data.get("file_size"),
+                                duration=j_data.get("duration"),
+                                error=error,
+                                created_at=j_data.get("created_at", datetime.now(timezone.utc).isoformat()),
+                                updated_at=j_data.get("updated_at", datetime.now(timezone.utc).isoformat()),
+                            )
+                            self._jobs[reconstructed.id] = reconstructed
+                    jobs = [j for j in self._jobs.values() if j.project_id == project_id]
+            except Exception as e:
+                logger.debug(f"Could not list jobs from Firestore: {e}")
+        return jobs
 
     def delete_job(self, job_id: str) -> bool:
         job = self._jobs.get(job_id)
@@ -465,6 +590,13 @@ class RenderService:
         if job.id in self._jobs:
             del self._jobs[job.id]
             self._save_jobs_for_project(job.project_id)
+            try:
+                from app.configuration.firebase import get_firestore_client
+                db = get_firestore_client()
+                if db:
+                    db.collection("render_jobs").document(job.id).delete()
+            except Exception:
+                pass
         return True
 
     def create_render_job(

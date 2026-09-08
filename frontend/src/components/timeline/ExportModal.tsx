@@ -87,6 +87,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [activePreviewJobUrl, setActivePreviewJobUrl] = useState<string | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
+  const consecutiveErrorsRef = useRef<number>(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -180,6 +181,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       try {
         const updated = await api.getRenderStatus(project.id, activeJob.id);
         setActiveJob(updated);
+        consecutiveErrorsRef.current = 0;
         if (updated.status === "completed" || updated.status === "failed") {
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
@@ -188,7 +190,34 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           fetchRecentJobs();
         }
       } catch (err: any) {
-        console.error("Polling error:", err);
+        console.warn("Polling error:", err);
+        const isNotFound =
+          err?.status === 404 ||
+          err?.statusCode === 404 ||
+          (typeof err?.message === "string" && (
+            err.message.toLowerCase().includes("not found") ||
+            err.message.includes("404")
+          ));
+
+        if (isNotFound) {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          setActiveJob(null);
+          setErrorMsg("The render job was not found on the server (it may have expired or cleared during a server restart). You can start a new render now.");
+          fetchRecentJobs();
+          return;
+        }
+
+        consecutiveErrorsRef.current += 1;
+        if (consecutiveErrorsRef.current >= 4) {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          setErrorMsg("Connection lost while checking render status. Please check your connection or refresh the page.");
+        }
       }
     }, 1200);
 
@@ -202,6 +231,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const handleStartRender = async () => {
     setIsSubmitting(true);
     setErrorMsg(null);
+    consecutiveErrorsRef.current = 0;
     try {
       const job = await api.startRender(project.id, {
         resolution: selectedResolution,
@@ -220,6 +250,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     if (!targetJobId) return;
     setIsSubmitting(true);
     setErrorMsg(null);
+    consecutiveErrorsRef.current = 0;
     try {
       const job = await api.retryRender(project.id, targetJobId);
       setActiveJob(job);
