@@ -1,0 +1,1550 @@
+/* ==========================================================================
+   SCENORAEDITS — MODERN SAAS MARKETING HOMEPAGE STYLESHEET
+   Clean, Editorial, High-Converting, Light/Dark Mode Native
+   ========================================================================== */
+
+/* Page Wrapper */
+.mkt-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--surface);
+  color: var(--text);
+  overflow-x: hidden;
+  font-family: var(--font-saas, 'Poppins', sans-serif);
+  position: relative;
+}
+
+/* Base Container */
+.mkt-container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  .mkt-container {
+    padding: 0 16px;
+  }
+}
+
+/* Reusable Section Headers */
+.mkt-section-header {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 56px auto;
+}
+
+.mkt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(255, 107, 0, 0.08);
+  color: #FF6B00;
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  margin-bottom: 18px;
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.mkt-badge:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 107, 0, 0.12);
+}
+
+.mkt-badge-purple {
+  background: rgba(124, 58, 237, 0.08);
+  color: #8B5CF6;
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.mkt-badge-blue {
+  background: rgba(37, 99, 235, 0.08);
+  color: #3B82F6;
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.mkt-section-title {
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.mkt-section-subtitle {
+  font-size: clamp(1rem, 1.5vw, 1.125rem);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ==========================================================================
+   1. HERO SECTION
+   ========================================================================== */
+.mkt-hero-section {
+  position: relative;
+  padding: 80px 0 60px 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.07) 0%, transparent 60%),
+              radial-gradient(circle at 85% 25%, rgba(124, 58, 237, 0.05) 0%, transparent 50%),
+              var(--surface);
+}
+
+[data-theme="dark"] .mkt-hero-section {
+  background: radial-gradient(circle at 50% -10%, rgba(255, 107, 0, 0.12) 0%, transparent 65%),
+              radial-gradient(circle at 90% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
+              #0F1117;
+}
+
+.mkt-hero-content {
+  text-align: center;
+  max-width: 920px;
+  margin: 0 auto 52px auto;
+}
+
+.mkt-hero-h1 {
+  font-size: clamp(2.5rem, 5.5vw, 4.25rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.mkt-text-gradient {
+  background: linear-gradient(135deg, #FF6B00 0%, #FF8F3D 50%, #E05E00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mkt-hero-lead {
+  font-size: clamp(1.125rem, 1.8vw, 1.25rem);
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 720px;
+  margin: 0 auto 36px auto;
+  font-weight: 400;
+}
+
+.mkt-hero-cta-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.mkt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  color: #FFFFFF;
+  padding: 15px 32px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 107, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.mkt-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(255, 107, 0, 0.42);
+  background: linear-gradient(135deg, #FF7B1A 0%, #EB5A0A 100%);
+}
+
+.mkt-btn-primary:active {
+  transform: translateY(0);
+}
+
+.mkt-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--white);
+  color: var(--text);
+  padding: 15px 28px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+[data-theme="dark"] .mkt-btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #F3F4F6;
+}
+
+.mkt-btn-secondary:hover {
+  background: var(--surface-alt);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.mkt-hero-guarantees {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.mkt-guarantee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mkt-guarantee-icon {
+  color: #10B981;
+}
+
+/* Hero Interactive Studio Mockup */
+.mkt-studio-mockup {
+  position: relative;
+  max-width: 1140px;
+  margin: 0 auto;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+[data-theme="dark"] .mkt-studio-mockup {
+  background: #14161F;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 28px 72px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.mkt-mockup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-mockup-header {
+  background: #1A1D28;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-mockup-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.mkt-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+.mkt-dot-red { background-color: #EF4444; }
+.mkt-dot-yellow { background-color: #F59E0B; }
+.mkt-dot-green { background-color: #10B981; }
+
+.mkt-mockup-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mkt-mockup-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mkt-aspect-pill {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .mkt-aspect-pill {
+  background: #232736;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #D1D5DB;
+}
+
+.mkt-aspect-pill.active {
+  background: #FF6B00;
+  color: #FFFFFF;
+  border-color: #FF6B00;
+}
+
+/* Studio Workspace Grid */
+.mkt-studio-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 480px;
+}
+
+@media (max-width: 960px) {
+  .mkt-studio-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Script & Parameters Sidebar */
+.mkt-studio-sidebar {
+  padding: 20px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-theme="dark"] .mkt-studio-sidebar {
+  background: #11131A;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-sidebar-block-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mkt-script-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .mkt-script-card {
+  background: #181B26;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-script-card:hover, .mkt-script-card.active {
+  border-color: #FF6B00;
+  background: rgba(255, 107, 0, 0.03);
+}
+
+[data-theme="dark"] .mkt-script-card.active {
+  background: rgba(255, 107, 0, 0.1);
+}
+
+.mkt-script-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #FF6B00;
+  margin-bottom: 6px;
+}
+
+.mkt-script-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Character Continuity Anchor */
+.mkt-bible-anchor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .mkt-bible-anchor {
+  background: #181B26;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-character-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid #FF6B00;
+}
+
+.mkt-character-info h5 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.mkt-character-info p {
+  font-size: 11px;
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Studio Canvas Area */
+.mkt-studio-canvas {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--white);
+}
+
+[data-theme="dark"] .mkt-studio-canvas {
+  background: #14161F;
+}
+
+.mkt-canvas-preview {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0B0E17;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.mkt-canvas-preview.aspect-9-16 {
+  max-width: 280px;
+  aspect-ratio: 9 / 16;
+  margin: 0 auto;
+}
+
+.mkt-canvas-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.mkt-canvas-caption-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mkt-caption-highlight {
+  color: #FFC107;
+  text-decoration: underline;
+}
+
+/* Timeline Track Bar */
+.mkt-timeline-bar {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-timeline-bar {
+  background: #1A1D28;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-track-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.mkt-track-ducking-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.mkt-audio-waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 36px;
+  width: 100%;
+  background: var(--white);
+  border-radius: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-audio-waveform {
+  background: #11131A;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-wave-bar {
+  flex: 1;
+  background: #CBD5E1;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .mkt-wave-bar {
+  background: #374151;
+}
+
+.mkt-wave-bar.speaking {
+  background: #FF6B00;
+}
+
+.mkt-wave-bar.ducked {
+  background: #8B5CF6;
+  opacity: 0.5;
+}
+
+/* ==========================================================================
+   2. CREATOR PROOF & TRUST METRICS BAR
+   ========================================================================== */
+.mkt-metrics-section {
+  padding: 48px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--white);
+}
+
+[data-theme="dark"] .mkt-metrics-section {
+  background: #11131A;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  text-align: center;
+}
+
+@media (max-width: 840px) {
+  .mkt-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mkt-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+.mkt-metric-stat {
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.mkt-metric-stat span {
+  color: #FF6B00;
+}
+
+.mkt-metric-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   3. THE FRICTION VS. VELOCITY CONTRAST SECTION
+   ========================================================================== */
+.mkt-contrast-section {
+  padding: 100px 0;
+  background: var(--surface);
+}
+
+.mkt-contrast-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 48px;
+}
+
+@media (max-width: 860px) {
+  .mkt-contrast-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt-contrast-card {
+  padding: 36px;
+  border-radius: 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.mkt-contrast-card.old-way {
+  background: var(--white);
+  border: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-contrast-card.old-way {
+  background: #14161F;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-contrast-card.scenora-way {
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.04) 0%, rgba(255, 107, 0, 0.01) 100%), var(--white);
+  border: 2px solid rgba(255, 107, 0, 0.35);
+  box-shadow: 0 16px 40px -10px rgba(255, 107, 0, 0.12);
+}
+
+[data-theme="dark"] .mkt-contrast-card.scenora-way {
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.12) 0%, rgba(255, 107, 0, 0.02) 100%), #161822;
+  border-color: rgba(255, 107, 0, 0.4);
+}
+
+.mkt-contrast-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.mkt-contrast-badge.bad {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+}
+
+.mkt-contrast-badge.good {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.mkt-contrast-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text);
+}
+
+.mkt-contrast-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mkt-contrast-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.mkt-item-icon-bad {
+  color: #EF4444;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.mkt-item-icon-good {
+  color: #10B981;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.mkt-contrast-footer {
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .mkt-contrast-footer {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ==========================================================================
+   4. 4-STAGE PRODUCTION PIPELINE (HOW IT WORKS)
+   ========================================================================== */
+.mkt-pipeline-section {
+  padding: 100px 0;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-pipeline-section {
+  background: #10121A;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+  position: relative;
+}
+
+@media (max-width: 1024px) {
+  .mkt-pipeline-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .mkt-pipeline-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt-stage-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 24px;
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+[data-theme="dark"] .mkt-stage-card {
+  background: #161824;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-stage-card:hover {
+  transform: translateY(-4px);
+  border-color: #FF6B00;
+  box-shadow: 0 12px 32px -8px rgba(255, 107, 0, 0.15);
+}
+
+.mkt-stage-number {
+  font-size: 14px;
+  font-weight: 800;
+  color: #FF6B00;
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+  display: inline-block;
+}
+
+.mkt-stage-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 107, 0, 0.1);
+  color: #FF6B00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.mkt-stage-card h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.mkt-stage-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   5. FLAGSHIP BENTO GRID FEATURES
+   ========================================================================== */
+.mkt-features-section {
+  padding: 100px 0;
+  background: var(--surface);
+}
+
+.mkt-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+}
+
+.mkt-bento-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+[data-theme="dark"] .mkt-bento-card {
+  background: #141620;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-bento-card:hover {
+  border-color: rgba(255, 107, 0, 0.4);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.mkt-col-8 { grid-column: span 8; }
+.mkt-col-4 { grid-column: span 4; }
+.mkt-col-6 { grid-column: span 6; }
+.mkt-col-12 { grid-column: span 12; }
+
+@media (max-width: 960px) {
+  .mkt-col-8, .mkt-col-4, .mkt-col-6 {
+    grid-column: span 12;
+  }
+}
+
+.mkt-bento-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.mkt-bento-icon.orange {
+  background: rgba(255, 107, 0, 0.1);
+  color: #FF6B00;
+}
+.mkt-bento-icon.purple {
+  background: rgba(124, 58, 237, 0.1);
+  color: #8B5CF6;
+}
+.mkt-bento-icon.blue {
+  background: rgba(37, 99, 235, 0.1);
+  color: #3B82F6;
+}
+.mkt-bento-icon.green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.mkt-bento-card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.mkt-bento-card p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.mkt-bento-visual {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: auto;
+}
+
+[data-theme="dark"] .mkt-bento-visual {
+  background: #1B1E2B;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ==========================================================================
+   6. TARGET CREATOR NICHES
+   ========================================================================== */
+.mkt-niches-section {
+  padding: 100px 0;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-niches-section {
+  background: #11131C;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-niches-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+}
+
+@media (max-width: 1024px) {
+  .mkt-niches-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .mkt-niches-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt-niche-card {
+  padding: 28px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="dark"] .mkt-niche-card {
+  background: #161824;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-niche-card:hover {
+  border-color: #FF6B00;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.08);
+}
+
+.mkt-niche-pill {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #FF6B00;
+  margin-bottom: 14px;
+}
+
+.mkt-niche-card h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.mkt-niche-card p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  flex-grow: 1;
+}
+
+.mkt-niche-perks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mkt-niche-perks li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ==========================================================================
+   7. INTERACTIVE STORYBOARD SHOWCASE WIDGET
+   ========================================================================== */
+.mkt-showcase-section {
+  padding: 100px 0;
+  background: var(--surface);
+}
+
+.mkt-showcase-box {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .mkt-showcase-box {
+  background: #141622;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-showcase-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+
+.mkt-tab-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-theme="dark"] .mkt-tab-btn {
+  background: #1C1F2D;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #9CA3AF;
+}
+
+.mkt-tab-btn.active {
+  background: #FF6B00;
+  color: #FFFFFF;
+  border-color: #FF6B00;
+  box-shadow: 0 4px 14px rgba(255, 107, 0, 0.25);
+}
+
+.mkt-showcase-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+  align-items: center;
+}
+
+@media (max-width: 860px) {
+  .mkt-showcase-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt-showcase-details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mkt-showcase-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #FF6B00;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mkt-showcase-details h3 {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.mkt-showcase-details p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.mkt-prompt-box {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  position: relative;
+}
+
+[data-theme="dark"] .mkt-prompt-box {
+  background: #10121A;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-prompt-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #FF6B00;
+  margin-bottom: 6px;
+}
+
+/* ==========================================================================
+   8. COMPETITIVE MATRIX TABLE
+   ========================================================================== */
+.mkt-compare-section {
+  padding: 100px 0;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-compare-section {
+  background: #11131C;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-table-wrap {
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .mkt-table-wrap {
+  background: #151724;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.mkt-compare-table th {
+  padding: 18px 24px;
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
+  background: var(--surface);
+}
+
+[data-theme="dark"] .mkt-compare-table th {
+  background: #1B1E2E;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-compare-table th.highlight {
+  background: rgba(255, 107, 0, 0.08);
+  color: #FF6B00;
+  font-size: 16px;
+  border-bottom-color: #FF6B00;
+}
+
+.mkt-compare-table td {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .mkt-compare-table td {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.mkt-compare-table td.highlight {
+  background: rgba(255, 107, 0, 0.03);
+  font-weight: 600;
+  color: var(--text);
+}
+
+[data-theme="dark"] .mkt-compare-table td.highlight {
+  background: rgba(255, 107, 0, 0.06);
+}
+
+/* ==========================================================================
+   9. CREATOR TESTIMONIALS
+   ========================================================================== */
+.mkt-testimonials-section {
+  padding: 100px 0;
+  background: var(--surface);
+}
+
+.mkt-testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+}
+
+@media (max-width: 900px) {
+  .mkt-testimonials-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt-testimonial-card {
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+[data-theme="dark"] .mkt-testimonial-card {
+  background: #141622;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-quote-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text);
+  margin-bottom: 24px;
+  font-style: normal;
+}
+
+.mkt-author-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mkt-author-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #FF6B00;
+  border: 1px solid var(--border);
+}
+
+.mkt-author-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.mkt-author-role {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   10. PRICING TEASER
+   ========================================================================== */
+.mkt-pricing-teaser-section {
+  padding: 100px 0;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] .mkt-pricing-teaser-section {
+  background: #10121A;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-pricing-teaser-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px;
+  max-width: 860px;
+  margin: 48px auto 0 auto;
+}
+
+@media (max-width: 720px) {
+  .mkt-pricing-teaser-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt-price-card {
+  padding: 36px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="dark"] .mkt-price-card {
+  background: #161824;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-price-card.featured {
+  border: 2px solid #FF6B00;
+  box-shadow: 0 16px 40px -10px rgba(255, 107, 0, 0.16);
+  background: var(--white);
+}
+
+[data-theme="dark"] .mkt-price-card.featured {
+  background: #181B28;
+}
+
+.mkt-price-badge {
+  position: absolute;
+  top: -12px;
+  right: 28px;
+  background: #FF6B00;
+  color: #FFFFFF;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mkt-plan-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.mkt-plan-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  min-height: 42px;
+}
+
+.mkt-price-amount {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.mkt-price-sub {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.mkt-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  flex-grow: 1;
+}
+
+.mkt-plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mkt-plan-features svg {
+  color: #10B981;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   11. SEO FAQ ACCORDION SECTION
+   ========================================================================== */
+.mkt-faq-section {
+  padding: 100px 0;
+  background: var(--surface);
+}
+
+.mkt-faq-list {
+  max-width: 800px;
+  margin: 48px auto 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mkt-faq-item {
+  border: 1px solid var(--border);
+  background: var(--white);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .mkt-faq-item {
+  background: #141622;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-faq-question {
+  width: 100%;
+  padding: 20px 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  transition: color 0.15s ease;
+}
+
+.mkt-faq-question:hover {
+  color: #FF6B00;
+}
+
+.mkt-faq-answer {
+  padding: 0 24px 20px 24px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   12. HIGH-CONVERTING BOTTOM CTA BANNER
+   ========================================================================== */
+.mkt-cta-banner-section {
+  padding: 100px 0;
+  background: var(--surface);
+}
+
+.mkt-cta-banner {
+  background: linear-gradient(135deg, #181B26 0%, #0F1117 100%);
+  border-radius: 24px;
+  padding: 72px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.35);
+}
+
+.mkt-cta-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(255, 107, 0, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.mkt-cta-banner h2 {
+  font-size: clamp(2.25rem, 4vw, 3.25rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.mkt-cta-banner p {
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+  line-height: 1.6;
+  color: #D1D5DB;
+  max-width: 620px;
+  margin: 0 auto 36px auto;
+  position: relative;
+}
+
+.mkt-cta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  position: relative;
+  margin-bottom: 28px;
+}
+
+.mkt-cta-subtext {
+  font-size: 13px;
+  color: #9CA3AF;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}

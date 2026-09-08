@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   ShieldAlert,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,6 +50,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     { label: "Payments", to: "/admin/payments", icon: <CreditCard size={18} /> },
     { label: "Pricing", to: "/admin/pricing", icon: <Tag size={18} /> },
     { label: "Usage & Quotas", to: "/admin/usage", icon: <BarChart3 size={18} /> },
+    { label: "Messages", to: "/admin/messages", icon: <MessageSquare size={18} /> },
     { label: "Content", to: "/admin/content", icon: <FileCheck size={18} /> },
     { label: "Settings", to: "/admin/settings", icon: <Settings size={18} /> },
   ];

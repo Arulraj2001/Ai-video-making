@@ -21,12 +21,13 @@ import {
   ShieldCheck,
   AlertTriangle,
   ExternalLink,
+  Zap,
 } from "lucide-react";
-
 
 export const UpgradePage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
-  const [plan, setPlan] = useState<PlanConfigResponse | null>(null);
+  const [plans, setPlans] = useState<PlanConfigResponse[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("scenora-pro-yearly");
   const [entitlement, setEntitlement] = useState<EntitlementResponse | null>(null);
   const [payments, setPayments] = useState<PaymentResponse[]>([]);
 
@@ -43,12 +44,15 @@ export const UpgradePage: React.FC = () => {
     try {
       setLoading(true);
       setErrorMsg(null);
-      const [planData, entData, paymentsData] = await Promise.all([
-        api.getYearlyPlan(),
+      const [allPlans, entData, paymentsData] = await Promise.all([
+        api.getPlans(),
         api.getCurrentEntitlement(),
         api.getUserPayments().catch(() => []),
       ]);
-      setPlan(planData);
+      setPlans(allPlans);
+      if (allPlans.length > 0 && !allPlans.some((p) => p.plan_id === selectedPlanId)) {
+        setSelectedPlanId(allPlans[0].plan_id);
+      }
       setEntitlement(entData);
       setPayments(paymentsData);
     } catch (err: any) {
@@ -56,15 +60,17 @@ export const UpgradePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedPlanId]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  const activePlan = plans.find((p) => p.plan_id === selectedPlanId) || plans[0] || null;
+
   const handleCopyUpi = () => {
-    if (!plan?.upi_id) return;
-    navigator.clipboard.writeText(plan.upi_id);
+    if (!activePlan?.upi_id) return;
+    navigator.clipboard.writeText(activePlan.upi_id);
     setCopiedUpi(true);
     setTimeout(() => setCopiedUpi(false), 2000);
   };
@@ -89,7 +95,7 @@ export const UpgradePage: React.FC = () => {
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!plan) return;
+    if (!activePlan) return;
     if (!reference.trim()) {
       setErrorMsg("Please enter your transaction reference / UTR number.");
       return;
@@ -101,11 +107,11 @@ export const UpgradePage: React.FC = () => {
       setSuccessMsg(null);
 
       const currency = method === "upi" ? "INR" : "USD";
-      const amount = method === "upi" ? plan.price_inr : plan.price_usd;
+      const amount = method === "upi" ? activePlan.price_inr : activePlan.price_usd;
 
       // 1. Submit payment record
       const payment = await api.submitPayment({
-        plan_id: plan.plan_id,
+        plan_id: activePlan.plan_id,
         amount,
         currency,
         payment_method: method,
@@ -130,10 +136,10 @@ export const UpgradePage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading && plans.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        <LoadingState message="Loading ScenoraEdits subscription options..." />
+        <LoadingState message="Loading ScenoraEdits creator passes..." />
       </div>
     );
   }
@@ -142,13 +148,36 @@ export const UpgradePage: React.FC = () => {
   const pendingPayment = payments.find((p) => p.status === "pending");
   const rejectedPayment = payments.find((p) => p.status === "rejected");
 
+  const durationMonths = activePlan ? Math.round(activePlan.duration_days / 30) : 12;
+  const priceInr = activePlan ? activePlan.price_inr : 2999;
+  const priceUsd = activePlan ? activePlan.price_usd : 49;
+  const monthlyInr = Math.round(priceInr / (durationMonths || 1));
+  const monthlyUsd = (priceUsd / (durationMonths || 1)).toFixed(2);
+
   return (
     <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 pt-16 sm:pt-20 pb-16 space-y-8">
       <PageHeader
-        title="Upgrade to Pro Yearly"
-        subtitle="One annual pass for unlimited AI scene generation, high-speed cloud rendering, and character consistency."
-        className="mb-10 pb-8"
+        title="Creator Pro Membership Pass"
+        subtitle="Transparent platform & development pass for the studio timeline, Video Bible™ continuity, audio ducking, and BYOK unlimited generations."
+        className="mb-6 pb-4"
       />
+
+      {/* ─── PLATFORM DEVELOPMENT & BYOK TRANSPARENCY NOTICE ─────────────────── */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+            <Zap size={20} />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-[var(--color-text)]">
+              Transparent Software Platform License (Zero Token Markup)
+            </h4>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5 leading-relaxed max-w-3xl">
+              You are paying for our software engineering, timeline studio, and workflow automation. Connect your own API keys (BYOK: Gemini, OpenAI, Replicate, Fal.ai) or run unlimited on local RTX GPUs with zero token markups. No monthly token expiration anxiety.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {errorMsg && (
         <Alert type="error" title="Submission Error">
@@ -172,14 +201,14 @@ export const UpgradePage: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-[var(--color-text)]">
-                  👑 Active ScenoraEdits Pro Yearly Member
+                  👑 Active ScenoraEdits Creator Pro Member
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   ACTIVE
                 </span>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)]">
-                You have full access to unlimited generations. Expiration date:{" "}
+                You have full access to priority cloud rendering and the studio pipeline. Expiration date:{" "}
                 <strong>{new Date(entitlement.expires_at).toLocaleDateString()}</strong> (
                 {entitlement.days_remaining} days remaining).
               </p>
@@ -247,49 +276,82 @@ export const UpgradePage: React.FC = () => {
         </div>
       )}
 
+      {/* ─── DURATION SWITCHER (6 MONTHS VS 1 YEAR) ─────────────────────────── */}
+      {plans.length > 1 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)]">
+          <div className="text-xs font-bold text-[var(--color-text)] px-3">
+            Choose Your Access Duration:
+          </div>
+          <div className="flex items-center gap-2">
+            {plans.map((p) => {
+              const isSelected = p.plan_id === activePlan?.plan_id;
+              const isYear = p.duration_days >= 300;
+              return (
+                <button
+                  key={p.plan_id}
+                  type="button"
+                  onClick={() => setSelectedPlanId(p.plan_id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                    isSelected
+                      ? "bg-[#FF6B00] text-white shadow-sm"
+                      : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                  }`}
+                >
+                  <span>{isYear ? "1 Year (Annual Pass)" : "6 Months Pass"}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${
+                    isSelected ? "bg-white/20 text-white" : "bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]"
+                  }`}>
+                    {p.duration_days} Days
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ─── PLAN OVERVIEW & PAYMENT SECTION ─────────────────────────────── */}
-      {plan && (
+      {activePlan && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* ─── LEFT COLUMN: PLAN OVERVIEW ───────────────────────────────── */}
-          <Card className="lg:col-span-3 p-6 flex flex-col justify-between border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/[0.04] via-transparent to-transparent shadow-sm">
+          <Card className="lg:col-span-4 p-6 flex flex-col justify-between border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/[0.04] via-transparent to-transparent shadow-sm">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold meta-mono uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
                   <Sparkles size={13} />
-                  ALL-ACCESS PASS
+                  CREATOR PASS
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold meta-mono bg-amber-500/15 text-amber-500 border border-amber-500/30">
-                  365 DAYS
+                  {activePlan.duration_days} DAYS
                 </span>
               </div>
 
               <div>
                 <h2 className="text-2xl font-bold font-display tracking-tight text-[var(--color-text)]">
-                  {plan.name}{" "}
-                  <span className="text-amber-500 font-semibold text-base block sm:inline">
-                    (Yearly)
-                  </span>
+                  {activePlan.name}
                 </h2>
 
                 <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-[var(--color-border-subtle)]">
                   <span className="text-3xl sm:text-4xl font-black text-[var(--color-text)] font-display tracking-tight">
-                    {method === "upi" ? `₹${plan.price_inr.toLocaleString()}` : `$${plan.price_usd}`}
+                    {method === "upi" ? `₹${priceInr.toLocaleString()}` : `$${priceUsd}`}
                   </span>
-                  <span className="text-xs meta-mono font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {method === "upi" ? "INR / 1 Year" : "USD / 1 Year"}
+                  <span className="text-xs meta-mono font-semibold text-[var(--color-text-muted)]">
+                    {method === "upi"
+                      ? `INR / ${activePlan.duration_days} days (~₹${monthlyInr}/mo)`
+                      : `USD / ${activePlan.duration_days} days (~$${monthlyUsd}/mo)`}
                   </span>
                 </div>
               </div>
 
               <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                {plan.description}
+                {activePlan.description}
               </p>
 
               <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-2.5">
                 <div className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
                   What's Included
                 </div>
-                {plan.features.map((feat, i) => (
+                {activePlan.features.map((feat, i) => (
                   <div key={i} className="flex items-start gap-2.5 text-xs text-[var(--color-text)]">
                     <div className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
                       <Check size={11} strokeWidth={3} />
@@ -302,14 +364,14 @@ export const UpgradePage: React.FC = () => {
           </Card>
 
           {/* ─── RIGHT COLUMN: PAYMENT & SUBMISSION SECTION ───────────────── */}
-          <Card className="lg:col-span-9 p-6 space-y-6 shadow-sm border border-[var(--color-border)]">
+          <Card className="lg:col-span-8 p-6 space-y-6 shadow-sm border border-[var(--color-border)]">
             <div>
               <h3 className="text-base font-bold text-[var(--color-text)] flex items-center gap-2">
                 <Sparkles size={17} className="text-amber-500" />
                 Select Payment Method
               </h3>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                Pay using India UPI or International Buy Me a Coffee, then submit your transaction details below.
+                Pay using India UPI or International Buy Me a Coffee / Card, then submit your reference below.
               </p>
             </div>
 
@@ -334,7 +396,7 @@ export const UpgradePage: React.FC = () => {
                     India UPI / QR
                   </div>
                   <div className="text-[11px] meta-mono text-[var(--color-text-muted)]">
-                    ₹{plan.price_inr.toLocaleString()} INR
+                    ₹{priceInr.toLocaleString()} INR
                   </div>
                 </div>
               </button>
@@ -355,10 +417,10 @@ export const UpgradePage: React.FC = () => {
                 </div>
                 <div>
                   <div className={`text-xs font-bold ${method === "buymeacoffee" ? "text-amber-500" : "text-[var(--color-text)]"}`}>
-                    Buy Me a Coffee
+                    Buy Me a Coffee / Card
                   </div>
                   <div className="text-[11px] meta-mono text-[var(--color-text-muted)]">
-                    ${plan.price_usd} USD (Intl)
+                    ${priceUsd} USD (Intl)
                   </div>
                 </div>
               </button>
@@ -369,10 +431,10 @@ export const UpgradePage: React.FC = () => {
               <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/30 space-y-4">
                 {/* Hero QR & Payee Row */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-4 sm:p-5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-xs">
-                  {plan.upi_qr_url && plan.upi_qr_url.trim() !== "" && (
+                  {activePlan.upi_qr_url && activePlan.upi_qr_url.trim() !== "" && (
                     <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 bg-white p-1.5 rounded-xl flex items-center justify-center shadow-xs border border-gray-200 overflow-hidden">
                       <img
-                        src={plan.upi_qr_url}
+                        src={activePlan.upi_qr_url}
                         alt="Scan to pay with UPI"
                         className="w-full h-full object-contain"
                       />
@@ -381,17 +443,17 @@ export const UpgradePage: React.FC = () => {
                   <div className="flex-1 min-w-0 w-full space-y-3 text-center sm:text-left">
                     <div className="space-y-1.5">
                       <span className="block text-xs font-bold text-[var(--color-text)]">
-                        {plan.upi_qr_url && plan.upi_qr_url.trim() !== ""
+                        {activePlan.upi_qr_url && activePlan.upi_qr_url.trim() !== ""
                           ? "Scan QR or pay via UPI"
                           : "Pay via UPI"}
                       </span>
                       <div className="text-2xl font-black text-[var(--color-text)] font-display leading-none">
-                        ₹{plan.price_inr.toLocaleString()}{" "}
+                        ₹{priceInr.toLocaleString()}{" "}
                         <span className="text-xs font-mono font-normal text-[var(--color-text-muted)]">INR</span>
                       </div>
                       <div className="px-3 py-2 rounded-lg bg-[var(--color-card-subtle)] border border-amber-500/30 inline-block max-w-full">
                         <span className="text-xs font-mono font-bold text-[var(--color-primary)] break-all select-all" title="UPI ID">
-                          {plan.upi_id}
+                          {activePlan.upi_id}
                         </span>
                       </div>
                     </div>
@@ -407,7 +469,7 @@ export const UpgradePage: React.FC = () => {
                         <span>{copiedUpi ? "Copied!" : "Copy UPI ID"}</span>
                       </Button>
                       <a
-                        href={`upi://pay?pa=${encodeURIComponent(plan.upi_id)}&pn=ScenoraEdits&am=${plan.price_inr}&cu=INR&tn=Scenora%20Pro%20Yearly`}
+                        href={`upi://pay?pa=${encodeURIComponent(activePlan.upi_id)}&pn=ScenoraEdits&am=${priceInr}&cu=INR&tn=${encodeURIComponent(activePlan.name)}`}
                         className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
                       >
                         Open UPI App
@@ -426,7 +488,7 @@ export const UpgradePage: React.FC = () => {
                       1
                     </div>
                     <p className="leading-snug">
-                      {plan.upi_qr_url && plan.upi_qr_url.trim() !== ""
+                      {activePlan.upi_qr_url && activePlan.upi_qr_url.trim() !== ""
                         ? "Scan the QR code above or pay to the UPI ID"
                         : "Pay to the UPI ID above"}{" "}
                       using <strong>Google Pay, PhonePe, Paytm, or BHIM</strong>.
@@ -437,7 +499,7 @@ export const UpgradePage: React.FC = () => {
                       2
                     </div>
                     <p className="leading-snug">
-                      Complete the transfer of <strong>₹{plan.price_inr.toLocaleString()} INR</strong>.
+                      Complete the transfer of <strong>₹{priceInr.toLocaleString()} INR</strong> for {activePlan.name}.
                     </p>
                   </div>
                   <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
@@ -458,11 +520,11 @@ export const UpgradePage: React.FC = () => {
                       International Membership
                     </span>
                     <div className="text-base font-bold text-[var(--color-text)]">
-                      Buy Me a Coffee · ${plan.price_usd} USD
+                      Buy Me a Coffee · ${priceUsd} USD
                     </div>
                   </div>
                   <a
-                    href={plan.bmc_url}
+                    href={activePlan.bmc_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Open Buy Me a Coffee payment page in a new tab"
@@ -488,7 +550,7 @@ export const UpgradePage: React.FC = () => {
                     <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
                       2
                     </div>
-                    <p className="leading-snug">Pay the yearly supporter membership of <strong>${plan.price_usd} USD</strong>.</p>
+                    <p className="leading-snug">Pay the supporter membership of <strong>${priceUsd} USD</strong>.</p>
                   </div>
                   <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
                     <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
@@ -551,7 +613,7 @@ export const UpgradePage: React.FC = () => {
                   disabled={submitting}
                   className="w-full font-bold flex items-center justify-center gap-2 py-2.5 shadow-sm"
                 >
-                  {submitting ? "Submitting Verification..." : "Submit Payment for Review"}
+                  {submitting ? "Submitting Verification..." : `Submit Payment for ${activePlan.name}`}
                 </Button>
               </div>
             </form>
@@ -636,3 +698,5 @@ export const UpgradePage: React.FC = () => {
     </div>
   );
 };
+
+export default UpgradePage;

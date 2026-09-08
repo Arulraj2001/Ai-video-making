@@ -23,9 +23,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
 
-        <div className="relative flex items-center w-full">
+        <div className={`scenora-input-wrapper ${leftElement ? "has-left-icon" : ""} ${rightElement ? "has-right-icon" : ""}`}>
           {leftElement && (
-            <div className="absolute left-3 flex items-center pointer-events-none text-[var(--color-text-muted)]">
+            <div className="scenora-input-icon-left">
               {leftElement}
             </div>
           )}
@@ -33,17 +33,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             id={inputId}
             ref={ref}
-            className={`scenora-field w-full px-4 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed ${
-              error
-                ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-                : "border-[var(--color-outline)] hover:border-[var(--color-outline-strong)]"
-            } ${leftElement ? "pl-10" : ""} ${rightElement ? "pr-10" : ""} ${className}`}
+            className={`scenora-input ${error ? "border-[var(--color-error)] focus:border-[var(--color-error)]" : ""} ${className}`}
             style={{ fontFamily: "var(--font-sans)" }}
             {...props}
           />
 
           {rightElement && (
-            <div className="absolute right-3 flex items-center text-[var(--color-text-muted)]">
+            <div className="scenora-input-icon-right">
               {rightElement}
             </div>
           )}
@@ -81,10 +77,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           id={textareaId}
           ref={ref}
-          className={`scenora-field w-full px-4 py-3 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-50 disabled:cursor-not-allowed resize-y min-h-[100px] ${
-            error
-              ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-              : "border-[var(--color-outline)] hover:border-[var(--color-outline-strong)]"
+          className={`scenora-textarea ${
+            error ? "border-[var(--color-error)] focus:border-[var(--color-error)]" : ""
           } ${className}`}
           style={{ fontFamily: "var(--font-sans)" }}
           {...props}
@@ -130,10 +124,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           id={selectId}
           ref={ref}
-          className={`scenora-field w-full px-3.5 py-2.5 text-sm bg-[var(--white)] text-[var(--text)] border rounded-[var(--radius-input)] transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] cursor-pointer disabled:bg-[var(--surface-alt)] disabled:cursor-not-allowed ${
-            error
-              ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-              : "border-[var(--color-outline)] hover:border-[var(--color-outline-strong)]"
+          className={`scenora-select ${
+            error ? "border-[var(--color-error)]" : ""
           } ${className}`}
           style={{ fontFamily: "var(--font-sans)" }}
           {...props}

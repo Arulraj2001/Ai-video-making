@@ -22,6 +22,7 @@ from app.api.routes.usage import router as usage_router
 from app.api.routes.payments import router as payments_router
 from app.api.routes.admin import router as admin_router
 from app.api.routes.tts import router as tts_router
+from app.api.routes.contact import router as contact_router
 from app.utils.errors import AppException, app_exception_handler, global_exception_handler
 
 
@@ -61,7 +62,8 @@ class MaintenanceModeMiddleware(BaseHTTPMiddleware):
         if (
             path in ("/health", "/healthz", "/api/health", "/api/health/diagnostics", "/docs", "/openapi.json", "/")
             or path.startswith("/api/admin")
-            or path == "/api/plans/yearly"
+            or path.startswith("/api/plans")
+            or path == "/api/contact"
         ):
             return await call_next(request)
 
@@ -127,6 +129,7 @@ app.include_router(usage_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(tts_router, prefix="/api")
+app.include_router(contact_router, prefix="/api")
 
 
 @app.get("/health")

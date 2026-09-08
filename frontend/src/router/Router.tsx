@@ -33,6 +33,12 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handlePopState = () => {
       setPath(window.location.pathname || "/");
       setSearchParams(new URLSearchParams(window.location.search));
+      if (window.location.hash) {
+        setTimeout(() => {
+          const el = document.getElementById(window.location.hash.slice(1));
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }, 50);
+      }
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -45,7 +51,16 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     window.history.pushState({}, "", url.toString());
     setPath(url.pathname);
     setSearchParams(new URLSearchParams(url.search));
-    window.scrollTo(0, 0);
+    if (url.hash) {
+      setTimeout(() => {
+        const el = document.getElementById(url.hash.slice(1));
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 50);
+    } else {
+      window.scrollTo(0, 0);
+    }
   }, []);
 
   const replace = useCallback((to: string) => {
@@ -54,6 +69,16 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     window.history.replaceState({}, "", url.toString());
     setPath(url.pathname);
     setSearchParams(new URLSearchParams(url.search));
+    if (url.hash) {
+      setTimeout(() => {
+        const el = document.getElementById(url.hash.slice(1));
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 50);
+    } else {
+      window.scrollTo(0, 0);
+    }
   }, []);
 
   return (

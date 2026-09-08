@@ -490,20 +490,508 @@ a {
 }
 
 /* ==========================================================================
-   PUBLIC SAAS HEADER & NAVIGATION SYSTEM
+   Modern Interactive & Form Element Reset
+   Eliminates legacy OS default buttonface grey and 3D outset beveled borders
    ========================================================================== */
-.saas-announcement-bar {
-  min-height: 34px;
-  background-color: var(--surface-alt);
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 0.8125rem; /* 13px */
-  font-weight: 500;
-  color: var(--text-secondary);
+button,
+[type="button"],
+[type="reset"],
+[type="submit"] {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+button:focus-visible,
+[type="button"]:focus-visible,
+[type="submit"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+button:disabled,
+[type="button"]:disabled,
+[type="submit"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ==========================================================================
+   Scenora UI Micro-Components (Segmented Tabs, Action Buttons, Badges)
+   ========================================================================== */
+.scenora-tab-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.scenora-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.scenora-tab-btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+  border-color: var(--color-border-subtle);
+}
+
+.scenora-tab-btn.active {
+  background: var(--color-primary);
+  color: #FFFFFF !important;
+  box-shadow: 0 1px 4px rgba(255, 107, 0, 0.28);
+  border-color: var(--color-primary);
+}
+
+.scenora-tab-btn .tab-count {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+}
+
+.scenora-tab-btn.active .tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+/* Micro Icon Action Buttons */
+.icon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.icon-action-btn:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  border-color: var(--color-border-subtle);
+}
+
+.icon-action-btn.sm {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+}
+
+.icon-action-btn.primary:hover {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  border-color: var(--color-outline);
+}
+
+.icon-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Status Badges */
+.scenora-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+}
+
+.scenora-badge.unread {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.scenora-badge.read {
+  background: rgba(59, 130, 246, 0.10);
+  color: #2563EB;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+}
+
+.scenora-badge.replied {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.scenora-badge.archived {
+  background: rgba(100, 116, 139, 0.10);
+  color: #64748B;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+}
+
+/* ==========================================================================
+   Standardized Input & Form Field System
+   ========================================================================== */
+
+/* Universal styling for all text-based input controls */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+.scenora-input,
+.input-text {
+  display: block;
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+input[type="text"]:hover,
+input[type="email"]:hover,
+input[type="password"]:hover,
+input[type="url"]:hover,
+input[type="number"]:hover,
+input[type="search"]:hover,
+.scenora-input:hover,
+.input-text:hover {
+  border-color: var(--color-border-strong);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+.scenora-input:focus,
+.input-text:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-subtle);
+  background-color: var(--color-surface);
+}
+
+input::placeholder,
+textarea::placeholder,
+.scenora-input::placeholder,
+.input-text::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+textarea,
+.scenora-textarea,
+.textarea-custom {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  outline: none;
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+textarea:focus,
+.scenora-textarea:focus,
+.textarea-custom:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-subtle);
+}
+
+select,
+.scenora-select,
+.select-custom {
+  display: block;
+  width: 100%;
+  height: 40px;
+  padding: 0 32px 0 14px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+select:focus,
+.scenora-select:focus,
+.select-custom:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-subtle);
+}
+
+/* ==========================================================================
+   Input Groups & Icon Positioning (Pure Vanilla CSS)
+   ========================================================================== */
+.scenora-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.scenora-input-icon-left {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 16px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  z-index: 2;
+  line-height: 0;
+}
+
+.scenora-input-icon-right {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  z-index: 2;
+  line-height: 0;
+}
+
+.scenora-input-wrapper.has-left-icon input,
+.scenora-input-wrapper.has-left-icon .scenora-input,
+.scenora-input-wrapper.has-left-icon .input-text {
+  padding-left: 38px !important;
+}
+
+.scenora-input-wrapper.has-right-icon input,
+.scenora-input-wrapper.has-right-icon .scenora-input,
+.scenora-input-wrapper.has-right-icon .input-text {
+  padding-right: 38px !important;
+}
+
+/* Core Layout Utilities used across UI components */
+.w-full {
+  width: 100% !important;
+}
+.relative {
+  position: relative !important;
+}
+.absolute {
+  position: absolute !important;
+}
+.flex {
+  display: flex !important;
+}
+.items-center {
+  align-items: center !important;
+}
+
+/* ==========================================================================
+   PREMIUM SAAS NOTIFICATION / ANNOUNCEMENT BAR
+   Editorial, high-converting banner inspired by Linear & Runway
+   ========================================================================== */
+.saas-announcement-bar {
+  position: relative;
+  min-height: 40px;
+  background: #0B0F19;
+  background: linear-gradient(90deg, #090D16 0%, #131A29 40%, #16192E 70%, #090D16 100%);
+  border-bottom: 1px solid rgba(255, 107, 0, 0.25);
+  color: #E2E8F0;
+  font-size: 0.8125rem; /* 13px */
+  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 48px;
+  overflow: hidden;
+  z-index: 60;
+  transition: all 0.25s ease;
+}
+
+/* Subtle brand glow effect behind banner */
+.saas-announcement-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 100%;
+  background: radial-gradient(ellipse at top, rgba(255, 107, 0, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.saas-announcement-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  text-align: center;
+}
+
+.saas-announcement-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  background: rgba(255, 107, 0, 0.16);
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  color: #FF8533;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 0 10px rgba(255, 107, 0, 0.2);
+}
+
+.saas-announcement-badge .badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #FF6B00;
+  box-shadow: 0 0 6px #FF6B00;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+.saas-announcement-text {
+  color: #CBD5E1;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saas-announcement-text strong {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.saas-announcement-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: #FFA366;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.saas-announcement-cta:hover {
+  color: #FFFFFF;
+  background: rgba(255, 107, 0, 0.25);
+  border-color: rgba(255, 107, 0, 0.5);
+  transform: translateY(-0.5px);
+}
+
+.saas-announcement-cta svg {
+  transition: transform 0.15s ease;
+}
+
+.saas-announcement-cta:hover svg {
+  transform: translateX(3px);
+}
+
+.saas-announcement-dismiss {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: #94A3B8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  transition: all 0.15s ease;
+}
+
+.saas-announcement-dismiss:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .saas-header {

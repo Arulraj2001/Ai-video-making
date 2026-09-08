@@ -15,6 +15,15 @@ class PlatformConfigRecord(BaseModel):
     yearly_plan_description: str = (
         "Unlimited AI scene generation, priority cloud rendering, multi-aspect export, and Video Bible consistency for 1 full year."
     )
+    plan_6m_id: str = "scenora-pro-6months"
+    plan_6m_name: str = "ScenoraEdits Pro (6 Months)"
+    plan_6m_price_inr: int = 1799
+    plan_6m_price_usd: int = 29
+    plan_6m_duration_days: int = 180
+    plan_6m_enabled: bool = True
+    plan_6m_description: str = (
+        "Full studio timeline access, Video Bible consistency, and BYOK integration for 6 months."
+    )
     free_generation_limit: int = 5
     payment_upi_id: str = "scenoraedits@upi"
     payment_upi_qr_url: str = ""
@@ -32,6 +41,12 @@ class PlatformConfigUpdate(BaseModel):
     yearly_plan_duration_days: Optional[int] = Field(None, gt=0)
     yearly_plan_enabled: Optional[bool] = None
     yearly_plan_description: Optional[str] = None
+    plan_6m_name: Optional[str] = None
+    plan_6m_price_inr: Optional[int] = Field(None, gt=0)
+    plan_6m_price_usd: Optional[int] = Field(None, gt=0)
+    plan_6m_duration_days: Optional[int] = Field(None, gt=0)
+    plan_6m_enabled: Optional[bool] = None
+    plan_6m_description: Optional[str] = None
     free_generation_limit: Optional[int] = Field(None, ge=1)
     payment_upi_id: Optional[str] = None
     payment_upi_qr_url: Optional[str] = None

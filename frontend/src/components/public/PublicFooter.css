@@ -1,0 +1,305 @@
+/* ==========================================================================
+   SCENORAEDITS — CLEAN PROFESSIONAL SAAS FOOTER STYLESHEET
+   Clean, Editorial, Responsive, Light/Dark Mode Native
+   ========================================================================== */
+
+.saas-footer {
+  width: 100%;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  padding: 80px 0 36px 0;
+  font-family: var(--font-saas, 'Poppins', sans-serif);
+  color: var(--text);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+[data-theme="dark"] .saas-footer {
+  background: #0E1017;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.saas-footer-container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  .saas-footer-container {
+    padding: 0 16px;
+  }
+}
+
+/* 1. TOP TIER: NEWSLETTER & LIVE STATUS */
+.saas-footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding-bottom: 56px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+[data-theme="dark"] .saas-footer-top {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.saas-footer-nl-content h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.saas-footer-nl-content p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.saas-footer-nl-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.saas-footer-nl-input {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  min-width: 260px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .saas-footer-nl-input {
+  background: #161824;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #F3F4F6;
+}
+
+.saas-footer-nl-input:focus {
+  border-color: #FF6B00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15);
+}
+
+.saas-footer-nl-btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: #FF6B00;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.saas-footer-nl-btn:hover {
+  background: #E05E00;
+  transform: translateY(-1px);
+}
+
+.saas-footer-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  font-size: 12px;
+  font-weight: 600;
+  color: #10B981;
+}
+
+.saas-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: saas-pulse 2s infinite;
+}
+
+@keyframes saas-pulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* 2. MAIN 5-COLUMN DIRECTORY GRID */
+.saas-footer-main {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 48px;
+  padding: 56px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] .saas-footer-main {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 1024px) {
+  .saas-footer-main {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 36px;
+  }
+}
+
+@media (max-width: 680px) {
+  .saas-footer-main {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+}
+
+.saas-footer-brand-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.saas-footer-desc {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 320px;
+}
+
+.saas-footer-socials {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.saas-social-link {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+[data-theme="dark"] .saas-social-link {
+  background: #161824;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #9CA3AF;
+}
+
+.saas-social-link:hover {
+  color: #FF6B00;
+  border-color: #FF6B00;
+  transform: translateY(-2px);
+}
+
+.saas-footer-col h5 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-bottom: 18px;
+}
+
+.saas-footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saas-footer-links a {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saas-footer-links a:hover {
+  color: #FF6B00;
+}
+
+.saas-badge-new {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(255, 107, 0, 0.12);
+  color: #FF6B00;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* 3. BOTTOM OPERATIONAL STRIP */
+.saas-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 32px;
+  font-size: 13px;
+  color: var(--text-muted);
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.saas-footer-legal-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.saas-footer-legal-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.saas-footer-legal-links a:hover {
+  color: var(--text);
+}
+
+.saas-back-to-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .saas-back-to-top {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #9CA3AF;
+}
+
+.saas-back-to-top:hover {
+  color: #FF6B00;
+  border-color: #FF6B00;
+  background: rgba(255, 107, 0, 0.05);
+}

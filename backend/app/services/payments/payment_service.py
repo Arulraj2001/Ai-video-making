@@ -92,21 +92,90 @@ class PaymentService:
                 features=features,
             )
 
+    def get_all_plans_config(self) -> List[PlanConfigResponse]:
+        """Returns all configured and enabled creator plans (6-Month and 1-Year Passes)."""
+        plans: List[PlanConfigResponse] = []
+        try:
+            from app.services.platform.platform_service import get_platform_service
+            p_config = get_platform_service().get_config()
+
+            # 1. 6-Month Plan
+            if getattr(p_config, "plan_6m_enabled", True):
+                plans.append(
+                    PlanConfigResponse(
+                        plan_id=getattr(p_config, "plan_6m_id", "scenora-pro-6months"),
+                        name=getattr(p_config, "plan_6m_name", "ScenoraEdits Pro (6 Months)"),
+                        price_inr=getattr(p_config, "plan_6m_price_inr", 1799),
+                        price_usd=getattr(p_config, "plan_6m_price_usd", 29),
+                        duration_days=getattr(p_config, "plan_6m_duration_days", 180),
+                        enabled=getattr(p_config, "plan_6m_enabled", True),
+                        description=getattr(
+                            p_config,
+                            "plan_6m_description",
+                            "Full studio timeline access, Video Bible consistency, and BYOK integration for 6 months."
+                        ),
+                        upi_id=p_config.payment_upi_id,
+                        upi_qr_url=p_config.payment_upi_qr_url,
+                        bmc_url=p_config.payment_bmc_url,
+                        features=[
+                            "Full studio timeline access for 6 months",
+                            "Bring Your Own Key (BYOK) unlimited generations",
+                            "Video Bible™ character consistency engine",
+                            "16:9 Landscape & 9:16 Shorts export",
+                            "Speech-aware DSP audio ducking",
+                            "Commercial YouTube monetization rights",
+                        ],
+                    )
+                )
+
+            # 2. 1-Year Plan
+            if getattr(p_config, "yearly_plan_enabled", True):
+                plans.append(
+                    PlanConfigResponse(
+                        plan_id=p_config.yearly_plan_id,
+                        name=p_config.yearly_plan_name,
+                        price_inr=p_config.yearly_plan_price_inr,
+                        price_usd=p_config.yearly_plan_price_usd,
+                        duration_days=p_config.yearly_plan_duration_days,
+                        enabled=p_config.yearly_plan_enabled,
+                        description=p_config.yearly_plan_description,
+                        upi_id=p_config.payment_upi_id,
+                        upi_qr_url=p_config.payment_upi_qr_url,
+                        bmc_url=p_config.payment_bmc_url,
+                        features=[
+                            "Full studio timeline access for 1 full year",
+                            "Bring Your Own Key (BYOK) unlimited generations",
+                            "Unlimited priority cloud GPU rendering queue",
+                            "Full Video Bible™ character & style continuity",
+                            "Multi-aspect ratio exports (16:9 & 9:16 Shorts)",
+                            "Speech-aware digital audio ducking (-14dB DSP)",
+                            "Kinetic word-by-word highlighted captions",
+                            "100% Commercial YouTube monetization license",
+                            "Priority creator support SLA & all updates",
+                        ],
+                    )
+                )
+        except Exception:
+            plans.append(self.get_yearly_plan_config())
+
+        return plans
 
     def submit_payment(self, uid: str, req: PaymentSubmitRequest) -> PaymentRecord:
         """
         Creates a new pending payment record associated with the authenticated creator's UID.
         Zero automatic activation occurs at submission.
         """
-        config = self.get_yearly_plan_config()
-        if not config.enabled:
+        all_plans = self.get_all_plans_config()
+        matching_plan = next((p for p in all_plans if p.plan_id == req.plan_id), None)
+        if not matching_plan:
+            matching_plan = self.get_yearly_plan_config()
+
+        if not matching_plan.enabled:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Yearly subscription plan is currently disabled."
+                detail=f"Subscription plan '{req.plan_id}' is currently disabled."
             )
 
-        # Validate currency & amount match plan expectation
-        expected_amount = config.price_inr if req.currency == "INR" else config.price_usd
         if req.amount <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -284,9 +353,15 @@ class PaymentService:
                 detail=f"Payment {payment_id} has already been rejected and cannot be approved."
             )
 
-        # Approve payment and create new 1-year entitlement
+        # Approve payment and create new entitlement with duration matching the plan
         now_dt = datetime.now(timezone.utc)
-        duration_days = getattr(settings, "YEARLY_PLAN_DURATION_DAYS", 365)
+        all_plans = self.get_all_plans_config()
+        matching_plan = next((p for p in all_plans if p.plan_id == payment.plan_id), None)
+        if matching_plan:
+            duration_days = matching_plan.duration_days
+        else:
+            duration_days = getattr(settings, "YEARLY_PLAN_DURATION_DAYS", 365)
+
         started_at = now_dt.isoformat()
         expires_at = (now_dt + timedelta(days=duration_days)).isoformat()
 

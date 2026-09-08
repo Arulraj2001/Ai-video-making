@@ -189,14 +189,14 @@ export const ObjectsSection: React.FC<ObjectsSectionProps> = ({
                         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openEdit(obj)}
-                            className="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                            className="icon-action-btn sm"
                             title="Edit object"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onDelete(obj.id)}
-                            className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                            className="icon-action-btn sm danger"
                             title="Delete object"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -255,10 +255,10 @@ export const ObjectsSection: React.FC<ObjectsSectionProps> = ({
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-lg transition-colors"
-                style={{ color: "var(--text-muted)" }}
+                className="icon-action-btn"
+                title="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 

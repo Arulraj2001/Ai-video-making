@@ -199,14 +199,14 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
                         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openEdit(loc)}
-                            className="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                            className="icon-action-btn sm"
                             title="Edit location"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onDelete(loc.id)}
-                            className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                            className="icon-action-btn sm danger"
                             title="Delete location"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -281,8 +281,8 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-lg transition-colors"
-                style={{ color: "var(--text-muted)" }}
+                className="icon-action-btn"
+                title="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>

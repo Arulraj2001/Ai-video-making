@@ -22,6 +22,17 @@ logger = logging.getLogger("scenora.payments.api")
 router = APIRouter(tags=["Payments & Entitlements"])
 
 
+@router.get("/plans", response_model=List[PlanConfigResponse])
+def get_all_plans(
+    payment_service: PaymentService = Depends(get_payment_service),
+) -> List[PlanConfigResponse]:
+    """
+    Returns all active creator plans (e.g. 6-Month Pass and 1-Year Pass)
+    with dynamic pricing and payment instructions.
+    """
+    return payment_service.get_all_plans_config()
+
+
 @router.get("/plans/yearly", response_model=PlanConfigResponse)
 def get_yearly_plan_config(
     payment_service: PaymentService = Depends(get_payment_service),
@@ -135,6 +146,10 @@ def approve_payment(
         admin_identifier=admin_id,
         payment_id=payment_id,
     )
+    all_plans = payment_service.get_all_plans_config()
+    matching_plan = next((p for p in all_plans if p.plan_id == entitlement.plan_id), None)
+    duration_days = matching_plan.duration_days if matching_plan else 365
+
     return {
         "message": f"Payment {payment_id} successfully approved.",
         "payment": PaymentResponse.model_validate(payment.model_dump()),
@@ -147,7 +162,7 @@ def approve_payment(
             started_at=entitlement.started_at,
             expires_at=entitlement.expires_at,
             payment_id=entitlement.payment_id,
-            days_remaining=365,
+            days_remaining=duration_days,
         )
     }
 

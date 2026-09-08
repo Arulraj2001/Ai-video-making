@@ -219,6 +219,32 @@ def test_dynamic_pricing_modification_and_public_reflection():
     assert data2["price_usd"] == 59
     assert data2["name"] == "ScenoraEdits Pro Ultra"
 
+    # 4. Check /api/plans returns both 6-month and yearly plans
+    resp_plans = client.get("/api/plans")
+    assert resp_plans.status_code == 200
+    plans = resp_plans.json()
+    assert len(plans) >= 2
+    plan_6m = next((p for p in plans if p["plan_id"] == "scenora-pro-6months"), None)
+    assert plan_6m is not None
+    assert plan_6m["duration_days"] == 180
+
+    # 5. Admin updates 6-month pricing dynamically
+    put_6m = client.put(
+        "/api/admin/config",
+        json={
+            "plan_6m_price_inr": 1999,
+            "plan_6m_price_usd": 35,
+            "plan_6m_name": "ScenoraEdits Pro 6-Month Pass",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert put_6m.status_code == 200
+    updated_plans = client.get("/api/plans").json()
+    p6_updated = next(p for p in updated_plans if p["plan_id"] == "scenora-pro-6months")
+    assert p6_updated["price_inr"] == 1999
+    assert p6_updated["price_usd"] == 35
+    assert p6_updated["name"] == "ScenoraEdits Pro 6-Month Pass"
+
 
 # =====================================================================
 # 5. Immediate Free Limit Enforcement (Section 6)

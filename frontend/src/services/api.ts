@@ -854,6 +854,15 @@ class ApiService {
   }
 
   // Payments and Entitlements methods (Phase 17)
+  async getPlans(): Promise<PlanConfigResponse[]> {
+    try {
+      return await this.request<PlanConfigResponse[]>("/api/plans");
+    } catch {
+      const yearly = await this.getYearlyPlan();
+      return [yearly];
+    }
+  }
+
   async getYearlyPlan(): Promise<PlanConfigResponse> {
     return this.request<PlanConfigResponse>("/api/plans/yearly");
   }
@@ -1020,6 +1029,36 @@ class ApiService {
     return data;
   }
 
+  // Contact & Inquiries (Public & Admin)
+  async submitContactInquiry(data: ContactInquiryCreate): Promise<ContactInquiryRecord> {
+    return this.request<ContactInquiryRecord>("/api/contact", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAdminInquiries(status?: string): Promise<ContactInquiryRecord[]> {
+    const query = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<ContactInquiryRecord[]>(`/api/admin/inquiries${query}`);
+  }
+
+  async getAdminInquiry(inquiryId: string): Promise<ContactInquiryRecord> {
+    return this.request<ContactInquiryRecord>(`/api/admin/inquiries/${encodeURIComponent(inquiryId)}`);
+  }
+
+  async updateAdminInquiry(inquiryId: string, updates: ContactInquiryUpdate): Promise<ContactInquiryRecord> {
+    return this.request<ContactInquiryRecord>(`/api/admin/inquiries/${encodeURIComponent(inquiryId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteAdminInquiry(inquiryId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/admin/inquiries/${encodeURIComponent(inquiryId)}`, {
+      method: "DELETE",
+    });
+  }
+
   getMediaUrl(urlPath?: string): string {
     if (!urlPath) return "";
     if (urlPath.startsWith("http://") || urlPath.startsWith("https://")) {
@@ -1140,6 +1179,13 @@ export interface PlatformConfig {
   yearly_plan_duration_days: number;
   yearly_plan_enabled: boolean;
   yearly_plan_description: string;
+  plan_6m_id?: string;
+  plan_6m_name?: string;
+  plan_6m_price_inr?: number;
+  plan_6m_price_usd?: number;
+  plan_6m_duration_days?: number;
+  plan_6m_enabled?: boolean;
+  plan_6m_description?: string;
   free_generation_limit: number;
   payment_upi_id: string;
   payment_upi_qr_url: string;
@@ -1148,6 +1194,33 @@ export interface PlatformConfig {
   maintenance_mode: boolean;
   updated_at?: string;
   updated_by?: string;
+}
+
+export interface ContactInquiryCreate {
+  name: string;
+  email: string;
+  subject?: string;
+  channel_url?: string;
+  message: string;
+}
+
+export interface ContactInquiryRecord {
+  inquiry_id: string;
+  name: string;
+  email: string;
+  subject: string;
+  channel_url?: string;
+  message: string;
+  status: "unread" | "read" | "replied" | "archived";
+  submitted_at: string;
+  admin_notes?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}
+
+export interface ContactInquiryUpdate {
+  status?: "unread" | "read" | "replied" | "archived";
+  admin_notes?: string;
 }
 
 export interface AuditLogEntry {

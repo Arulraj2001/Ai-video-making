@@ -20,6 +20,12 @@ import { ContactPage } from "./pages/public/ContactPage";
 import { SignInPage } from "./pages/public/SignInPage";
 import { SignUpPage } from "./pages/public/SignUpPage";
 import { NotFoundPage } from "./pages/public/NotFoundPage";
+import { TermsPage } from "./pages/public/TermsPage";
+import { PrivacyPage } from "./pages/public/PrivacyPage";
+import { CommercialRightsPage } from "./pages/public/CommercialRightsPage";
+import { SecurityPage } from "./pages/public/SecurityPage";
+import { CookiesPage } from "./pages/public/CookiesPage";
+import { StatusPage } from "./pages/public/StatusPage";
 
 // Authenticated App Pages
 import { AppDashboardPage } from "./pages/app/AppDashboardPage";
@@ -39,6 +45,7 @@ import { AdminPricingPage } from "./pages/admin/AdminPricingPage";
 import { AdminUsagePage } from "./pages/admin/AdminUsagePage";
 import { AdminContentPage } from "./pages/admin/AdminContentPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+import { AdminMessagesPage } from "./pages/admin/AdminMessagesPage";
 import { AdminAccessDenied } from "./pages/admin/AdminAccessDenied";
 
 function RedirectToSignIn({ returnUrl }: { returnUrl: string }) {
@@ -100,6 +107,7 @@ function AppContent() {
     else if (path === "/admin/payments") adminContent = <AdminPaymentsPage />;
     else if (path === "/admin/pricing") adminContent = <AdminPricingPage />;
     else if (path === "/admin/usage") adminContent = <AdminUsagePage />;
+    else if (path === "/admin/messages") adminContent = <AdminMessagesPage />;
     else if (path === "/admin/content") adminContent = <AdminContentPage />;
     else if (path === "/admin/settings") adminContent = <AdminSettingsPage />;
 
@@ -155,6 +163,12 @@ function AppContent() {
   else if (path === "/contact") publicContent = <ContactPage />;
   else if (path === "/sign-in") publicContent = <SignInPage />;
   else if (path === "/sign-up") publicContent = <SignUpPage />;
+  else if (path === "/terms") publicContent = <TermsPage />;
+  else if (path === "/privacy") publicContent = <PrivacyPage />;
+  else if (path === "/commercial-rights") publicContent = <CommercialRightsPage />;
+  else if (path === "/security") publicContent = <SecurityPage />;
+  else if (path === "/cookies") publicContent = <CookiesPage />;
+  else if (path === "/status") publicContent = <StatusPage />;
   else if (path !== "/") publicContent = <NotFoundPage />;
 
   return <PublicLayout>{publicContent}</PublicLayout>;

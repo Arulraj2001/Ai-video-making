@@ -234,7 +234,7 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(char)}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+                    className="icon-action-btn sm primary"
                     title="Edit character"
                   >
                     <Edit3 size={13} />
@@ -245,7 +245,7 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
                         onDelete(char.id);
                       }
                     }}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400"
+                    className="icon-action-btn sm danger"
                     title="Delete character"
                   >
                     <Trash2 size={13} />
@@ -270,8 +270,8 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded transition-colors"
-                style={{ color: "var(--text-muted)" }}
+                className="icon-action-btn"
+                title="Close modal"
               >
                 <X size={16} />
               </button>
