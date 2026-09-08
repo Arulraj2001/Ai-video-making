@@ -310,6 +310,17 @@ class CredentialVault:
             logger.error(f"Failed to decrypt credential for {user_id}/{provider_key}: {e}")
             return None
 
+    def has_credential(self, user_id: str, provider: str) -> bool:
+        """
+        Fast check whether an authenticated user has an active encrypted credential
+        configured for the given provider.
+        """
+        if not user_id or not provider:
+            return False
+        provider_key = provider.lower().strip()
+        data = self._read_raw_record(user_id, provider_key)
+        return data is not None and bool(data.get("ciphertext"))
+
     def _read_raw_record(self, user_id: str, provider: str) -> Optional[Dict[str, Any]]:
         """Reads raw encrypted document strictly from the configured backend."""
         provider_key = provider.lower().strip()

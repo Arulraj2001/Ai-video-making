@@ -74,7 +74,12 @@ class ApiService {
         try {
           const errorData = await response.json();
           if (errorData.detail) {
-            if (typeof errorData.detail === "object" && errorData.detail.errors) {
+            if (Array.isArray(errorData.detail)) {
+              errorMessage = errorData.detail
+                .map((item: { msg?: string }) => item?.msg)
+                .filter(Boolean)
+                .join("; ") || errorMessage;
+            } else if (typeof errorData.detail === "object" && errorData.detail.errors) {
               errorMessage = errorData.detail.errors.join("; ");
             } else if (typeof errorData.detail === "string") {
               errorMessage = errorData.detail;

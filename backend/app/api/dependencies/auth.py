@@ -185,3 +185,34 @@ def get_admin_user(user: AuthenticatedUser = Depends(get_required_user)) -> Auth
             detail="Admin privileges are required for this action."
         )
     return user
+
+def get_optional_user(
+    request: Request,
+    authorization: Optional[str] = Header(None)
+) -> Optional[AuthenticatedUser]:
+    """
+    Extracts the authenticated user if credentials/headers are supplied.
+    Returns None for unauthenticated calls without raising 401 exceptions.
+    """
+    token_param = request.query_params.get("token") or request.query_params.get("auth")
+    if not authorization and not token_param:
+        is_prod = (
+            settings.ENVIRONMENT.lower() == "production"
+            or os.getenv("SCENORA_ENV", "").lower() == "production"
+            or any(k in os.environ for k in ("RENDER", "RENDER_SERVICE_ID", "RENDER_INSTANCE_ID", "RENDER_SERVICE_NAME"))
+        )
+        if not is_prod and not getattr(settings, "FIREBASE_AUTH_REQUIRED", False):
+            default_uid = getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
+            return AuthenticatedUser(
+                uid=default_uid,
+                email="creator@scenoraedits.local",
+                is_admin=False,
+                claims={"local_fallback": True}
+            )
+        return None
+
+    try:
+        return get_current_user(request, authorization)
+    except HTTPException:
+        return None
+

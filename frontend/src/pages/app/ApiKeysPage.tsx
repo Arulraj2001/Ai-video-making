@@ -243,9 +243,10 @@ export const ApiKeysPage: React.FC = () => {
       </div>
 
       {/* Security Guarantee Alert */}
-      <Alert type="success" title="Encrypted personal vault" className="mb-6 shadow-sm">
+      <Alert type="success" title="Encrypted personal vault & studio integration" className="mb-6 shadow-sm">
         <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
           Keys are encrypted with <strong>AES-256-GCM</strong>, bound to your account, and never returned to the browser in plaintext.
+          Connecting an <strong>OpenAI</strong> or <strong>Google Gemini</strong> key activates high-resolution image synthesis (including <strong>DALL-E 3</strong>) in your Storyboard Studio.
           Use <strong>Test</strong> after saving to verify the provider without running a billable generation.
         </p>
       </Alert>
@@ -341,9 +342,26 @@ export const ApiKeysPage: React.FC = () => {
                         <h3 className="text-base font-bold text-[var(--color-text)] font-display flex items-center gap-2">
                           {p.label}
                         </h3>
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-                          {p.category.replace("_", " ")}
-                        </span>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                            {p.category.replace("_", " ")}
+                          </span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-semibold border ${
+                              p.provider === "openai" || p.provider === "gemini"
+                                ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-400"
+                                : p.category === "image" || p.provider === "sana_local"
+                                ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                                : "border-purple-500/30 bg-purple-500/10 text-purple-400"
+                            }`}
+                          >
+                            {p.provider === "openai" || p.provider === "gemini"
+                              ? "Image Gen + Storyboard LLM"
+                              : p.category === "image" || p.provider === "sana_local"
+                              ? "Image Generation"
+                              : "Storyboard LLM"}
+                          </span>
+                        </div>
                       </div>
                     </div>
 

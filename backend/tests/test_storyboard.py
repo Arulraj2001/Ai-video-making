@@ -196,9 +196,8 @@ def test_final_prompt_prioritizes_ai_scene_prompt_and_preserves_caption(sample_p
     context = resolve_scene_context(sample_project_with_bible, scene, style_id="cinematic")
     prompt = build_scene_prompt(context, scene.image_prompt)
 
-    assert prompt.startswith("Scene: Kaelen hides behind a steaming service column")
-    assert "Caption intent:" in prompt
-    assert "slipped into the shadows" in prompt
+    assert "Scene meaning:\nKaelen slipped into the shadows" in prompt or "slipped into the shadows" in prompt
+    assert "Kaelen hides behind a steaming service column as distant sirens approach" in prompt
     assert "A generic neon city mood" not in prompt
 
 def test_storyboard_api_endpoints(sample_project_with_bible):

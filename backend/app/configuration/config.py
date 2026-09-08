@@ -49,9 +49,13 @@ class Settings:
 
     # Gemini image/LLM provider key. Image generation requires this explicit variable.
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+
+    # OpenAI API Key and image model configuration
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", os.getenv("LLM_API_KEY", ""))
+    OPENAI_IMAGE_MODEL: str = os.getenv("OPENAI_IMAGE_MODEL", "dall-e-3")
     
     # Image Generator Provider Configuration
-    # Supported: "pollinations", "mock", "cloudflare", "huggingface", "gemini"
+    # Supported: "pollinations", "mock", "cloudflare", "huggingface", "gemini", "openai"
     IMAGE_GENERATOR_PROVIDER: str = os.getenv("IMAGE_GENERATOR_PROVIDER", "pollinations").lower()
     IMAGE_GENERATOR_MODEL: Optional[str] = os.getenv("IMAGE_GENERATOR_MODEL", None)
     

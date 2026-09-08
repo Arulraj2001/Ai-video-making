@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useRouter } from "../../router/Router";
-import { useAuth } from "../../context/AuthContext";
 import { useSEO } from "../../utils/seo";
 import { api } from "../../services/api";
 import "./ContactPage.css";
@@ -39,7 +38,6 @@ const GitHubIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
 
 export const ContactPage: React.FC = () => {
   const { navigate } = useRouter();
-  const { user } = useAuth();
 
   useSEO({
     title: "Contact Us & Creator Support — ScenoraEdits",
@@ -52,8 +50,8 @@ export const ContactPage: React.FC = () => {
   });
 
   // Form State
-  const [name, setName] = useState<string>(user?.displayName || "");
-  const [email, setEmail] = useState<string>(user?.email || "");
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   const [subject, setSubject] = useState<string>("Technical & Local GPU Setup");
   const [channelUrl, setChannelUrl] = useState<string>("");
   const [message, setMessage] = useState<string>("");
@@ -65,8 +63,31 @@ export const ContactPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedSubject = subject.trim();
+    const trimmedChannelUrl = channelUrl.trim();
+    const trimmedMessage = message.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedMessage) {
       setErrorMsg("Please fill in all required fields.");
+      return;
+    }
+    if (trimmedName.length < 2) {
+      setErrorMsg("Please enter your full name.");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmedEmail)) {
+      setErrorMsg("Please enter a valid email address.");
+      return;
+    }
+    if (trimmedMessage.length < 10) {
+      const validationMessage = "Please provide at least 10 characters in your message.";
+      setErrorMsg(validationMessage);
+      return;
+    }
+    if (trimmedSubject.length > 150 || trimmedChannelUrl.length > 300 || trimmedMessage.length > 3000) {
+      setErrorMsg("One or more fields exceed the allowed length.");
       return;
     }
 
@@ -74,11 +95,11 @@ export const ContactPage: React.FC = () => {
       setSubmitting(true);
       setErrorMsg("");
       await api.submitContactInquiry({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        subject,
-        channel_url: channelUrl.trim() || undefined,
-        message: message.trim(),
+        name: trimmedName,
+        email: trimmedEmail,
+        subject: trimmedSubject,
+        channel_url: trimmedChannelUrl || undefined,
+        message: trimmedMessage,
       });
       setSuccess(true);
       setMessage("");
@@ -272,12 +293,16 @@ export const ContactPage: React.FC = () => {
                       <textarea
                         id="contact-message"
                         required
+                        minLength={10}
                         rows={4}
-                        placeholder="Describe your question, GPU model, or workflow requirements..."
+                        placeholder="Describe your question, GPU model, or workflow requirements (10+ characters)..."
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         className="contact-textarea"
                       />
+                      <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                        Please enter at least 10 characters.
+                      </p>
                     </div>
 
                     <button

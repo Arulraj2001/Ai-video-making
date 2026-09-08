@@ -248,7 +248,12 @@ class SceneImageService:
                     custom_instructions=prompt_override,
                     previous_scene=self._previous_scene(project, scene_id),
                 )
-                source_prompt = prompt_override or target_scene.image_prompt or target_scene.caption or "Cinematic scene"
+                source_prompt = (
+                    prompt_override
+                    or target_scene.image_prompt
+                    or target_scene.visual_description
+                    or target_scene.caption
+                )
                 effective_prompt = build_scene_prompt(context, source_prompt)
 
                 # 4. Determine aspect ratio and dimensions
@@ -348,6 +353,8 @@ class SceneImageService:
             except Exception as e:
                 from app.utils.security import sanitize_secrets
                 err_msg = sanitize_secrets(str(e)) or "Unknown image generation failure"
+                target_scene.image_status = "failed"
+                target_scene.image_error = err_msg
                 updated_scene = project_service.update_scene_image_state(
                     project_id=project.id,
                     scene_id=scene_id,
@@ -469,10 +476,12 @@ class SceneImageService:
             style_id=style_mode,
             previous_scene=self._previous_scene(project, scene_id),
         )
-        effective_prompt = build_scene_prompt(
-            context,
-            target_scene.image_prompt or target_scene.caption or "Cinematic scene",
+        source_prompt = (
+            target_scene.image_prompt
+            or target_scene.visual_description
+            or target_scene.caption
         )
+        effective_prompt = build_scene_prompt(context, source_prompt)
         references = context["references"]
         aspect_ratio = project.canvas_settings.aspect_ratio or settings.DEFAULT_ASPECT_RATIO or "16:9"
         self._validate_aspect_ratio(aspect_ratio, active_generator.capabilities)

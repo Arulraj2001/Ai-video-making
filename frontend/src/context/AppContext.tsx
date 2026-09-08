@@ -49,8 +49,11 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { theme, preference, setPreference } = useTheme();
-  const { isHealthy, checking: checkingHealth, error: healthError, refetch: refetchHealth } = useHealth();
   const { user, loading: authLoading } = useAuth();
+  const { isHealthy, checking: checkingHealth, error: healthError, refetch: refetchHealth } = useHealth(
+    30000,
+    Boolean(user) && !authLoading
+  );
   const {
     projects,
     activeProject,

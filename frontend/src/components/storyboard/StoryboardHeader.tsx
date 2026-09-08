@@ -72,6 +72,25 @@ export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
 }) => {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+
+  const updateDropdownPosition = () => {
+    const picker = pickerRef.current;
+    if (!picker) return;
+
+    const rect = picker.getBoundingClientRect();
+    const menuWidth = Math.min(352, window.innerWidth - 32);
+    const menuHeight = Math.min(560, window.innerHeight * 0.7);
+    const preferredTop = rect.bottom + 6;
+    const top = preferredTop + menuHeight > window.innerHeight - 16
+      ? Math.max(16, rect.top - menuHeight - 6)
+      : preferredTop;
+    setDropdownPosition({
+      top,
+      left: Math.max(16, Math.min(rect.left, window.innerWidth - menuWidth - 16)),
+    });
+  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -82,8 +101,15 @@ export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
     };
     if (modelDropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      updateDropdownPosition();
+      window.addEventListener("resize", updateDropdownPosition);
+      window.addEventListener("scroll", updateDropdownPosition, true);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
+    };
   }, [modelDropdownOpen]);
 
   const selectedModelObj = models.find((m) => m.model_id === selectedModelId);
@@ -146,6 +172,7 @@ export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
                 id="storyboard-model-picker"
                 onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
                 className="sb-model-picker"
+                ref={pickerRef}
                 aria-expanded={modelDropdownOpen}
                 title="Select AI image generation model"
               >
@@ -165,7 +192,10 @@ export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
               </button>
 
               {modelDropdownOpen && (
-                <div className="sb-model-dropdown">
+                <div
+                  className="sb-model-dropdown"
+                  style={dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left } : undefined}
+                >
                   {/* Header */}
                   <div className="flex items-center justify-between mb-2 pb-2 border-b border-[rgba(255,255,255,0.08)]">
                     <span className="text-[11px] font-bold" style={{ color: "var(--sb-text-primary)" }}>
@@ -195,12 +225,26 @@ export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
                             >
                               <span className="truncate">{m.name}</span>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
-                                {m.is_free && (
+                                {m.is_free ? (
                                   <span
                                     className="text-[9px] px-1.5 py-0.5 rounded font-bold"
                                     style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}
                                   >
                                     FREE
+                                  </span>
+                                ) : m.is_ready ? (
+                                  <span
+                                    className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                                    style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.35)" }}
+                                  >
+                                    ACTIVE KEY
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}
+                                  >
+                                    NEEDS KEY
                                   </span>
                                 )}
                                 {isSel && <Check size={13} style={{ color: "var(--sb-accent)" }} />}

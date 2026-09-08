@@ -18,7 +18,7 @@ from app.services.scene_image_service import scene_image_service
 from app.services.image_generation.factory import get_available_providers, get_model_catalog
 from app.services.image_generation.gemini_generator import GeminiImageGenerator
 from app.configuration.config import settings
-from app.api.dependencies.auth import get_current_user, AuthenticatedUser
+from app.api.dependencies.auth import get_current_user, get_optional_user, AuthenticatedUser
 
 router = APIRouter(tags=["images"])
 
@@ -26,14 +26,35 @@ router = APIRouter(tags=["images"])
 async def get_image_provider_health(
     provider: str = Query(..., description="Provider to check"),
     model: Optional[str] = Query(None, description="Model to check"),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """Check provider configuration/access without generating an image."""
     try:
         generator = scene_image_service.get_capabilities(provider_name=provider, model_name=model)
+        user_cred = None
+        if current_user:
+            try:
+                from app.services.vault import get_credential_vault
+                user_cred = get_credential_vault().get_credential(current_user.uid, provider)
+            except Exception:
+                pass
+
         if provider.lower() == "gemini":
+            gemini_key = (user_cred.get("api_key") if user_cred else None) or settings.GEMINI_API_KEY
             health = await GeminiImageGenerator(
-                api_key=settings.GEMINI_API_KEY,
+                api_key=gemini_key,
                 model_name=model or GeminiImageGenerator.DEFAULT_MODEL,
+            ).check_health()
+        elif provider.lower() == "openai":
+            from app.services.image_generation.openai_generator import OpenAIImageGenerator
+            openai_key = (
+                (user_cred.get("api_key") if user_cred else None)
+                or getattr(settings, "OPENAI_API_KEY", "")
+                or getattr(settings, "LLM_API_KEY", "")
+            )
+            health = await OpenAIImageGenerator(
+                api_key=openai_key or "unconfigured",
+                model_name=model or OpenAIImageGenerator.DEFAULT_MODEL,
             ).check_health()
         else:
             health = {"status": "ready", "message": "Provider configured"}
@@ -50,6 +71,8 @@ async def get_image_provider_health(
             status_name = "missing_key"
         elif "unsupported gemini image model" in message_lower:
             status_name = "model_unavailable"
+        elif "unsupported openai image model" in message_lower:
+            status_name = "model_unavailable"
         else:
             status_name = "error"
         return ImageProviderHealthResponse(
@@ -62,13 +85,16 @@ async def get_image_provider_health(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 @router.get("/images/models", response_model=ModelCatalogResponse)
-def get_available_models():
+def get_available_models(
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+):
     """
     Returns the full catalog of supported AI image models across providers,
-    including readiness status, quality scores, and supported art styles.
+    personalized with readiness status from the user's credential vault.
     """
     try:
-        catalog_raw = get_model_catalog()
+        user_id = current_user.uid if current_user else None
+        catalog_raw = get_model_catalog(user_id=user_id)
         models = [ModelCatalogItem(**item) for item in catalog_raw]
         current_provider = settings.IMAGE_GENERATOR_PROVIDER or "pollinations"
         return ModelCatalogResponse(

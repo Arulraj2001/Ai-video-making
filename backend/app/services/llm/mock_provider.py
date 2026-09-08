@@ -59,7 +59,11 @@ class MockLLMProvider(BaseLLMProvider):
         duration = float(scene.get("duration", 5.0))
         style_fragment = visual_context.get("style_prompt_fragment", "").strip()
 
-        entities = self._extract_matching_entities(caption, visual_context)
+        clean_caption = re.sub(r'["\']', '', caption).strip()
+        if not clean_caption and not instructions.strip():
+            raise ValueError("Cannot generate scene metadata: Scene caption is empty and no instructions provided.")
+
+        entities = self._extract_matching_entities(clean_caption or instructions, visual_context)
         chars = entities["characters"]
         locs = entities["locations"]
         objs = entities["objects"]
@@ -81,7 +85,6 @@ class MockLLMProvider(BaseLLMProvider):
             o = objs[0]
             obj_desc = f", prominently highlighting the {o.get('prompt_descriptor', o['name'])}"
 
-        clean_caption = re.sub(r'["\']', '', caption)
         visual_description = (
             f"Scene visualizing '{clean_caption}'. "
             f"{char_desc.capitalize() if char_desc else 'A clear narrative composition'} "
@@ -90,35 +93,41 @@ class MockLLMProvider(BaseLLMProvider):
         if instructions:
             visual_description += f" Directed alteration: {instructions}."
 
-        # 2. Synthesize Image Prompt (Scene Action FIRST!)
-        prompt_parts = [f"Scene: {clean_caption}"]
+        # 2. Synthesize Image Prompt (Structured Cinematic Format)
+        prompt_sections = []
+        if clean_caption:
+            prompt_sections.append(f"Scene meaning:\n{clean_caption}.")
+            prompt_sections.append(f"Visual interpretation:\nFaithful cinematic expansion visualizing {clean_caption}.")
 
-        # Continuity: Characters
+        action_text = instructions.strip() if instructions.strip() else clean_caption
+        if action_text:
+            prompt_sections.append(f"Subject and action:\n{action_text}.")
+
+        continuity_tokens = []
         if chars:
             c = chars[0]
-            prompt_parts.append(c.get("prompt_descriptor") or f"character {c['name']} with {c.get('appearance', 'detailed visual identity')}")
+            continuity_tokens.append(c.get("prompt_descriptor") or f"character {c['name']} with {c.get('appearance', 'detailed visual identity')}")
+        if continuity_tokens:
+            prompt_sections.append(f"Characters and continuity:\n{', '.join(continuity_tokens)}.")
 
-        # Continuity: Location
+        env_tokens = []
         if locs:
             l = locs[0]
-            prompt_parts.append(l.get("prompt_descriptor") or f"environment of {l['name']}")
-
-        # Continuity: Objects
+            env_tokens.append(l.get("prompt_descriptor") or f"environment of {l['name']}")
         if objs:
             o = objs[0]
-            prompt_parts.append(o.get("prompt_descriptor") or f"featuring detailed {o['name']}")
+            env_tokens.append(o.get("prompt_descriptor") or f"featuring detailed {o['name']}")
+        if env_tokens:
+            prompt_sections.append(f"Environment:\n{', '.join(env_tokens)}.")
 
         if style_fragment:
-            prompt_parts.append(style_fragment)
-
-        if instructions:
-            prompt_parts.append(f"stylistic modification: {instructions}")
+            prompt_sections.append(f"Style:\n{style_fragment}.")
 
         composition = visual_context.get("composition_guidance", f"{aspect_ratio} composition")
-        prompt_parts.append(f"{composition}, balanced readable framing, sharp focus, master cinematography")
-        prompt_parts.append("--no text, typography, captions, subtitles, logos, watermarks, signature, split screen, low quality")
+        prompt_sections.append(f"Aspect-ratio framing:\nComposition: {composition}, balanced readable framing, sharp focus, master cinematography.")
+        prompt_sections.append("Negative guidance:\nAvoid: --no text, typography, captions, subtitles, logos, watermarks, signature, split screen, low quality, distorted anatomy, blurry output.")
 
-        image_prompt = ", ".join(prompt_parts)
+        image_prompt = "\n\n".join(s for s in prompt_sections if s)
 
         # 3. Suggested Motion (Duration-aware)
         if duration <= 3.5:

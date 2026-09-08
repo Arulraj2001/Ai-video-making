@@ -1,24 +1,69 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "../services/api";
 import type { Project, ProjectCreateInput, SceneUpdateInput, Scene } from "../types";
 
 type ProjectUpdate = Project | ((previous: Project) => Project);
 
 let cachedProjectsList: Project[] | null = null;
+let cachedProjectsUserId: string | null = null;
+let cachedProjectsTimestamp = 0;
+const PROJECTS_CACHE_TTL_MS = 30000;
+
+function getCachedProjects(userId?: string | null): Project[] | null {
+  if (
+    !userId ||
+    cachedProjectsUserId !== userId ||
+    !cachedProjectsList ||
+    Date.now() - cachedProjectsTimestamp >= PROJECTS_CACHE_TTL_MS
+  ) {
+    return null;
+  }
+  return cachedProjectsList;
+}
+
+function setCachedProjects(userId: string, projects: Project[]): void {
+  cachedProjectsList = projects;
+  cachedProjectsUserId = userId;
+  cachedProjectsTimestamp = Date.now();
+}
+
+function clearCachedProjects(): void {
+  cachedProjectsList = null;
+  cachedProjectsUserId = null;
+  cachedProjectsTimestamp = 0;
+}
 
 export function useProjects(userId?: string | null, authLoading?: boolean) {
-  const [projects, setProjects] = useState<Project[]>(() => cachedProjectsList || []);
+  const [projects, setProjects] = useState<Project[]>(() => getCachedProjects(userId) || []);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState<boolean>(() => !cachedProjectsList);
+  const [loading, setLoading] = useState<boolean>(() => Boolean(userId) && !getCachedProjects(userId));
   const [error, setError] = useState<string | null>(null);
+  const activeUserId = useRef<string | null | undefined>(userId);
 
-  const fetchProjects = useCallback(async () => {
-    if (authLoading) return;
+  activeUserId.current = userId;
+
+  const fetchProjects = useCallback(async (force: boolean = false) => {
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      setProjects([]);
+      setActiveProject(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     try {
-      if (!cachedProjectsList) setLoading(true);
+      if (force || !getCachedProjects(userId)) setLoading(true);
       setError(null);
       const list = await api.listProjects();
-      cachedProjectsList = list;
+
+      if (activeUserId.current !== userId) return;
+
+      setCachedProjects(userId, list);
       setProjects(list);
       if (list.length > 0) {
         setActiveProject((prev) => (prev && list.some((p) => p.id === prev.id) ? list.find((p) => p.id === prev.id)! : list[0]));
@@ -26,23 +71,22 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
         setActiveProject(null);
       }
     } catch (err: any) {
+      if (activeUserId.current !== userId) return;
       setError(err.message || "Failed to load projects");
     } finally {
-      setLoading(false);
+      if (activeUserId.current === userId) setLoading(false);
     }
   }, [authLoading, userId]);
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchProjects();
-    }
+    fetchProjects();
   }, [fetchProjects, authLoading, userId]);
 
   const createProject = async (input: ProjectCreateInput): Promise<Project> => {
     try {
       setError(null);
       const newProject = await api.createProject(input);
-      cachedProjectsList = [newProject, ...(cachedProjectsList || [])];
+      clearCachedProjects();
       setProjects((prev) => [newProject, ...prev]);
       setActiveProject(newProject);
       return newProject;
@@ -56,7 +100,7 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     try {
       setError(null);
       const newProject = await api.importProject(formData);
-      cachedProjectsList = [newProject, ...(cachedProjectsList || [])];
+      clearCachedProjects();
       setProjects((prev) => [newProject, ...prev]);
       setActiveProject(newProject);
       return newProject;
@@ -70,7 +114,7 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     try {
       setError(null);
       const updated = await api.ingestProjectMedia(projectId, formData);
-      cachedProjectsList = (cachedProjectsList || []).map((p) => (p.id === projectId ? updated : p));
+      clearCachedProjects();
       setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
       if (activeProject?.id === projectId) {
         setActiveProject(updated);
@@ -123,7 +167,7 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     try {
       setError(null);
       await api.deleteProject(id);
-      cachedProjectsList = (cachedProjectsList || []).filter((p) => p.id !== id);
+      clearCachedProjects();
       setProjects((prev) => prev.filter((p) => p.id !== id));
       setActiveProject((prev) => (prev?.id === id ? null : prev));
     } catch (err: any) {
@@ -180,6 +224,6 @@ export function useProjects(userId?: string | null, authLoading?: boolean) {
     selectProject,
     applyProjectUpdate,
     patchActiveProject,
-    refresh: fetchProjects,
+    refresh: () => fetchProjects(true),
   };
 }

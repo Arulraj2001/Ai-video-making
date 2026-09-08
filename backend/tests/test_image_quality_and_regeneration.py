@@ -173,7 +173,7 @@ async def test_batch_generation_failure_isolation(test_project):
     orig_generate = mock_gen.generate_image
 
     async def flaky_generate(prompt, options, **kwargs):
-        if prompt.startswith("Scene: Bob analyzing financial charts"):
+        if "Subject and action:\nBob analyzing financial charts" in prompt or prompt.startswith("Scene: Bob analyzing financial charts"):
             raise ConnectionError("Simulated upstream provider timeout on Scene 2")
         return await orig_generate(prompt, options, **kwargs)
 

@@ -97,7 +97,7 @@ export const SecurityPage: React.FC = () => {
         </div>
         <ul>
           <li>Keys are stored in an encrypted sub-collection indexed only by salted account hash.</li>
-          <li>In the client dashboard, keys are permanently masked (e.g., `sk-proj-••••••••••••••••3A9F`).</li>
+          <li>In the client dashboard, keys are permanently masked (e.g., `key-••••••••••••••••3A9F`).</li>
           <li>You can revoke or rotate any connected key instantly with one click from <Link to="/app/api-keys" className="text-[#FF6B00] font-semibold hover:underline">API Key Settings</Link>.</li>
         </ul>
       </section>

@@ -10,7 +10,16 @@ import { Search, Plus, Trash2, Calendar, Sliders } from "lucide-react";
 
 export const ProjectsListPage: React.FC = () => {
   const { navigate } = useRouter();
-  const { projects, activeProject, selectProject, deleteProject, setIsCreateModalOpen } = useApp();
+  const {
+    projects,
+    activeProject,
+    projectsLoading,
+    projectsError,
+    selectProject,
+    deleteProject,
+    refreshProjects,
+    setIsCreateModalOpen,
+  } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredProjects = projects.filter(
@@ -59,7 +68,21 @@ export const ProjectsListPage: React.FC = () => {
       </div>
 
       {/* Projects Grid */}
-      {filteredProjects.length === 0 ? (
+      {projectsLoading ? (
+        <Card variant="default" className="p-12 text-center text-xs text-[var(--color-text-muted)]">
+          Loading your projects...
+        </Card>
+      ) : projectsError ? (
+        <Card variant="default" className="p-12 text-center">
+          <p className="text-sm text-[var(--color-error)]">{projectsError}</p>
+          <button
+            onClick={() => refreshProjects()}
+            className="app-action-link mt-3"
+          >
+            Try again
+          </button>
+        </Card>
+      ) : filteredProjects.length === 0 ? (
         <Card variant="default" className="p-12 text-center text-xs text-[var(--color-text-muted)]">
           {searchTerm ? "No projects match your search query." : "No projects created yet."}
         </Card>

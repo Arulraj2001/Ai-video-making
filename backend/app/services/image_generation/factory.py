@@ -6,6 +6,7 @@ from app.services.image_generation.cloudflare_generator import CloudflareImageGe
 from app.services.image_generation.huggingface_generator import HuggingFaceImageGenerator
 from app.services.image_generation.pollinations_generator import PollinationsImageGenerator
 from app.services.image_generation.gemini_generator import GeminiImageGenerator
+from app.services.image_generation.openai_generator import OpenAIImageGenerator
 from app.services.image_generation.sana_generator import SanaLocalImageGenerator
 
 _cached_mock_generator: Optional[MockImageGenerator] = None
@@ -27,6 +28,11 @@ def _validate_model(provider: str, model_name: Optional[str]) -> None:
             raise ValueError(
                 f"Unsupported Gemini image model '{model_name}'. "
                 f"Supported model: 'gemini-3.1-flash-image'."
+            )
+        if provider == "openai":
+            raise ValueError(
+                f"Unsupported OpenAI image model '{model_name}'. "
+                f"Supported model: 'dall-e-3'."
             )
         raise ValueError(
             f"Unsupported model '{model_name}' for provider '{provider}'. "
@@ -109,18 +115,46 @@ def get_image_generator(
         model = model_name or GeminiImageGenerator.DEFAULT_MODEL
         return GeminiImageGenerator(api_key=gemini_key, model_name=model)
 
+    elif chosen_provider == "openai":
+        openai_key = (
+            (user_cred.get("api_key") if user_cred else None)
+            or getattr(settings, "OPENAI_API_KEY", "")
+            or getattr(settings, "LLM_API_KEY", "")
+        )
+        if not openai_key:
+            raise ValueError("OpenAI API key missing. Set OPENAI_API_KEY in Vault or backend environment.")
+        model = model_name or getattr(settings, "OPENAI_IMAGE_MODEL", "dall-e-3")
+        return OpenAIImageGenerator(api_key=openai_key, model_name=model)
+
     else:
         raise ValueError(
-            f"Unsupported image generator provider '{chosen_provider}'. Supported: 'pollinations', 'mock', 'cloudflare', 'sana_local', 'huggingface', 'gemini'."
+            f"Unsupported image generator provider '{chosen_provider}'. "
+            "Supported: 'pollinations', 'mock', 'cloudflare', 'sana_local', 'huggingface', 'gemini', 'openai'."
         )
 
 def get_available_providers() -> List[str]:
-    return ["pollinations", "cloudflare", "sana_local", "mock", "huggingface", "gemini"]
+    return ["pollinations", "cloudflare", "sana_local", "mock", "huggingface", "gemini", "openai"]
 
-def get_model_catalog() -> List[dict]:
-    hf_ready = bool(settings.HUGGINGFACE_API_KEY)
-    cf_ready = bool(settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN)
-    gemini_ready = bool(settings.GEMINI_API_KEY)
+def get_model_catalog(user_id: Optional[str] = None) -> List[dict]:
+    user_has_hf = False
+    user_has_cf = False
+    user_has_gemini = False
+    user_has_openai = False
+    if user_id:
+        try:
+            from app.services.vault import get_credential_vault
+            vault = get_credential_vault()
+            user_has_hf = vault.has_credential(user_id, "huggingface")
+            user_has_cf = vault.has_credential(user_id, "cloudflare")
+            user_has_gemini = vault.has_credential(user_id, "gemini")
+            user_has_openai = vault.has_credential(user_id, "openai")
+        except Exception:
+            pass
+
+    hf_ready = bool(settings.HUGGINGFACE_API_KEY) or user_has_hf
+    cf_ready = bool(settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_API_TOKEN) or user_has_cf
+    gemini_ready = bool(settings.GEMINI_API_KEY) or user_has_gemini
+    openai_ready = bool(getattr(settings, "OPENAI_API_KEY", "") or getattr(settings, "LLM_API_KEY", "")) or user_has_openai
     
     catalog = [
         # --- 1. FREE CLOUD (Zero Setup / Unlimited) ---
@@ -293,6 +327,25 @@ def get_model_catalog() -> List[dict]:
             "is_free": True,
             "is_ready": hf_ready,
             "supported_styles": ["photorealistic", "artistic", "fantasy"]
+        },
+        {
+            "id": "openai-dall-e-3",
+            "name": "OpenAI DALL-E 3",
+            "provider": "openai",
+            "model_id": "dall-e-3",
+            "category": "paid_cloud",
+            "description": "Premier OpenAI visual synthesis with outstanding prompt adherence and realism",
+            "quality": 5,
+            "speed": "Fast",
+            "is_free": False,
+            "is_ready": openai_ready,
+            "supported_styles": ["photorealistic", "cinematic", "anime", "3d", "artistic", "fantasy", "documentary", "custom"],
+            "supports_reference_images": False,
+            "supports_seed": False,
+            "supports_aspect_ratio": True,
+            "supports_negative_prompt": False,
+            "supports_image_to_image": False,
+            "supports_variations": True,
         }
     ]
     for item in catalog:

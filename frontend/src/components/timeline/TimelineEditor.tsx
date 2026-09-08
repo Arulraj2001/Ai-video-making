@@ -34,6 +34,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   const [activeTab, setActiveTab] = useState<"scene" | "overlays" | "captions" | "audio" | "canvas">("scene");
   const [deleteTargetSceneId, setDeleteTargetSceneId] = useState<string | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
   // Undo / Redo History Stack with synchronous Ref to eliminate stale closures
   const historyRef = useRef<Scene[][]>([]);
@@ -344,7 +345,11 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     if (!selectedScene) return;
     await handleUpdateScene({
       elements,
-    });
+    }, false);
+  };
+
+  const handleUpdateSceneElements = async (sceneId: string, elements: SceneElement[]) => {
+    await handleUpdateSceneById(sceneId, { elements }, false);
   };
 
   const handleSplitScene = async (sceneId: string, splitTime: number) => {
@@ -760,6 +765,10 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             }}
             onUploadImage={handleUploadImage}
             audioRef={audioRef}
+            selectedSceneId={selectedScene?.id}
+            selectedElementId={selectedElementId}
+            onSelectElement={setSelectedElementId}
+            onUpdateElements={handleUpdateSceneElements}
           />
         </div>
 
@@ -851,6 +860,8 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                 <OverlayElementsInspector
                   scene={selectedScene}
                   onUpdateElements={handleUpdateElements}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={setSelectedElementId}
                 />
               </div>
             ) : (

@@ -211,6 +211,58 @@
   margin-bottom: 28px;
 }
 
+.contact-page .hiw-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  color: #FFFFFF;
+  padding: 14px 30px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(255, 107, 0, 0.3);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.contact-page .hiw-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 107, 0, 0.42);
+}
+
+.contact-page .hiw-btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
+.contact-page .hiw-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--white);
+  color: var(--text);
+  padding: 14px 26px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.contact-page .hiw-btn-secondary:hover {
+  background: var(--surface-alt);
+  border-color: rgba(255, 107, 0, 0.35);
+  transform: translateY(-2px);
+}
+
 .contact-form-group {
   margin-bottom: 20px;
 }

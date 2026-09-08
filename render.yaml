@@ -34,9 +34,9 @@ services:
       - key: RENDER_RETENTION_HOURS
         value: "24"
       - key: FIREBASE_PROJECT_ID
-        value: scenoraedits
+        value: scenora-46cfe
       - key: FIREBASE_STORAGE_BUCKET
-        value: scenoraedits.firebasestorage.app
+        value: scenora-46cfe.firebasestorage.app
       - key: SCENORA_CREDENTIAL_ENCRYPTION_KEY
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_KEY

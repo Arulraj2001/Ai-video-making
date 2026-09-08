@@ -212,81 +212,165 @@ def resolve_scene_context(
     }
 
 
+def _is_meaningful(text: Optional[str]) -> bool:
+    if not text:
+        return False
+    return bool(text.strip().strip(".-_ \t\n\r"))
+
+
 def build_scene_prompt(context: Dict[str, Any], scene_prompt: Optional[str] = None) -> str:
     """
-    Assemble a readable, prioritized prompt strictly following the Core Prompt Model:
-    1. Scene subject / action / meaning (FIRST)
-    2. Relevant character identity
-    3. Relevant location identity
-    4. Relevant object identity
-    5. Selected visual style & rendering
-    6. Composition & aspect framing
-    7. Compatible project rules
-    8. Continuity context
-    9. Scene-specific direction (de-duplicated)
-    10. Explicit custom instructions (de-duplicated)
-    11. Negative guidance
+    Assemble a structured, cinematic, prioritized prompt strictly following:
+    1. Caption as exact source of truth under Scene meaning
+    2. Explicit user prompt overrides as highest priority
+    3. Zero generic fallback text (no 'Cinematic scene', no 'A clearly visualized scene')
+    4. Only relevant Video Bible entities and continuity
+    5. Clean structured sections:
+       Scene meaning:
+       Visual interpretation:
+       Subject and action:
+       Characters and continuity:
+       Environment:
+       Camera and composition:
+       Lighting and mood:
+       Style:
+       Aspect-ratio framing:
+       Negative guidance:
     """
+    caption = (context.get("caption") or "").strip()
+    visual_desc = (context.get("visual_description") or "").strip()
+    custom_inst = (context.get("custom_instructions") or "").strip()
+    scene_prompt_clean = (scene_prompt or "").strip()
+
+    # Fail clearly if neither caption, prompt override, scene_prompt, nor visual_description has meaningful content
+    if not any(_is_meaningful(t) for t in (caption, visual_desc, custom_inst, scene_prompt_clean)):
+        raise ValueError("Scene has no meaningful caption, prompt, or visual description to generate an image prompt.")
+
     preset: StylePreset = context["style"]
-    sections: List[str] = []
 
-    # 1. Scene subject / action / meaning (FIRST!)
-    scene_meaning = (
-        scene_prompt
-        or context.get("visual_description")
-        or context.get("caption")
-        or "A clearly visualized scene"
-    ).strip().rstrip(".")
-    sections.append(f"Scene: {scene_meaning}.")
+    # --- 1. Scene meaning: exact original caption as source of truth ---
+    clean_caption = caption.rstrip(".") if _is_meaningful(caption) else ""
 
-    caption = (context.get("caption") or "").strip().rstrip(".")
-    if caption and caption.lower() not in scene_meaning.lower():
-        sections.append(f"Caption intent: {caption}.")
-
-    # 2-4. Relevant entities (Character, Location, Object)
-    for entity in context.get("entities", []):
-        sections.append(entity["identity"].rstrip(".") + ".")
-
-    # 5. Selected visual style & rendering language
-    if preset.id == "custom" and context.get("custom_instructions"):
-        sections.append(f"Visual style: Custom art style. {context['custom_instructions'].strip().rstrip('.')}.")
+    # --- Determine Priority for Subject / Action ---
+    # 1. User prompt override (custom_inst or explicit override)
+    # 2. Existing scene.image_prompt (passed in as scene_prompt_clean if distinct from visual_desc and caption)
+    # 3. Scene visual_description
+    # 4. Original scene caption
+    if _is_meaningful(custom_inst) and preset.id != "custom":
+        primary_action = custom_inst.rstrip(".")
+    elif _is_meaningful(scene_prompt_clean) and scene_prompt_clean.lower() != clean_caption.lower():
+        primary_action = scene_prompt_clean.rstrip(".")
+    elif _is_meaningful(visual_desc) and visual_desc.lower() != clean_caption.lower():
+        primary_action = visual_desc.rstrip(".")
+    elif _is_meaningful(clean_caption):
+        primary_action = clean_caption
     else:
-        sections.append(
+        primary_action = (scene_prompt_clean or visual_desc or custom_inst).rstrip(".")
+
+    # --- 2. Visual interpretation: faithful visual expansion ---
+    # If a scene_prompt (like image_prompt) was provided that already expanded the scene,
+    # do not inject the lower-priority / overridden visual_desc if it was generic or conflicting.
+    has_custom_interp = False
+    if _is_meaningful(visual_desc) and visual_desc.lower() != clean_caption.lower():
+        if _is_meaningful(scene_prompt_clean) and scene_prompt_clean.lower() != visual_desc.lower():
+            visual_interp = f"Faithful visual expansion of the scene: {primary_action}."
+            has_custom_interp = True
+        else:
+            visual_interp = visual_desc.rstrip(".") + "."
+            has_custom_interp = True
+    elif _is_meaningful(clean_caption):
+        visual_interp = f"Faithful cinematic visualization of {clean_caption}."
+    else:
+        visual_interp = f"Cinematic visualization of {primary_action}."
+
+    # --- 3. Subject and action ---
+    subject_action = primary_action + "."
+
+    # --- 4. Characters and continuity ---
+    char_tokens = [
+        e["identity"].rstrip(".") + "."
+        for e in context.get("entities", [])
+        if e.get("type") == "character"
+    ]
+    if context.get("continuity_context"):
+        char_tokens.append(context["continuity_context"].rstrip(".") + ".")
+    characters_continuity = " ".join(char_tokens).strip()
+
+    # --- 5. Environment (location & objects) ---
+    env_tokens = [
+        e["identity"].rstrip(".") + "."
+        for e in context.get("entities", [])
+        if e.get("type") in ("location", "object")
+    ]
+    untyped_tokens = [
+        e["identity"].rstrip(".") + "."
+        for e in context.get("entities", [])
+        if e.get("type") not in ("character", "location", "object")
+    ]
+    if untyped_tokens:
+        env_tokens.extend(untyped_tokens)
+    environment = " ".join(env_tokens).strip()
+
+    # --- 6. Camera and composition ---
+    camera_parts = []
+    if preset.camera:
+        camera_parts.append(preset.camera.rstrip(".") + ".")
+    camera_composition = " ".join(camera_parts).strip()
+
+    # --- 7. Lighting and mood ---
+    lighting_parts = []
+    if preset.lighting:
+        lighting_parts.append(preset.lighting.rstrip(".") + ".")
+    if preset.color_treatment:
+        lighting_parts.append(preset.color_treatment.rstrip(".") + ".")
+    lighting_mood = " ".join(lighting_parts).strip()
+
+    # --- 8. Style ---
+    style_parts = []
+    if preset.id == "custom" and _is_meaningful(custom_inst):
+        style_parts.append(f"Visual style: Custom art style. {custom_inst.rstrip('.')}.")
+    else:
+        style_parts.append(
             f"Visual style: {preset.label}. {preset.visual_language}; {preset.rendering}; {preset.color_treatment}; {preset.texture}."
         )
-        sections.append(f"Lighting and camera: {preset.lighting}; {preset.camera}.")
-
-    # 6. Composition / aspect ratio framing
-    sections.append(f"Composition: {context['composition']}.")
-
-    # 7. Compatible project rules
     if context.get("rules"):
-        sections.append("Project visual rules: " + "; ".join(context["rules"]) + ".")
+        style_parts.append("Project visual rules: " + "; ".join(context["rules"]) + ".")
+    style_section = " ".join(style_parts).strip()
 
-    # 8. Continuity context (if present)
-    if context.get("continuity_context"):
-        sections.append(context["continuity_context"].rstrip(".") + ".")
+    # --- 9. Aspect-ratio framing ---
+    composition_guidance = context.get("composition", "")
+    aspect_framing = f"Composition: {composition_guidance}." if composition_guidance else ""
 
-    # 9. Scene-specific camera / direction (only if distinct from scene_meaning and caption)
-    caption_text = (context.get("caption") or "").strip().lower()
-    if scene_prompt:
-        clean_prompt = scene_prompt.strip().rstrip(".")
-        clean_prompt_lower = clean_prompt.lower()
-        if clean_prompt_lower != scene_meaning.lower() and clean_prompt_lower != caption_text:
-            sections.append(f"Scene direction: {clean_prompt}.")
+    # --- 10. Negative guidance ---
+    negative_guidance = f"Avoid: {preset.negative_prompt.rstrip('.')}, text, watermark, logo, duplicate subjects, distorted anatomy, unrelated objects, blurry output."
 
-    # 10. Explicit custom instructions (if not already used as custom style)
-    if context.get("custom_instructions") and preset.id != "custom":
-        clean_custom = context["custom_instructions"].strip().rstrip(".")
-        clean_custom_lower = clean_custom.lower()
-        if (
-            clean_custom_lower != scene_meaning.lower()
-            and clean_custom_lower != caption_text
-            and clean_custom_lower != (scene_prompt or "").strip().lower()
-        ):
-            sections.append(f"Custom user direction: {clean_custom}.")
+    # Assemble structured sections
+    structured_sections: List[str] = []
+    if clean_caption:
+        structured_sections.append(f"Scene meaning:\n{clean_caption}.")
+    if visual_interp:
+        # Prevent verbatim duplicate repetition of the exact primary_action text
+        norm_pa = primary_action.strip().rstrip(".").lower()
+        norm_vi = visual_interp.strip().rstrip(".").lower()
+        if norm_pa in norm_vi or norm_vi in norm_pa:
+            structured_sections.append("Visual interpretation:\nFaithful cinematic expansion preserving scene context.")
+        else:
+            structured_sections.append(f"Visual interpretation:\n{visual_interp}")
+    if subject_action:
+        structured_sections.append(f"Subject and action:\n{subject_action}")
+    if characters_continuity:
+        structured_sections.append(f"Characters and continuity:\n{characters_continuity}")
+    if environment:
+        structured_sections.append(f"Environment:\n{environment}")
+    if camera_composition:
+        structured_sections.append(f"Camera and composition:\n{camera_composition}")
+    if lighting_mood:
+        structured_sections.append(f"Lighting and mood:\n{lighting_mood}")
+    if style_section:
+        structured_sections.append(f"Style:\n{style_section}")
+    if aspect_framing:
+        structured_sections.append(f"Aspect-ratio framing:\n{aspect_framing}")
+    if negative_guidance:
+        structured_sections.append(f"Negative guidance:\n{negative_guidance}")
 
-    # 11. Negative guidance
-    sections.append("Avoid: " + preset.negative_prompt.rstrip(".") + ".")
-
-    return " ".join(section for section in sections if section)
+    return "\n\n".join(section for section in structured_sections if section)

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
-import type { Project, Scene } from "../../types/project";
+import type { Project, Scene, SceneElement } from "../../types/project";
 import { api } from "../../services/api";
+import { Trash2, Copy } from "lucide-react";
 
 interface CinemaPreviewProps {
   project: Project;
@@ -12,6 +13,10 @@ interface CinemaPreviewProps {
   onSelectScene?: (sceneId: string) => void;
   onUploadImage?: (sceneId: string, file: File) => Promise<void>;
   audioRef: React.RefObject<HTMLAudioElement | null>;
+  selectedSceneId?: string;
+  selectedElementId?: string | null;
+  onSelectElement?: (elementId: string | null) => void;
+  onUpdateElements?: (sceneId: string, elements: SceneElement[]) => void;
 }
 
 export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
@@ -24,13 +29,26 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
   onSelectScene,
   onUploadImage,
   audioRef,
+  selectedSceneId,
+  selectedElementId,
+  onSelectElement,
+  onUpdateElements,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasScreenRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const [isOverlayDragging, setIsOverlayDragging] = useState(false);
+  const [dragDropPos, setDragDropPos] = useState({ x: 50, y: 50 });
   const [isCanvasUploading, setIsCanvasUploading] = useState(false);
+
+  // On-canvas dragging state
+  const [draggingElementId, setDraggingElementId] = useState<string | null>(null);
+  const [dragStartPointer, setDragStartPointer] = useState<{ clientX: number; clientY: number } | null>(null);
+  const [dragStartElemPos, setDragStartElemPos] = useState<{ x: number; y: number } | null>(null);
+  const [snapGuides, setSnapGuides] = useState<{ vertical: boolean; horizontal: boolean }>({ vertical: false, horizontal: false });
 
   // Find currently active scene according to authoritative timestamps
   const scenes = project.scenes || [];
@@ -48,8 +66,13 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
         ? scenes.findIndex((s) => s.end > currentTime)
         : 0
       : -1;
+
+  // When paused and a scene is explicitly selected in inspector, show and edit that scene
   const activeScene: Scene | undefined =
-    safeActiveIndex !== -1 ? scenes[safeActiveIndex] : undefined;
+    isPlaying
+      ? (safeActiveIndex !== -1 ? scenes[safeActiveIndex] : undefined)
+      : (selectedSceneId && scenes.find((s) => s.id === selectedSceneId)) ||
+        (safeActiveIndex !== -1 ? scenes[safeActiveIndex] : undefined);
 
   // Check if upcoming scene transition should crossfade
   const nextScene: Scene | undefined =
@@ -213,22 +236,223 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
     return filters.length > 0 ? filters.join(" ") : "none";
   };
 
+  const handleDuplicateElement = (elem: SceneElement) => {
+    if (!activeScene || !onUpdateElements) return;
+    const clone: SceneElement = {
+      ...elem,
+      id: `elem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      x: Math.min(92, Math.max(8, elem.x + 4)),
+      y: Math.min(92, Math.max(8, elem.y + 4)),
+    };
+    const updated = [...(activeScene.elements || []), clone];
+    onUpdateElements(activeScene.id, updated);
+    if (onSelectElement) onSelectElement(clone.id);
+  };
+
+  const handleDeleteElement = (id: string) => {
+    if (!activeScene || !onUpdateElements) return;
+    const updated = (activeScene.elements || []).filter((el) => el.id !== id);
+    onUpdateElements(activeScene.id, updated);
+    if (selectedElementId === id && onSelectElement) {
+      onSelectElement(null);
+    }
+  };
+
+  // On-canvas element pointer interaction
+  const handleElementPointerDown = (e: React.PointerEvent, elem: SceneElement) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onSelectElement) onSelectElement(elem.id);
+    setDraggingElementId(elem.id);
+    setDragStartPointer({ clientX: e.clientX, clientY: e.clientY });
+    setDragStartElemPos({ x: elem.x, y: elem.y });
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const handleElementPointerMove = (e: React.PointerEvent) => {
+    if (!draggingElementId || !dragStartPointer || !dragStartElemPos || !canvasScreenRef.current || !activeScene) return;
+    const rect = canvasScreenRef.current.getBoundingClientRect();
+    const deltaX = ((e.clientX - dragStartPointer.clientX) / rect.width) * 100;
+    const deltaY = ((e.clientY - dragStartPointer.clientY) / rect.height) * 100;
+    let newX = Math.max(4, Math.min(96, Math.round(dragStartElemPos.x + deltaX)));
+    let newY = Math.max(4, Math.min(96, Math.round(dragStartElemPos.y + deltaY)));
+
+    // Center Magnetic Snapping
+    let snapV = false;
+    let snapH = false;
+    if (Math.abs(newX - 50) <= 2.5) {
+      newX = 50;
+      snapV = true;
+    }
+    if (Math.abs(newY - 50) <= 2.5) {
+      newY = 50;
+      snapH = true;
+    }
+    setSnapGuides({ vertical: snapV, horizontal: snapH });
+
+    const updated = (activeScene.elements || []).map((el) =>
+      el.id === draggingElementId ? { ...el, x: newX, y: newY } : el
+    );
+    if (onUpdateElements) onUpdateElements(activeScene.id, updated);
+  };
+
+  const handleElementPointerUp = (e: React.PointerEvent) => {
+    if (!draggingElementId) return;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    setDraggingElementId(null);
+    setDragStartPointer(null);
+    setDragStartElemPos(null);
+    setSnapGuides({ vertical: false, horizontal: false });
+  };
+
+  // Keyboard accessibility: Arrow nudging, Delete, Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedElementId || !activeScene || !onUpdateElements) return;
+      const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (targetTag === "input" || targetTag === "textarea" || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      const elements = activeScene.elements || [];
+      const curElem = elements.find((el) => el.id === selectedElementId);
+      if (!curElem) return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        handleDeleteElement(selectedElementId);
+        return;
+      }
+
+      if (e.key === "Escape") {
+        if (onSelectElement) onSelectElement(null);
+        return;
+      }
+
+      const step = e.shiftKey ? 5 : 1;
+      let newX = curElem.x;
+      let newY = curElem.y;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        newX = Math.max(4, curElem.x - step);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        newX = Math.min(96, curElem.x + step);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        newY = Math.max(4, curElem.y - step);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        newY = Math.min(96, curElem.y + step);
+      } else {
+        return;
+      }
+
+      const updated = elements.map((el) =>
+        el.id === selectedElementId ? { ...el, x: newX, y: newY } : el
+      );
+      onUpdateElements(activeScene.id, updated);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedElementId, activeScene, onUpdateElements, onSelectElement]);
+
   const handleCanvasDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDraggingCanvas(true);
+    const types = Array.from(e.dataTransfer.types);
+    if (types.includes("application/x-scenora-element") || types.includes("text/plain")) {
+      e.dataTransfer.dropEffect = "copy";
+      setIsOverlayDragging(true);
+      setIsDraggingCanvas(false);
+      if (canvasScreenRef.current) {
+        const rect = canvasScreenRef.current.getBoundingClientRect();
+        const rawX = ((e.clientX - rect.left) / rect.width) * 100;
+        const rawY = ((e.clientY - rect.top) / rect.height) * 100;
+        setDragDropPos({
+          x: Math.max(5, Math.min(95, Math.round(rawX))),
+          y: Math.max(5, Math.min(95, Math.round(rawY))),
+        });
+      }
+    } else {
+      setIsDraggingCanvas(true);
+      setIsOverlayDragging(false);
+    }
   };
 
   const handleCanvasDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingCanvas(false);
+    setIsOverlayDragging(false);
   };
 
   const handleCanvasDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const wasOverlayDragging = isOverlayDragging;
     setIsDraggingCanvas(false);
+    setIsOverlayDragging(false);
+
+    if (wasOverlayDragging) {
+      const rawData =
+        e.dataTransfer.getData("application/x-scenora-element") ||
+        e.dataTransfer.getData("text/plain");
+      if (rawData && activeScene && onUpdateElements) {
+        try {
+          const parsed = JSON.parse(rawData) as Partial<SceneElement>;
+          const rect = canvasScreenRef.current?.getBoundingClientRect();
+          let posX = 50;
+          let posY = 50;
+          if (rect) {
+            posX = Math.max(5, Math.min(95, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+            posY = Math.max(5, Math.min(95, Math.round(((e.clientY - rect.top) / rect.height) * 100)));
+          }
+          const newElem: SceneElement = {
+            id: `elem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            type: parsed.type || "text",
+            content:
+              parsed.content ??
+              (parsed.type === "emoji"
+                ? "✨"
+                : parsed.type === "badge"
+                ? "⚡ KEY TAKEAWAY"
+                : "Headline Title"),
+            x: posX,
+            y: posY,
+            font_size:
+              parsed.font_size ||
+              (parsed.type === "emoji" ? 64 : parsed.type === "badge" ? 22 : 38),
+            font_weight: parsed.font_weight || (parsed.type === "badge" ? "bold" : "bold"),
+            color: parsed.color || "#ffffff",
+            bg_color:
+              parsed.bg_color ||
+              (parsed.type === "badge" ? "#0d9488" : parsed.type === "shape" ? "rgba(15, 23, 42, 0.85)" : "transparent"),
+            border_radius:
+              parsed.border_radius ??
+              (parsed.type === "badge" ? 999 : parsed.type === "shape" ? 16 : 8),
+            padding: parsed.padding ?? (parsed.type === "badge" ? 12 : 0),
+            align: parsed.align || "center",
+            shape: parsed.shape || "rectangle",
+            width: parsed.width || (parsed.type === "shape" ? 280 : undefined),
+            height: parsed.height || (parsed.type === "shape" ? 140 : undefined),
+          };
+          const updated = [...(activeScene.elements || []), newElem];
+          onUpdateElements(activeScene.id, updated);
+          if (onSelectElement) onSelectElement(newElem.id);
+        } catch (err) {
+          console.error("Failed to parse dropped element data", err);
+        }
+      }
+      return;
+    }
+
     if (!activeScene || !onUploadImage) return;
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
@@ -311,7 +535,14 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
         {/* Canvas Screen */}
         <div
           id="cinema-canvas-screen"
-          onClick={onTogglePlay}
+          ref={canvasScreenRef}
+          onClick={() => {
+            if (selectedElementId) {
+              if (onSelectElement) onSelectElement(null);
+            } else {
+              onTogglePlay();
+            }
+          }}
           onDragOver={handleCanvasDragOver}
           onDragLeave={handleCanvasDragLeave}
           onDrop={handleCanvasDrop}
@@ -330,12 +561,87 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             maxWidth: "100%",
             overflow: "hidden",
             background: "#000",
-            boxShadow: isDraggingCanvas ? "0 0 35px var(--accent-cyan)" : "0 0 35px rgba(0,0,0,0.8)",
-            border: isDraggingCanvas ? "2px dashed var(--accent-cyan)" : "none",
-            cursor: "pointer",
+            boxShadow: isOverlayDragging
+              ? "0 0 35px #38bdf8"
+              : isDraggingCanvas
+              ? "0 0 35px var(--accent-cyan)"
+              : "0 0 35px rgba(0,0,0,0.8)",
+            border: isOverlayDragging
+              ? "2px dashed #38bdf8"
+              : isDraggingCanvas
+              ? "2px dashed var(--accent-cyan)"
+              : "none",
+            cursor: selectedElementId ? "default" : "pointer",
             transition: "box-shadow 0.15s ease, border 0.15s ease",
           }}
         >
+          {/* Drag & Drop Overlay Element Target HUD */}
+          {isOverlayDragging && (
+            <div
+              id="cinema-overlay-drop-target"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(8, 20, 36, 0.75)",
+                backdropFilter: "blur(4px)",
+                zIndex: 45,
+                pointerEvents: "none",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {/* Animated Crosshairs at drop pointer */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${dragDropPos.x}%`,
+                  top: `${dragDropPos.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    border: "2px solid #38bdf8",
+                    boxShadow: "0 0 16px #38bdf8",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(56, 189, 248, 0.2)",
+                  }}
+                >
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />
+                </div>
+                <div
+                  style={{
+                    marginTop: "8px",
+                    background: "#0f172a",
+                    border: "1px solid #38bdf8",
+                    color: "#fff",
+                    borderRadius: "999px",
+                    padding: "3px 12px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.6)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  🎯 Drop at X: {dragDropPos.x}%, Y: {dragDropPos.y}%
+                </div>
+              </div>
+            </div>
+          )}
           {/* Centered Play Button HUD Overlay when Paused */}
           {!isPlaying && !isDraggingCanvas && !isCanvasUploading && (
             <div
@@ -684,36 +990,228 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
                   right: 0,
                   bottom: 0,
                   pointerEvents: "none",
-                  zIndex: 10,
+                  zIndex: 20,
                 }}
               >
+                {/* Magnetic Center Alignment Guidelines */}
+                {snapGuides.vertical && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      bottom: 0,
+                      left: "50%",
+                      width: "1px",
+                      background: "#38bdf8",
+                      boxShadow: "0 0 8px #38bdf8",
+                      zIndex: 25,
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
+                {snapGuides.horizontal && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: "50%",
+                      height: "1px",
+                      background: "#38bdf8",
+                      boxShadow: "0 0 8px #38bdf8",
+                      zIndex: 25,
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
+
                 {activeScene.elements.map((elem) => {
+                  const isSelected = selectedElementId === elem.id;
+                  const isBeingDragged = draggingElementId === elem.id;
                   const alignStyle = elem.align === "left" ? "left" : elem.align === "right" ? "right" : "center";
                   const hasBg = Boolean(elem.bg_color && elem.bg_color !== "transparent");
+                  const isShape = elem.type === "shape";
+                  const shapeRadius =
+                    elem.shape === "circle"
+                      ? "50%"
+                      : elem.shape === "pill"
+                      ? "999px"
+                      : `${elem.border_radius ?? 16}px`;
+
                   return (
                     <div
                       key={elem.id}
+                      onPointerDown={(e) => handleElementPointerDown(e, elem)}
+                      onPointerMove={handleElementPointerMove}
+                      onPointerUp={handleElementPointerUp}
                       style={{
                         position: "absolute",
                         left: `${elem.x}%`,
                         top: `${elem.y}%`,
                         transform: "translate(-50%, -50%)",
-                        fontSize: `${elem.font_size || 32}px`,
+                        fontSize: isShape ? undefined : `${elem.font_size || 32}px`,
                         fontWeight: elem.font_weight === "bold" ? 700 : 500,
                         color: elem.color || "#ffffff",
-                        background: hasBg ? elem.bg_color : "transparent",
-                        padding: hasBg ? `${elem.padding || 12}px` : "0",
-                        borderRadius: `${elem.border_radius || 8}px`,
+                        background: isShape
+                          ? elem.bg_color || "rgba(15, 23, 42, 0.85)"
+                          : hasBg
+                          ? elem.bg_color
+                          : "transparent",
+                        padding: isShape ? "0" : hasBg ? `${elem.padding || 12}px` : "0",
+                        borderRadius: isShape ? shapeRadius : `${elem.border_radius || 8}px`,
                         textAlign: alignStyle as any,
-                        maxWidth: elem.width ? `${elem.width}px` : "85%",
+                        width: isShape ? `${elem.width || 280}px` : undefined,
+                        height: isShape ? `${elem.height || 140}px` : undefined,
+                        maxWidth: isShape ? undefined : elem.width ? `${elem.width}px` : "88%",
+                        backdropFilter: isShape ? "blur(12px)" : hasBg ? "blur(8px)" : "none",
                         wordBreak: "break-word",
                         whiteSpace: "pre-wrap",
-                        boxShadow: hasBg ? "0 4px 20px rgba(0,0,0,0.5)" : "none",
-                        textShadow: hasBg ? "none" : "0 2px 8px rgba(0,0,0,0.85)",
-                        pointerEvents: "none",
+                        boxShadow: isShape
+                          ? "0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)"
+                          : hasBg
+                          ? "0 4px 20px rgba(0,0,0,0.5)"
+                          : "none",
+                        textShadow: isShape || hasBg ? "none" : "0 2px 8px rgba(0,0,0,0.9)",
+                        pointerEvents: "auto",
+                        cursor: isBeingDragged ? "grabbing" : "grab",
+                        userSelect: "none",
+                        touchAction: "none",
+                        transition: isBeingDragged ? "none" : "box-shadow 0.15s ease, outline 0.15s ease",
+                        outline: isSelected ? "2px solid #38bdf8" : "1px dashed transparent",
+                        outlineOffset: "3px",
                       }}
+                      className={!isSelected ? "hover:outline-cyan-400/50 hover:outline-dashed" : ""}
                     >
-                      {elem.content}
+                      {isShape ? (
+                        <div style={{ width: "100%", height: "100%" }} />
+                      ) : (
+                        elem.content
+                      )}
+
+                      {/* Active Selection Anchor Points & Floating Control Pill */}
+                      {isSelected && (
+                        <>
+                          {/* 4 Corner Anchors */}
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: -4,
+                              left: -4,
+                              width: 8,
+                              height: 8,
+                              background: "#38bdf8",
+                              borderRadius: "2px",
+                              border: "1.5px solid #ffffff",
+                              pointerEvents: "none",
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: -4,
+                              right: -4,
+                              width: 8,
+                              height: 8,
+                              background: "#38bdf8",
+                              borderRadius: "2px",
+                              border: "1.5px solid #ffffff",
+                              pointerEvents: "none",
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: -4,
+                              left: -4,
+                              width: 8,
+                              height: 8,
+                              background: "#38bdf8",
+                              borderRadius: "2px",
+                              border: "1.5px solid #ffffff",
+                              pointerEvents: "none",
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: -4,
+                              right: -4,
+                              width: 8,
+                              height: 8,
+                              background: "#38bdf8",
+                              borderRadius: "2px",
+                              border: "1.5px solid #ffffff",
+                              pointerEvents: "none",
+                            }}
+                          />
+
+                          {/* Floating Position Pill & Quick Actions */}
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: -30,
+                              left: "50%",
+                              transform: "translateX(-50%)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              background: "rgba(15, 23, 42, 0.95)",
+                              backdropFilter: "blur(8px)",
+                              border: "1px solid rgba(56, 189, 248, 0.5)",
+                              borderRadius: "999px",
+                              padding: "2px 8px",
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
+                              whiteSpace: "nowrap",
+                              zIndex: 35,
+                              pointerEvents: "auto",
+                            }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                          >
+                            <span style={{ fontSize: "10px", fontWeight: 700, color: "#38bdf8", fontFamily: "monospace" }}>
+                              {Math.round(elem.x)}%, {Math.round(elem.y)}%
+                            </span>
+                            <div style={{ width: "1px", height: "10px", background: "rgba(255,255,255,0.2)" }} />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDuplicateElement(elem);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#cbd5e1",
+                                cursor: "pointer",
+                                padding: "2px",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                              title="Duplicate Element"
+                            >
+                              <Copy size={11} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteElement(elem.id);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#f87171",
+                                cursor: "pointer",
+                                padding: "2px",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                              title="Delete Element (Del)"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}

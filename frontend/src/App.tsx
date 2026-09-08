@@ -1,4 +1,4 @@
-import { useEffect, Suspense } from "react";
+import { lazy, useEffect, Suspense } from "react";
 import { RouterProvider, useRouter, matchRoute } from "./router/Router";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider } from "./context/AppContext";
@@ -7,46 +7,48 @@ import { LoadingState } from "./components/ui/StateViews";
 
 // Layouts
 import { PublicLayout } from "./layouts/PublicLayout";
-import { AppLayout } from "./layouts/AppLayout";
-import { AdminLayout } from "./layouts/AdminLayout";
 
 // Public Pages
 import { HomePage } from "./pages/public/HomePage";
-import { FeaturesPage } from "./pages/public/FeaturesPage";
-import { HowItWorksPage } from "./pages/public/HowItWorksPage";
-import { PricingPage } from "./pages/public/PricingPage";
-import { BlogPage } from "./pages/public/BlogPage";
-import { ContactPage } from "./pages/public/ContactPage";
 import { SignInPage } from "./pages/public/SignInPage";
 import { SignUpPage } from "./pages/public/SignUpPage";
 import { NotFoundPage } from "./pages/public/NotFoundPage";
-import { TermsPage } from "./pages/public/TermsPage";
-import { PrivacyPage } from "./pages/public/PrivacyPage";
-import { CommercialRightsPage } from "./pages/public/CommercialRightsPage";
-import { SecurityPage } from "./pages/public/SecurityPage";
-import { CookiesPage } from "./pages/public/CookiesPage";
-import { StatusPage } from "./pages/public/StatusPage";
 
 // Authenticated App Pages
-import { AppDashboardPage } from "./pages/app/AppDashboardPage";
-import { ProjectsListPage } from "./pages/app/ProjectsListPage";
-import { CreateProjectPage } from "./pages/app/CreateProjectPage";
-import { StudioPage } from "./pages/app/StudioPage";
-import { AppSettingsPage } from "./pages/app/AppSettingsPage";
-import { ApiKeysPage } from "./pages/app/ApiKeysPage";
-import { AccountPage } from "./pages/app/AccountPage";
-import { HelpPage } from "./pages/app/HelpPage";
-import { UpgradePage } from "./pages/app/UpgradePage";
+const AppLayout = lazy(() => import("./layouts/AppLayout").then(({ AppLayout }) => ({ default: AppLayout })));
+const AdminLayout = lazy(() => import("./layouts/AdminLayout").then(({ AdminLayout }) => ({ default: AdminLayout })));
 
-import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
-import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
-import { AdminPaymentsPage } from "./pages/admin/AdminPaymentsPage";
-import { AdminPricingPage } from "./pages/admin/AdminPricingPage";
-import { AdminUsagePage } from "./pages/admin/AdminUsagePage";
-import { AdminContentPage } from "./pages/admin/AdminContentPage";
-import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
-import { AdminMessagesPage } from "./pages/admin/AdminMessagesPage";
-import { AdminAccessDenied } from "./pages/admin/AdminAccessDenied";
+const FeaturesPage = lazy(() => import("./pages/public/FeaturesPage").then(({ FeaturesPage }) => ({ default: FeaturesPage })));
+const HowItWorksPage = lazy(() => import("./pages/public/HowItWorksPage").then(({ HowItWorksPage }) => ({ default: HowItWorksPage })));
+const PricingPage = lazy(() => import("./pages/public/PricingPage").then(({ PricingPage }) => ({ default: PricingPage })));
+const BlogPage = lazy(() => import("./pages/public/BlogPage").then(({ BlogPage }) => ({ default: BlogPage })));
+const ContactPage = lazy(() => import("./pages/public/ContactPage").then(({ ContactPage }) => ({ default: ContactPage })));
+const TermsPage = lazy(() => import("./pages/public/TermsPage").then(({ TermsPage }) => ({ default: TermsPage })));
+const PrivacyPage = lazy(() => import("./pages/public/PrivacyPage").then(({ PrivacyPage }) => ({ default: PrivacyPage })));
+const CommercialRightsPage = lazy(() => import("./pages/public/CommercialRightsPage").then(({ CommercialRightsPage }) => ({ default: CommercialRightsPage })));
+const SecurityPage = lazy(() => import("./pages/public/SecurityPage").then(({ SecurityPage }) => ({ default: SecurityPage })));
+const CookiesPage = lazy(() => import("./pages/public/CookiesPage").then(({ CookiesPage }) => ({ default: CookiesPage })));
+const StatusPage = lazy(() => import("./pages/public/StatusPage").then(({ StatusPage }) => ({ default: StatusPage })));
+
+const AppDashboardPage = lazy(() => import("./pages/app/AppDashboardPage").then(({ AppDashboardPage }) => ({ default: AppDashboardPage })));
+const ProjectsListPage = lazy(() => import("./pages/app/ProjectsListPage").then(({ ProjectsListPage }) => ({ default: ProjectsListPage })));
+const CreateProjectPage = lazy(() => import("./pages/app/CreateProjectPage").then(({ CreateProjectPage }) => ({ default: CreateProjectPage })));
+const StudioPage = lazy(() => import("./pages/app/StudioPage").then(({ StudioPage }) => ({ default: StudioPage })));
+const AppSettingsPage = lazy(() => import("./pages/app/AppSettingsPage").then(({ AppSettingsPage }) => ({ default: AppSettingsPage })));
+const ApiKeysPage = lazy(() => import("./pages/app/ApiKeysPage").then(({ ApiKeysPage }) => ({ default: ApiKeysPage })));
+const AccountPage = lazy(() => import("./pages/app/AccountPage").then(({ AccountPage }) => ({ default: AccountPage })));
+const HelpPage = lazy(() => import("./pages/app/HelpPage").then(({ HelpPage }) => ({ default: HelpPage })));
+const UpgradePage = lazy(() => import("./pages/app/UpgradePage").then(({ UpgradePage }) => ({ default: UpgradePage })));
+
+const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage").then(({ AdminDashboardPage }) => ({ default: AdminDashboardPage })));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage").then(({ AdminUsersPage }) => ({ default: AdminUsersPage })));
+const AdminPaymentsPage = lazy(() => import("./pages/admin/AdminPaymentsPage").then(({ AdminPaymentsPage }) => ({ default: AdminPaymentsPage })));
+const AdminPricingPage = lazy(() => import("./pages/admin/AdminPricingPage").then(({ AdminPricingPage }) => ({ default: AdminPricingPage })));
+const AdminUsagePage = lazy(() => import("./pages/admin/AdminUsagePage").then(({ AdminUsagePage }) => ({ default: AdminUsagePage })));
+const AdminContentPage = lazy(() => import("./pages/admin/AdminContentPage").then(({ AdminContentPage }) => ({ default: AdminContentPage })));
+const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage").then(({ AdminSettingsPage }) => ({ default: AdminSettingsPage })));
+const AdminMessagesPage = lazy(() => import("./pages/admin/AdminMessagesPage").then(({ AdminMessagesPage }) => ({ default: AdminMessagesPage })));
+const AdminAccessDenied = lazy(() => import("./pages/admin/AdminAccessDenied").then(({ AdminAccessDenied }) => ({ default: AdminAccessDenied })));
 
 function RedirectToSignIn({ returnUrl }: { returnUrl: string }) {
   const { replace } = useRouter();
@@ -80,9 +82,11 @@ function AppContent() {
       return <RedirectToSignIn returnUrl={`/app/studio?${searchParams.toString()}`} />;
     }
     return (
-      <AppLayout>
-        <StudioPage />
-      </AppLayout>
+      <Suspense fallback={<LoadingState message="Loading studio..." className="py-20" />}>
+        <AppLayout>
+          <StudioPage />
+        </AppLayout>
+      </Suspense>
     );
   }
 
@@ -94,11 +98,11 @@ function AppContent() {
 
     if (!isAdmin) {
       return (
-        <AdminLayout>
-          <Suspense fallback={<div className="p-8"><LoadingState message="Loading..." /></div>}>
+        <Suspense fallback={<div className="p-8"><LoadingState message="Loading..." /></div>}>
+          <AdminLayout>
             <AdminAccessDenied />
-          </Suspense>
-        </AdminLayout>
+          </AdminLayout>
+        </Suspense>
       );
     }
 
@@ -112,11 +116,11 @@ function AppContent() {
     else if (path === "/admin/settings") adminContent = <AdminSettingsPage />;
 
     return (
-      <AdminLayout>
-        <Suspense fallback={<div className="p-8"><LoadingState message="Loading administrative view..." /></div>}>
+      <Suspense fallback={<div className="p-8"><LoadingState message="Loading administrative view..." /></div>}>
+        <AdminLayout>
           {adminContent}
-        </Suspense>
-      </AdminLayout>
+        </AdminLayout>
+      </Suspense>
     );
   }
 
@@ -151,7 +155,11 @@ function AppContent() {
     }
 
 
-    return <AppLayout>{appContent}</AppLayout>;
+    return (
+      <Suspense fallback={<LoadingState message="Loading studio..." className="py-20" />}>
+        <AppLayout>{appContent}</AppLayout>
+      </Suspense>
+    );
   }
 
   // 5. Public Website Routes (/, /features, /how-it-works, /pricing, /blog, /contact, /sign-in, /sign-up)
@@ -171,7 +179,13 @@ function AppContent() {
   else if (path === "/status") publicContent = <StatusPage />;
   else if (path !== "/") publicContent = <NotFoundPage />;
 
-  return <PublicLayout>{publicContent}</PublicLayout>;
+  return (
+    <PublicLayout>
+      <Suspense fallback={<LoadingState message="Loading page..." className="py-20" />}>
+        {publicContent}
+      </Suspense>
+    </PublicLayout>
+  );
 }
 
 export function App() {

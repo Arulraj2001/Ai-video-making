@@ -106,13 +106,14 @@ def bible_project():
 
 
 def test_scene_meaning_placed_first_in_prompt(bible_project):
-    """Test that Scene Meaning / Action appears at the very beginning of the prompt (Section 1)."""
+    """Test that Scene Meaning appears at the very beginning of the prompt (Section 1) preserving caption."""
     scene = bible_project.scenes[0]
     context = resolve_scene_context(bible_project, scene, style_id="stickman")
     prompt = build_scene_prompt(context, scene.visual_description)
 
-    # Must start with Scene: {meaning}
-    assert prompt.startswith("Scene: Bob sitting down and sipping steaming coffee from a red mug at a tidy modern office desk.")
+    # Must start with Scene meaning: and preserve exact caption as source of truth
+    assert prompt.startswith("Scene meaning:\nBob sips coffee from his red mug at his desk.")
+    assert "Bob sitting down and sipping steaming coffee" in prompt
 
 
 def test_photographic_rules_filtered_for_non_photographic_styles(bible_project):
@@ -257,3 +258,160 @@ def test_no_prompt_duplication_when_scene_meaning_provided(bible_project):
     # Count occurrences of the specific visual description
     count = prompt.count("Bob sitting down and sipping steaming coffee")
     assert count == 1, f"Expected visual description to appear once, appeared {count} times"
+
+
+def test_caption_meaning_preserved_exactly(bible_project):
+    """Test that original caption is preserved exactly under Scene meaning: as source of truth."""
+    scene = bible_project.scenes[0]
+    context = resolve_scene_context(bible_project, scene, style_id="cinematic")
+    prompt = build_scene_prompt(context, scene.image_prompt)
+
+    assert "Scene meaning:\nBob sips coffee from his red mug at his desk." in prompt
+
+
+def test_visual_descriptions_used_when_available(bible_project):
+    """Test that scene.visual_description is used in the prompt when available."""
+    scene = bible_project.scenes[1]
+    context = resolve_scene_context(bible_project, scene, style_id="cinematic")
+    prompt = build_scene_prompt(context, scene.visual_description)
+
+    assert "Bob staring wide-eyed at multiple glowing monitor screens" in prompt
+
+
+def test_explicit_prompt_overrides_remain_highest_priority(bible_project):
+    """Test that explicit user prompt overrides have higher priority than visual_description and caption."""
+    scene = bible_project.scenes[0]
+    custom_override = "Bob standing up triumphantly holding his coffee mug in a sunbeam"
+    context = resolve_scene_context(
+        bible_project,
+        scene,
+        style_id="cinematic",
+        custom_instructions=custom_override,
+    )
+    prompt = build_scene_prompt(context, custom_override)
+
+    # Caption preserved as source of truth
+    assert "Scene meaning:\nBob sips coffee from his red mug at his desk." in prompt
+    # User override is prioritized in Subject and action
+    assert "Subject and action:\nBob standing up triumphantly holding his coffee mug in a sunbeam." in prompt
+
+
+def test_prompt_priority_hierarchy(bible_project):
+    """
+    Test strict prompt priority:
+    1. User prompt override
+    2. Existing scene.image_prompt
+    3. Scene visual_description
+    4. Original scene caption
+    """
+    scene = bible_project.scenes[0]
+    scene.image_prompt = "AI Generated Image Prompt: Bob carefully inspects coffee beans."
+    scene.visual_description = "Visual Description: Bob examining coffee."
+
+    # Priority 1: User prompt override
+    override_context = resolve_scene_context(
+        bible_project,
+        scene,
+        style_id="cinematic",
+        custom_instructions="User Override: Bob brewing espresso.",
+    )
+    prompt_p1 = build_scene_prompt(override_context, "User Override: Bob brewing espresso.")
+    assert "User Override: Bob brewing espresso" in prompt_p1
+
+    # Priority 2: Existing image_prompt
+    context_p2 = resolve_scene_context(bible_project, scene, style_id="cinematic")
+    prompt_p2 = build_scene_prompt(context_p2, scene.image_prompt)
+    assert "AI Generated Image Prompt: Bob carefully inspects coffee beans" in prompt_p2
+
+    # Priority 3: Scene visual_description (when image_prompt is absent)
+    scene.image_prompt = None
+    context_p3 = resolve_scene_context(bible_project, scene, style_id="cinematic")
+    prompt_p3 = build_scene_prompt(context_p3, scene.visual_description)
+    assert "Visual Description: Bob examining coffee" in prompt_p3
+
+    # Priority 4: Caption (when visual_description and image_prompt are absent)
+    scene.visual_description = None
+    context_p4 = resolve_scene_context(bible_project, scene, style_id="cinematic")
+    prompt_p4 = build_scene_prompt(context_p4)
+    assert "Bob sips coffee from his red mug at his desk" in prompt_p4
+
+
+def test_video_bible_entities_included_only_when_relevant(bible_project):
+    """Test that Video Bible entities are included ONLY when relevant to the scene."""
+    # Scene 3 does not mention Bob or coffee mug
+    scene3 = bible_project.scenes[2]
+    context = resolve_scene_context(bible_project, scene3, style_id="cinematic")
+    prompt = build_scene_prompt(context, scene3.visual_description)
+
+    assert "canonical character identity: Bob" not in prompt
+    assert "canonical object identity: Bob's Coffee Mug" not in prompt
+
+
+def test_previous_scene_continuity_preserved(bible_project):
+    """Test that previous-scene continuity is preserved when a previous scene is provided."""
+    scene1 = bible_project.scenes[0]
+    scene2 = bible_project.scenes[1]
+
+    # Scene 1 has no previous scene
+    context1 = resolve_scene_context(bible_project, scene1, style_id="cinematic")
+    prompt1 = build_scene_prompt(context1, scene1.visual_description)
+    assert "Previous shot continuity" not in prompt1
+
+    # Scene 2 has previous scene 1
+    context2 = resolve_scene_context(
+        bible_project,
+        scene2,
+        style_id="cinematic",
+        previous_scene=scene1,
+    )
+    prompt2 = build_scene_prompt(context2, scene2.visual_description)
+    assert "Previous shot continuity" in prompt2
+    assert scene1.caption[:15].lower() in prompt2.lower() or "bob" in prompt2.lower()
+
+
+def test_no_generic_fallback_text_generated(bible_project):
+    """Test that neither 'Cinematic scene' nor 'A clearly visualized scene' is generated."""
+    scene = bible_project.scenes[0]
+    for style_id in ["stickman", "cinematic", "cartoon", "3d", "anime", "custom"]:
+        context = resolve_scene_context(bible_project, scene, style_id=style_id)
+        prompt = build_scene_prompt(context, scene.visual_description)
+        assert "cinematic scene" not in prompt.lower()
+        assert "a clearly visualized scene" not in prompt.lower()
+
+
+def test_empty_or_minimal_captions_fail_clearly_without_data(bible_project):
+    """Test that empty or minimal captions fail clearly when no other prompt data is provided."""
+    minimal_scene = SceneModel(
+        id="scene-empty",
+        start=0.0,
+        end=5.0,
+        duration=5.0,
+        caption="   .  ",
+        visual_description="",
+        image_prompt=None,
+    )
+    context = resolve_scene_context(bible_project, minimal_scene, style_id="cinematic")
+    with pytest.raises(ValueError, match="no meaningful caption, prompt, or visual description"):
+        build_scene_prompt(context, None)
+
+
+def test_empty_or_minimal_captions_use_available_meaningful_data(bible_project):
+    """Test that empty or minimal captions succeed using only available meaningful data when override/visual_description exists."""
+    minimal_scene = SceneModel(
+        id="scene-fallback",
+        start=0.0,
+        end=5.0,
+        duration=5.0,
+        caption="   ",
+        visual_description="A solitary astronaut gazing at a ringed planet from a lunar crater.",
+        image_prompt=None,
+    )
+    context = resolve_scene_context(bible_project, minimal_scene, style_id="cinematic")
+    prompt = build_scene_prompt(context, minimal_scene.visual_description)
+
+    # Should not raise ValueError, should use available visual description
+    assert "A solitary astronaut gazing at a ringed planet" in prompt
+    # No generic fallback phrases
+    assert "cinematic scene" not in prompt.lower()
+    assert "a clearly visualized scene" not in prompt.lower()
+

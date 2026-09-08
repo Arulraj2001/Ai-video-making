@@ -827,6 +827,8 @@ class ProjectService:
             target.contrast = max(0.5, min(2.0, round(update.contrast, 2)))
         if update.saturation is not None:
             target.saturation = max(0.0, min(2.5, round(update.saturation, 2)))
+        if update.color_filter is not None:
+            target.color_filter = update.color_filter
         if update.template_type is not None:
             target.template_type = update.template_type
             if update.template_type != "standard":

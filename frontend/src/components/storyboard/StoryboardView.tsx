@@ -140,7 +140,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         const cat = await api.getModelCatalog();
         if (isMounted) {
           setModels(cat.models);
-          const readyDefault = cat.models.find((m) => m.is_ready) || cat.models[0];
+          const userConfiguredModel = cat.models.find((m) => m.is_ready && !m.is_free);
+          const readyDefault = userConfiguredModel || cat.models.find((m) => m.is_ready) || cat.models[0];
           if (readyDefault) {
             setSelectedModelId(readyDefault.model_id);
             setSelectedProvider(readyDefault.provider);
