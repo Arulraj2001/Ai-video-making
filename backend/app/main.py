@@ -155,6 +155,7 @@ def root():
         "docs": "/docs"
     }
 
+# Deploy trigger: routes include tts, contact, plans, admin/inquiries (2026-09-08)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host=settings.HOST, port=settings.PORT, reload=True)
