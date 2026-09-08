@@ -526,7 +526,10 @@ class RenderService:
         except RuntimeError:
             import threading
             def _thread_target():
-                asyncio.run(self._run_render_worker(job.id))
+                try:
+                    asyncio.run(self._run_render_worker(job.id))
+                except Exception:
+                    pass
             t = threading.Thread(target=_thread_target, daemon=True)
             t.start()
 
@@ -919,7 +922,10 @@ class RenderService:
             logger.info(f"Render job {job.id} completed successfully: {final_mp4_path}")
 
         except Exception as e:
-            logger.exception(f"Render job {job.id} failed: {e}")
+            try:
+                logger.exception(f"Render job {job.id} failed: {e}")
+            except Exception:
+                pass
             job.status = "failed"
             job.error = str(e)
             job.updated_at = datetime.now(timezone.utc).isoformat()
@@ -994,13 +1000,13 @@ class RenderService:
     def _build_scene_filters(
         self,
         scene,
-        scene_index: int = 0,
         duration: float = 1.0,
         num_frames: int = 30,
         target_width: int = 1080,
         target_height: int = 1920,
         is_last: bool = False,
         target_fps: int = 30,
+        scene_index: int = 0,
         motion_preset: str = "none",
     ) -> str:
         """Constructs safe FFmpeg filter expressions for scaling, image transforms (fit/crop/zoom/position), motion, and transitions."""

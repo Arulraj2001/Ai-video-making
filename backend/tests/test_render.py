@@ -128,6 +128,54 @@ def test_build_scene_filters():
     assert "fade=t=out" in filters
 
 
+def test_build_scene_filters_ken_burns_preset():
+    scene = SceneModel(
+        id="sc_kb",
+        start=0.0,
+        end=4.0,
+        duration=4.0,
+        caption="kb test",
+        motion="none",
+    )
+    f0 = render_service._build_scene_filters(
+        scene=scene,
+        duration=4.0,
+        num_frames=120,
+        target_width=1080,
+        target_height=1920,
+        scene_index=0,
+        motion_preset="ken_burns",
+    )
+    assert "zoompan=" in f0
+    assert "zoom+0.0008" in f0
+
+    # Index 1 -> pan_left
+    f1 = render_service._build_scene_filters(
+        scene=scene,
+        duration=4.0,
+        num_frames=120,
+        target_width=1080,
+        target_height=1920,
+        scene_index=1,
+        motion_preset="ken_burns",
+    )
+    assert "zoompan=" in f1
+    assert "x=" in f1
+
+    # Index 2 -> zoom_out
+    f2 = render_service._build_scene_filters(
+        scene=scene,
+        duration=4.0,
+        num_frames=120,
+        target_width=1080,
+        target_height=1920,
+        scene_index=2,
+        motion_preset="ken_burns",
+    )
+    assert "zoompan=" in f2
+    assert "zoom-0.0008" in f2
+
+
 def test_build_scene_filters_blur_mirror():
     scene = SceneModel(
         id="sc_blur",
