@@ -297,7 +297,7 @@ class SceneImageService:
                     seed=seed,
                 )
 
-                # 7. Save image bytes to project storage
+                # 7. Save image bytes to project storage (local copy used for rendering)
                 images_dir = STORAGE_DIR / "projects" / project.id / "images"
                 images_dir.mkdir(parents=True, exist_ok=True)
 
@@ -311,6 +311,18 @@ class SceneImageService:
 
                 relative_path = f"storage/projects/{project.id}/images/{filename}"
                 public_url = f"/media/{project.id}/images/{filename}"
+
+                # 7b. Mirror to Firebase Storage for durability (best-effort).
+                _signed = project_service.upload_asset_to_cloud(
+                    project_id=project.id,
+                    asset_category="images",
+                    filename=filename,
+                    content=result.image_bytes,
+                    content_type="image/png" if ext == ".png" else "image/jpeg",
+                    owner_id=project.owner_id or "legacy-local-user",
+                )
+                if _signed:
+                    public_url = _signed
 
                 metadata = result.metadata or {}
                 metadata = dict(metadata)
@@ -528,7 +540,8 @@ class SceneImageService:
                     project_id=project.id,
                     scene_id=scene_id,
                     image_bytes=img_bytes,
-                    filename=filename
+                    filename=filename,
+                    owner_id=effective_uid,
                 )
 
                 variation_metadata = dict(gen_result.metadata or {})

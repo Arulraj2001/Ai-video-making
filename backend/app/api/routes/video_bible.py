@@ -40,9 +40,22 @@ router = APIRouter(
 def _serialize_ref(ref) -> Optional[ReferenceImageSchema]:
     if not ref:
         return None
+    url = getattr(ref, "url", None)
+    # If the reference image lives in Firebase Storage, refresh into a fresh
+    # signed URL so it keeps working after Render recycles its local disk.
+    storage_path = getattr(ref, "storage_path", None)
+    if storage_path and str(storage_path).startswith("users/"):
+        try:
+            from datetime import timedelta
+            from app.configuration.firebase import get_storage_bucket
+            bucket = get_storage_bucket()
+            if bucket:
+                url = bucket.blob(str(storage_path)).generate_signed_url(expiration=timedelta(days=7))
+        except Exception:
+            pass
     return ReferenceImageSchema(
         filename=ref.filename,
-        url=ref.url,
+        url=url,
         file_size=ref.file_size
     )
 

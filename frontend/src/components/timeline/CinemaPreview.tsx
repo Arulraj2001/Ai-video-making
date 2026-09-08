@@ -501,6 +501,9 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
               onTogglePlay();
             }
           }}
+          onError={() => {
+            console.warn(`[media] narration audio failed to load: ${audioUrl}`);
+          }}
         />
       )}
 
@@ -514,6 +517,9 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
           loop
           preload="auto"
           style={{ display: "none" }}
+          onError={() => {
+            console.warn(`[media] background music failed to load: ${bgmUrl}`);
+          }}
         />
       )}
 

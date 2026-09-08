@@ -110,6 +110,41 @@ class ProjectService:
             owner_id=owner_id,
         )
 
+    def resolve_media_url(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Returns a durable, browser-consumable URL for an asset, refreshing
+        stale Firebase signed URLs so project media keeps working after Render
+        recycles its local disk. Returns None when the asset cannot be resolved
+        so callers can fall back to their stored URL.
+        """
+        try:
+            return self.asset_storage.get_media_url(project_id, asset_category, filename, owner_id)
+        except Exception:
+            return None
+
+    def upload_asset_to_cloud(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        content: bytes,
+        content_type: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """Best-effort durable upload of an already-persisted local asset."""
+        try:
+            return self.asset_storage.upload_to_cloud(
+                project_id, asset_category, filename, content, content_type, owner_id
+            )
+        except Exception:
+            return None
+
     def _serialize_ref_image(self, ref: Optional[ReferenceImageModel]) -> Optional[dict]:
         if not ref:
             return None
@@ -354,14 +389,17 @@ class ProjectService:
             allowed = ", ".join(sorted(ALLOWED_AUDIO_EXTENSIONS))
             raise ValueError(f"Unsupported audio format '{ext}'. Allowed: {allowed}")
 
-        audio_dir = self._get_project_dir(project_id) / "audio"
-        audio_dir.mkdir(parents=True, exist_ok=True)
-        dest_file = audio_dir / safe_filename
-
-        with open(dest_file, "wb") as f:
-            f.write(content)
-
-        relative_path = f"storage/projects/{project_id}/audio/{safe_filename}"
+        # Persist narration audio through the asset storage adapter (uploads to
+        # Firebase Storage when available while keeping a local copy for the
+        # render pipeline). `owner_id` is required for the durable cloud copy.
+        relative_path, _ = self.asset_storage.save_asset(
+            project_id=project_id,
+            asset_category="audio",
+            filename=safe_filename,
+            content=content,
+            content_type=content_type or "audio/mpeg",
+            owner_id=owner_id,
+        )
         audio_model = AudioFileModel(
             filename=safe_filename,
             storage_path=relative_path,
@@ -738,20 +776,29 @@ class ProjectService:
             allowed = ", ".join(sorted(ALLOWED_IMAGE_EXTENSIONS))
             raise ValueError(f"Unsupported image format '{ext}'. Allowed: {allowed}")
 
-        ref_dir = self._get_project_dir(project_id) / "references"
-        ref_dir.mkdir(parents=True, exist_ok=True)
         safe_name = f"{entity_type}_{entity_id}{ext}"
-        dest_file = ref_dir / safe_name
 
-        with open(dest_file, "wb") as f:
-            f.write(content)
+        # Persist the reference image through the asset storage adapter so it is
+        # uploaded to Firebase Storage when possible (durable) while keeping a
+        # local copy for prompt/context use.
+        rel_path, url_path = self.asset_storage.save_asset(
+            project_id=project_id,
+            asset_category="references",
+            filename=safe_name,
+            content=content,
+            content_type="image/png" if ext == ".png" else "image/jpeg",
+            owner_id=project.owner_id,
+        )
 
-        relative_path = f"storage/projects/{project_id}/references/{safe_name}"
-        url_path = f"/media/{project_id}/references/{safe_name}"
+        # When the file was uploaded to Firebase, store the immutable cloud path
+        # so reference URLs can be refreshed into fresh signed URLs on read.
+        storage_path = rel_path
+        if url_path and str(url_path).startswith("http") and project.owner_id:
+            storage_path = f"users/{project.owner_id}/projects/{project_id}/references/{safe_name}"
 
         ref_model = ReferenceImageModel(
             filename=safe_filename,
-            storage_path=relative_path,
+            storage_path=storage_path,
             url=url_path,
             file_size=len(content)
         )
@@ -1101,18 +1148,19 @@ class ProjectService:
         if ext not in ALLOWED_IMAGE_EXTENSIONS:
             raise ValueError(f"Invalid image format '{ext}'. Allowed: {ALLOWED_IMAGE_EXTENSIONS}")
 
-        images_dir = STORAGE_DIR / "projects" / project_id / "images"
-        images_dir.mkdir(parents=True, exist_ok=True)
-
         timestamp = int(datetime.now().timestamp() * 1000)
         saved_filename = f"replacement_{scene_id}_{timestamp}{ext}"
-        dest_path = images_dir / saved_filename
 
-        with open(dest_path, "wb") as f:
-            f.write(file_bytes)
-
-        relative_path = f"storage/projects/{project_id}/images/{saved_filename}"
-        public_url = f"/media/{project_id}/images/{saved_filename}"
+        # Persist through the asset storage adapter: durable Firebase copy (when
+        # available) while keeping a local file for offline rendering.
+        relative_path, public_url = self.asset_storage.save_asset(
+            project_id=project_id,
+            asset_category="images",
+            filename=saved_filename,
+            content=file_bytes,
+            content_type="image/png" if ext == ".png" else "image/jpeg",
+            owner_id=project.owner_id,
+        )
 
         target.image_url = public_url
         target.image_path = relative_path

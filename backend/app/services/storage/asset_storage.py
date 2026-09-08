@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -42,6 +43,37 @@ class AssetStorage(ABC):
     ) -> Optional[Path]:
         """Returns local file Path if available."""
         pass
+
+    def get_media_url(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Returns a browser-consumable public URL for an asset.
+
+        Subclasses that back assets with a durable cloud service (e.g. Firebase
+        Storage) should override this to return a freshly-generated URL so that
+        media keeps working even after the local filesystem is recycled.
+        """
+        raise NotImplementedError
+
+    def upload_to_cloud(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        content: bytes,
+        content_type: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Best-effort durable upload of an already-written local asset. Returns a
+        signed/public URL when a cloud backend is available, else None.
+        """
+        return None
 
 
 class LocalAssetStorage(AssetStorage):
@@ -86,6 +118,19 @@ class LocalAssetStorage(AssetStorage):
             return path
         return None
 
+    def get_media_url(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        safe_name = sanitize_filename(filename)
+        path = self.projects_dir / project_id / asset_category / safe_name
+        if path.exists():
+            return f"/media/{project_id}/{asset_category}/{safe_name}"
+        return None
+
 
 class FirebaseStorageAdapter(AssetStorage):
     """
@@ -124,9 +169,11 @@ class FirebaseStorageAdapter(AssetStorage):
                 cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
                 blob = self.bucket.blob(cloud_blob_path)
                 blob.upload_from_string(content, content_type=content_type)
-                cloud_url = blob.public_url
+                signed_url = blob.generate_signed_url(expiration=timedelta(days=7))
                 logger.info(f"Uploaded asset to Firebase Storage: {cloud_blob_path}")
-                return cloud_blob_path, local_url  # Return local_url for seamless browser serving
+                # Keep the LOCAL relative path as storage_path (needed by the render
+                # pipeline), but hand the browser a durable signed Firebase URL.
+                return local_rel, signed_url
             except Exception as e:
                 logger.warning(f"Firebase Storage upload failed, keeping local fallback: {e}")
 
@@ -140,6 +187,61 @@ class FirebaseStorageAdapter(AssetStorage):
         owner_id: Optional[str] = None,
     ) -> Optional[Path]:
         return self.local_storage.get_asset_path(project_id, asset_category, filename, owner_id)
+
+    def get_media_url(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Returns a durable, browser-consumable URL for an asset.
+
+        Serves the fast local `/media/...` URL whenever the file still exists
+        locally. When Render recycles its disk (or the file was never kept
+        locally), falls back to a freshly-signed Firebase Storage URL so media
+        keeps working and never goes stale.
+        """
+        safe_name = sanitize_filename(filename)
+
+        local = self.local_storage.get_media_url(project_id, asset_category, safe_name)
+        if local:
+            return local
+
+        if self.bucket and owner_id:
+            try:
+                cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
+                blob = self.bucket.blob(cloud_blob_path)
+                if blob.exists():
+                    return blob.generate_signed_url(expiration=timedelta(days=7))
+            except Exception as e:
+                logger.warning(f"Could not generate signed URL for {asset_category}/{safe_name}: {e}")
+
+        return None
+
+    def upload_to_cloud(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        content: bytes,
+        content_type: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """Uploads an asset to Firebase Storage and returns a signed URL (best-effort)."""
+        safe_name = sanitize_filename(filename)
+        if not (self.bucket and owner_id):
+            return None
+        try:
+            cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
+            blob = self.bucket.blob(cloud_blob_path)
+            blob.upload_from_string(content, content_type=content_type)
+            logger.info(f"Uploaded asset to Firebase Storage: {cloud_blob_path}")
+            return blob.generate_signed_url(expiration=timedelta(days=7))
+        except Exception as e:
+            logger.warning(f"Firebase durability upload failed for {asset_category}/{safe_name}: {e}")
+            return None
 
 
 # Global default asset storage instance

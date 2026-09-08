@@ -407,7 +407,8 @@ def apply_graphic_template(
         project_id=project_id,
         scene_id=scene_id,
         image_bytes=img_bytes,
-        filename=filename
+        filename=filename,
+        owner_id=project.owner_id,
     )
 
     target_scene.image_url = image_url

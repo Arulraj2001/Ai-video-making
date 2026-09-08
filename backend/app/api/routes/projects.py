@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import List, Optional, Union
 from fastapi import APIRouter, UploadFile, File, Form, Body, Request, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
@@ -24,6 +25,23 @@ from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
+def _scene_image_url(project_id, scene, owner_id) -> Optional[str]:
+    """Returns a fresh/durable URL for a completed scene image, falling back to the stored one."""
+    raw_url = getattr(scene, "image_url", None)
+    if not raw_url:
+        return raw_url
+    raw_path = getattr(scene, "image_path", None) or raw_url
+    name = Path(str(raw_path)).name if raw_path else None
+    if name:
+        try:
+            resolved = project_service.resolve_media_url(project_id, "images", name, owner_id)
+            if resolved:
+                return resolved
+        except Exception:
+            pass
+    return raw_url
+
+
 def _to_project_response(p) -> ProjectResponse:
     audio = None
     if p.audio_file:
@@ -31,12 +49,15 @@ def _to_project_response(p) -> ProjectResponse:
             filename=p.audio_file.filename,
             file_size=p.audio_file.file_size,
             content_type=p.audio_file.content_type,
-            url=f"/media/{p.id}/audio/{p.audio_file.filename}"
+            url=project_service.resolve_media_url(p.id, "audio", p.audio_file.filename, p.owner_id)
+            or f"/media/{p.id}/audio/{p.audio_file.filename}"
         )
-    scenes = [
-        SceneSchema.model_validate(s)
-        for s in p.scenes
-    ]
+    scenes = []
+    for s in p.scenes:
+        sch = SceneSchema.model_validate(s)
+        if sch.image_url:
+            sch.image_url = _scene_image_url(p.id, s, p.owner_id)
+        scenes.append(sch)
 
     bgm = None
     if getattr(p, "audio_settings", None) and p.audio_settings.music_file:
@@ -44,7 +65,10 @@ def _to_project_response(p) -> ProjectResponse:
             filename=p.audio_settings.music_file.filename,
             file_size=p.audio_settings.music_file.file_size,
             content_type=p.audio_settings.music_file.content_type,
-            url=f"/media/{p.id}/audio/{p.audio_settings.music_file.filename}"
+            url=project_service.resolve_media_url(
+                p.id, "audio", p.audio_settings.music_file.filename, p.owner_id
+            )
+            or f"/media/{p.id}/audio/{p.audio_settings.music_file.filename}"
         )
 
     caption_settings = None
@@ -112,6 +136,9 @@ def list_projects(
             aspect_ratio = getattr(p.canvas_settings, "aspect_ratio", "16:9") if getattr(p, "canvas_settings", None) else "16:9"
             total_duration = scenes[-1].end if scenes else 0.0
             thumb = next((s.image_url for s in scenes if getattr(s, "image_url", None)), None)
+            if thumb:
+                first = next((s for s in scenes if getattr(s, "image_url", None)), None)
+                thumb = _scene_image_url(p.id, first, p.owner_id) or thumb
 
             cs = None
             if getattr(p, "canvas_settings", None):

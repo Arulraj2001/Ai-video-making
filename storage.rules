@@ -2,6 +2,13 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // Durable project media (images, references, audio) is written by the
+    // backend's Firebase Admin service account and read by the browser through
+    // Firebase "managed download" (tokenized) URLs, which are validated by the
+    // token rather than these rules. These rules still enforce per-owner write
+    // intent and file-type/size limits, and allow the owner to read/viewed via
+    // Firebase Console.
+
     // Persistent project images and references remain user-owned and size-limited.
     match /users/{userId}/projects/{projectId}/images/{allPaths=**} {
       allow read: if request.auth != null && request.auth.uid == userId;
