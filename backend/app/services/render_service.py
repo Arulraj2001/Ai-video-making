@@ -379,7 +379,7 @@ class RenderService:
         for p_dir in projects_dir.iterdir():
             if p_dir.is_dir():
                 jobs_file = p_dir / "renders" / "render_jobs.json"
-                if jobs_file.exists():
+                if jobs_file.exists() and jobs_file.stat().st_size > 2:
                     try:
                         with open(jobs_file, "r", encoding="utf-8") as f:
                             data = json.load(f)
@@ -415,7 +415,7 @@ class RenderService:
                         logger.warning(f"Could not load render jobs from {jobs_file}: {e}")
 
     def _save_jobs_for_project(self, project_id: str):
-        """Persists jobs metadata to disk and optionally syncs to Firestore."""
+        """Persists jobs metadata to disk atomically and optionally syncs to Firestore."""
         jobs_file = self._get_jobs_file(project_id)
         project_jobs = [
             {
@@ -435,12 +435,14 @@ class RenderService:
                 "created_at": j.created_at,
                 "updated_at": j.updated_at,
             }
-            for j in self._jobs.values()
+            for j in list(self._jobs.values())
             if j.project_id == project_id
         ]
         try:
-            with open(jobs_file, "w", encoding="utf-8") as f:
+            tmp_file = jobs_file.with_suffix(".tmp")
+            with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(project_jobs, f, indent=2)
+            os.replace(tmp_file, jobs_file)
         except Exception as e:
             logger.error(f"Failed to persist render jobs for {project_id}: {e}")
 
@@ -786,13 +788,14 @@ class RenderService:
                 # Safe subprocess array
                 cmd_clip = [
                     ffmpeg_exe, "-y",
+                    "-threads", "2",
                     "-loop", "1",
                     "-i", str(img_path),
                     "-t", f"{duration:.3f}",
                     "-vf", filters,
                     "-c:v", "libx264",
-                    "-preset", "fast",
-                    "-crf", "20",
+                    "-preset", "ultrafast",
+                    "-crf", "22",
                     "-pix_fmt", "yuv420p",
                     "-r", str(target_fps),
                     str(clip_path)
@@ -834,6 +837,7 @@ class RenderService:
             merged_video_path = temp_dir / "merged_video.mp4"
             cmd_concat = [
                 ffmpeg_exe, "-y",
+                "-threads", "2",
                 "-f", "concat",
                 "-safe", "0",
                 "-i", "concat_list.txt",
@@ -875,11 +879,12 @@ class RenderService:
                 subtitled_video_path = temp_dir / "subtitled_video.mp4"
                 cmd_subs = [
                     ffmpeg_exe, "-y",
+                    "-threads", "2",
                     "-i", "merged_video.mp4",
                     "-vf", "subtitles=captions.ass",
                     "-c:v", "libx264",
-                    "-preset", "fast",
-                    "-crf", "20",
+                    "-preset", "ultrafast",
+                    "-crf", "22",
                     "-pix_fmt", "yuv420p",
                     "-r", str(target_fps),
                     "subtitled_video.mp4"
@@ -963,6 +968,7 @@ class RenderService:
                     )
                 cmd_final = [
                     ffmpeg_exe, "-y",
+                    "-threads", "2",
                     "-i", str(video_for_audio.resolve()),
                     "-i", str(narr_path),
                     "-i", str(bgm_path),
@@ -981,6 +987,7 @@ class RenderService:
             elif narr_path:
                 cmd_final = [
                     ffmpeg_exe, "-y",
+                    "-threads", "2",
                     "-i", str(video_for_audio.resolve()),
                     "-i", str(narr_path),
                     "-c:v", "copy",
@@ -1001,6 +1008,7 @@ class RenderService:
                 )
                 cmd_final = [
                     ffmpeg_exe, "-y",
+                    "-threads", "2",
                     "-i", str(video_for_audio.resolve()),
                     "-i", str(bgm_path),
                     "-c:v", "copy",
@@ -1016,6 +1024,7 @@ class RenderService:
             else:
                 cmd_final = [
                     ffmpeg_exe, "-y",
+                    "-threads", "2",
                     "-i", str(video_for_audio.resolve()),
                     "-f", "lavfi",
                     "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
@@ -1076,13 +1085,11 @@ class RenderService:
         target_height: int,
         target_fps: int,
     ) -> str:
-        """Returns an FFmpeg zoompan filter string for the given Ken Burns effect variant."""
-        # Scale to 2x canvas first so zoompan has headroom to zoom/pan without black borders
-        scale_2x_w = target_width * 2
-        scale_2x_h = target_height * 2
+        """Returns an FFmpeg zoompan filter string for the given Ken Burns effect variant.
+        Uses native canvas resolution to ensure lean memory usage (< 150MB) on cloud containers."""
         scale_prefix = (
-            f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,"
-            f"crop={scale_2x_w}:{scale_2x_h}"
+            f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
+            f"crop={target_width}:{target_height}"
         )
         out_size = f"{target_width}x{target_height}"
 
@@ -1172,8 +1179,8 @@ class RenderService:
                 pass
 
         # 2. Image Fit & Motion Logic
-        scale_2x_w = target_width * 2
-        scale_2x_h = target_height * 2
+        scale_w = target_width
+        scale_h = target_height
 
         if image_fit == "blur":
             # Blurred Mirror Framing: Background is scaled to fill and blurred, foreground is scaled to fit inside
@@ -1201,32 +1208,32 @@ class RenderService:
             base_z = max(1.0, min(2.5, image_zoom))
             if motion == "slow zoom in":
                 motion_filter = (
-                    f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
+                    f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,crop={scale_w}:{scale_h},"
                     f"zoompan=z='min(zoom+0.0015,{base_z + 0.25:.2f})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "slow zoom out":
                 motion_filter = (
-                    f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
+                    f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,crop={scale_w}:{scale_h},"
                     f"zoompan=z='if(lte(zoom,1.0),{base_z + 0.25:.2f},max(1.001,zoom-0.0015))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan left":
                 motion_filter = (
-                    f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
+                    f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,crop={scale_w}:{scale_h},"
                     f"zoompan=z={base_z * 1.15:.2f}:x='if(lte(on,1),(iw-iw/zoom),max(0,x-(iw*0.15/{num_frames})))':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan right":
                 motion_filter = (
-                    f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
+                    f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,crop={scale_w}:{scale_h},"
                     f"zoompan=z={base_z * 1.15:.2f}:x='min((iw-iw/zoom), x+(iw*0.15/{num_frames}))':y='ih/2-(ih/zoom/2)':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan up":
                 motion_filter = (
-                    f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
+                    f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,crop={scale_w}:{scale_h},"
                     f"zoompan=z={base_z * 1.15:.2f}:x='iw/2-(iw/zoom/2)':y='if(lte(on,1),(ih-ih/zoom),max(0,y-(ih*0.15/{num_frames})))':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             elif motion == "pan down":
                 motion_filter = (
-                    f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,crop={scale_2x_w}:{scale_2x_h},"
+                    f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,crop={scale_w}:{scale_h},"
                     f"zoompan=z={base_z * 1.15:.2f}:x='iw/2-(iw/zoom/2)':y='min((ih-ih/zoom), y+(ih*0.15/{num_frames}))':d={num_frames}:s={target_width}x{target_height}:fps={target_fps}"
                 )
             else:

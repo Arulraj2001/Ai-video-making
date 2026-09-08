@@ -211,15 +211,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         }
 
         consecutiveErrorsRef.current += 1;
-        if (consecutiveErrorsRef.current >= 4) {
+        // If the server is temporarily saturated during video rendering or cold-starting,
+        // give it up to 12 retries (~24 seconds) before giving up.
+        if (consecutiveErrorsRef.current >= 12) {
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
           }
-          setErrorMsg("Connection lost while checking render status. Please check your connection or refresh the page.");
+          setErrorMsg("Server is taking longer than expected to respond. Please verify your connection or refresh the page.");
         }
       }
-    }, 1200);
+    }, 2000);
 
     return () => {
       if (pollIntervalRef.current) {

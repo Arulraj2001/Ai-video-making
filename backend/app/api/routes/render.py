@@ -146,6 +146,7 @@ def download_rendered_video(
         if not mp3_path.exists() or mp3_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
+                "-threads", "2",
                 "-i", str(master_path),
                 "-vn",
                 "-c:a", "libmp3lame",
@@ -168,11 +169,12 @@ def download_rendered_video(
         if not p720_path.exists() or p720_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
+                "-threads", "2",
                 "-i", str(master_path),
                 "-vf", "scale=-2:720",
                 "-c:v", "libx264",
                 "-crf", "23",
-                "-preset", "fast",
+                "-preset", "ultrafast",
                 "-c:a", "copy",
                 str(p720_path)
             ]
@@ -192,6 +194,7 @@ def download_rendered_video(
         if not webm_path.exists() or webm_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
+                "-threads", "2",
                 "-i", str(master_path),
                 "-c:v", "libvpx-vp9",
                 "-crf", "32",
@@ -215,6 +218,7 @@ def download_rendered_video(
         if not gif_path.exists() or gif_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
+                "-threads", "2",
                 "-i", str(master_path),
                 "-t", "6",
                 "-vf", "fps=12,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
