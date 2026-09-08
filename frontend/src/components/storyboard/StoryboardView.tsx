@@ -51,6 +51,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [generatingAllImages, setGeneratingAllImages] = useState(false);
   const [retryingFailed, setRetryingFailed] = useState(false);
   const [generatingSceneIds, setGeneratingSceneIds] = useState<Set<string>>(new Set());
+  const [uploadingSceneIds, setUploadingSceneIds] = useState<Set<string>>(new Set());
   const sceneRequestTokens = useRef(new Map<string, number>());
   const [error, setError] = useState<string | null>(null);
   const [copiedSceneId, setCopiedSceneId] = useState<string | null>(null);
@@ -265,6 +266,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   // Helper to apply single scene updates
   const applySingleScene = (sceneId: string, updatedScene: Scene) => {
     setScenes((previous) => previous.map((scene) => (scene.id === sceneId ? updatedScene : scene)));
+    setDetailsModalScene((prev) => (prev?.id === sceneId ? updatedScene : prev));
     onProjectUpdated?.((previous) => ({
       ...previous,
       scenes: previous.scenes.map((scene) => (scene.id === sceneId ? updatedScene : scene)),
@@ -345,6 +347,28 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
       setError(`Failed to generate visual for scene ${sceneId}: ${err.message}`);
     } finally {
       setGeneratingSceneIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sceneId);
+        return next;
+      });
+    }
+  };
+
+  // 2b. Upload Replacement Image from Device for Scene
+  const handleUploadImage = async (sceneId: string, file: File) => {
+    setUploadingSceneIds((prev) => new Set(prev).add(sceneId));
+    setError(null);
+
+    try {
+      const updatedScene = await api.uploadReplacementImage(project.id, sceneId, file);
+      applySingleScene(sceneId, updatedScene);
+    } catch (err: any) {
+      const msg = err.message || "Failed to upload image";
+      setError(`Failed to upload image for scene: ${msg}`);
+      alert(msg);
+      throw err;
+    } finally {
+      setUploadingSceneIds((prev) => {
         const next = new Set(prev);
         next.delete(sceneId);
         return next;
@@ -750,6 +774,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                     projectAspectRatio={projectAspectRatio}
                     sceneAspectRatio={sceneAspectRatio}
                     onGenerateSceneImage={handleGenerateSceneImage}
+                    onUploadImage={handleUploadImage}
+                    isUploadingImage={uploadingSceneIds.has(scene.id)}
                     generatingAllImages={generatingAllImages}
                     onOpenLightbox={setPreviewImage}
                     onCopyPrompt={handleCopyPrompt}
@@ -797,6 +823,8 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         onEditScene={(sceneToEdit) => startEditing(sceneToEdit)}
         onTweakPrompt={(s) => openRegenModal(s)}
         projectAspectRatio={projectAspectRatio}
+        onUploadImage={handleUploadImage}
+        isUploadingImage={detailsModalScene ? uploadingSceneIds.has(detailsModalScene.id) : false}
       />
 
       {/* Direct Prompt Guidance & Tweak Modal */}

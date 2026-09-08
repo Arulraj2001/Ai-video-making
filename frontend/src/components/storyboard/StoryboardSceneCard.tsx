@@ -19,6 +19,7 @@ import {
   Palette,
   MessageSquare,
   ChevronDown,
+  Upload,
 } from "lucide-react";
 import { formatTimecode } from "../../utils/formatters";
 import { api } from "../../services/api";
@@ -36,6 +37,8 @@ interface StoryboardSceneCardProps {
   projectAspectRatio: string;
   sceneAspectRatio: "16:9" | "9:16" | "1:1";
   onGenerateSceneImage: (sceneId: string, regenerate: boolean) => void;
+  onUploadImage?: (sceneId: string, file: File) => Promise<void>;
+  isUploadingImage?: boolean;
   generatingAllImages: boolean;
   onOpenLightbox: (data: { url: string; sceneNumber: number; caption: string; metadata?: any }) => void;
   onCopyPrompt: (sceneId: string, prompt: string) => void;
@@ -75,6 +78,8 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
   projectAspectRatio,
   sceneAspectRatio,
   onGenerateSceneImage,
+  onUploadImage,
+  isUploadingImage = false,
   generatingAllImages,
   onOpenLightbox,
   onCopyPrompt,
@@ -102,6 +107,51 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
 }) => {
   const [showSceneDirection, setShowSceneDirection] = React.useState(false);
   const [showPromptDirective, setShowPromptDirective] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [isDraggingOverCanvas, setIsDraggingOverCanvas] = React.useState(false);
+
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadImage) return;
+    try {
+      await onUploadImage(scene.id, file);
+    } catch {
+      // Errors handled by parent handler
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleCanvasDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDraggingOverCanvas(true);
+    }
+  };
+
+  const handleCanvasDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOverCanvas(false);
+  };
+
+  const handleCanvasDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOverCanvas(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/") && onUploadImage) {
+      try {
+        await onUploadImage(scene.id, file);
+      } catch {
+        // Errors handled by parent handler
+      }
+    }
+  };
+
   const cardStatusClass = isSceneGenerating
     ? "is-generating"
     : isCompleted
@@ -202,7 +252,49 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
       </div>
 
       {/* ── Hero Image Canvas ────────────────────────────────────────── */}
-      <div className="sb-image-canvas" style={imageAspectStyle}>
+      <div
+        className="sb-image-canvas"
+        style={{ ...imageAspectStyle, position: "relative" }}
+        onDragOver={handleCanvasDragOver}
+        onDragLeave={handleCanvasDragLeave}
+        onDrop={handleCanvasDrop}
+      >
+        {/* Hidden file input for uploading replacement image */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/png,image/jpeg,image/webp,image/jpg"
+          onChange={handleFileInputChange}
+          style={{ display: "none" }}
+        />
+
+        {/* Drag & drop overlay */}
+        {isDraggingOverCanvas && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(255, 107, 0, 0.45)",
+              backdropFilter: "blur(4px)",
+              color: "#FFFFFF",
+              fontSize: "12px",
+              fontWeight: 700,
+              zIndex: 25,
+              pointerEvents: "none",
+              border: "2px dashed var(--sb-accent)",
+              borderRadius: "inherit",
+              gap: "6px",
+            }}
+          >
+            <Upload size={24} />
+            <span>Drop image to replace</span>
+          </div>
+        )}
+
         {isCompleted && scene.image_url ? (
           <>
             <img
@@ -223,6 +315,8 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
             <div className="sb-image-pill-top">
               {scene.image_metadata?.source === "graphic_template"
                 ? "📊 Graphic Card"
+                : scene.image_metadata?.source === "user_upload" || scene.image_metadata?.source === "upload"
+                ? "📁 Device Upload"
                 : `🎨 ${scene.image_metadata?.model || "AI Visual"}`}
             </div>
 
@@ -244,9 +338,19 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
               </button>
               <button
                 type="button"
+                className="sb-image-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                title="Upload replacement image from device"
+                aria-label="Upload replacement image from device"
+              >
+                <Upload size={13} className={isUploadingImage ? "animate-spin" : ""} />
+              </button>
+              <button
+                type="button"
                 className="sb-image-btn primary-regen"
                 onClick={() => onGenerateSceneImage(scene.id, true)}
-                disabled={isSceneGenerating || generatingAllImages}
+                disabled={isSceneGenerating || generatingAllImages || isUploadingImage}
                 title="Regenerate this scene"
                 aria-label="Regenerate visual"
               >
@@ -281,15 +385,29 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
                 {scene.image_error || "An unexpected error occurred."}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => onGenerateSceneImage(scene.id, true)}
-              className="sb-btn-danger"
-              style={{ padding: "5px 14px", fontSize: "11px" }}
-            >
-              <RefreshCw size={11} />
-              <span>Retry</span>
-            </button>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => onGenerateSceneImage(scene.id, true)}
+                disabled={isUploadingImage}
+                className="sb-btn-danger"
+                style={{ padding: "5px 14px", fontSize: "11px" }}
+              >
+                <RefreshCw size={11} />
+                <span>Retry</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="sb-mini-btn"
+                style={{ padding: "5px 14px" }}
+                title="Upload image from device"
+              >
+                <Upload size={11} className={isUploadingImage ? "animate-spin" : ""} />
+                <span>{isUploadingImage ? "Uploading..." : "Upload from device"}</span>
+              </button>
+            </div>
           </div>
         ) : (
           /* Pending State */
@@ -308,16 +426,30 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
                 Ready for synthesis
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => onGenerateSceneImage(scene.id, false)}
-              disabled={generatingAllImages}
-              className="sb-mini-btn accent"
-              style={{ padding: "5px 14px" }}
-            >
-              <Sparkles size={11} />
-              <span>Generate Visual</span>
-            </button>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => onGenerateSceneImage(scene.id, false)}
+                disabled={generatingAllImages || isUploadingImage}
+                className="sb-mini-btn accent"
+                style={{ padding: "5px 14px" }}
+                title="Generate visual with AI"
+              >
+                <Sparkles size={11} />
+                <span>Generate Visual</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="sb-mini-btn"
+                style={{ padding: "5px 14px" }}
+                title="Upload image from device"
+              >
+                <Upload size={11} className={isUploadingImage ? "animate-spin" : ""} />
+                <span>{isUploadingImage ? "Uploading..." : "Upload from device"}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -533,6 +665,17 @@ export const StoryboardSceneCard: React.FC<StoryboardSceneCardProps> = ({
         >
           <Palette size={12} />
           <span>Variations</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploadingImage}
+          className="sb-mini-btn"
+          title="Upload image from device"
+        >
+          <Upload size={12} className={isUploadingImage ? "animate-spin" : ""} />
+          <span>{isUploadingImage ? "Uploading…" : "Upload"}</span>
         </button>
 
         <div className="sb-card-actions-right">

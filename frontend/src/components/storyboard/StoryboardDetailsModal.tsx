@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Scissors,
   Cpu,
+  Upload,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { formatTimecode } from "../../utils/formatters";
@@ -25,6 +26,8 @@ interface StoryboardDetailsModalProps {
   onEditScene: (scene: Scene) => void;
   onTweakPrompt: (scene: Scene) => void;
   projectAspectRatio: string;
+  onUploadImage?: (sceneId: string, file: File) => Promise<void>;
+  isUploadingImage?: boolean;
 }
 
 export const StoryboardDetailsModal: React.FC<StoryboardDetailsModalProps> = ({
@@ -35,8 +38,23 @@ export const StoryboardDetailsModal: React.FC<StoryboardDetailsModalProps> = ({
   onEditScene,
   onTweakPrompt,
   projectAspectRatio,
+  onUploadImage,
+  isUploadingImage = false,
 }) => {
+  const detailFileInputRef = React.useRef<HTMLInputElement | null>(null);
   if (!scene) return null;
+
+  const handleDetailFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadImage) return;
+    try {
+      await onUploadImage(scene.id, file);
+    } catch {
+      // Handled
+    } finally {
+      if (detailFileInputRef.current) detailFileInputRef.current.value = "";
+    }
+  };
 
   const isImageReady = scene.image_status === "completed" && Boolean(scene.image_url);
   const isFailed = scene.image_status === "failed";
@@ -398,90 +416,148 @@ export const StoryboardDetailsModal: React.FC<StoryboardDetailsModalProps> = ({
                       }}
                     />
                   </div>
+                    {/* Top Bar on Image */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "6px",
+                        left: "6px",
+                        right: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          padding: "2px 7px",
+                          borderRadius: "5px",
+                          background: "rgba(0,0,0,0.75)",
+                          backdropFilter: "blur(6px)",
+                          color: "#22C55E",
+                          fontSize: "9.5px",
+                          fontWeight: 700,
+                          border: "1px solid rgba(34,197,94,0.3)",
+                        }}
+                      >
+                        RENDER MASTER
+                      </span>
 
-                  {/* Top Bar on Image */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px", pointerEvents: "auto" }}>
+                        {onUploadImage && (
+                          <button
+                            type="button"
+                            onClick={() => detailFileInputRef.current?.click()}
+                            disabled={isUploadingImage}
+                            title="Upload replacement image from device"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              padding: "2px 7px",
+                              borderRadius: "5px",
+                              background: "rgba(0,0,0,0.75)",
+                              backdropFilter: "blur(6px)",
+                              color: "#FFFFFF",
+                              fontSize: "9.5px",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Upload size={10} className={isUploadingImage ? "animate-spin" : ""} />
+                            <span>{isUploadingImage ? "Uploading..." : "Replace"}</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleOpenFullImage}
+                          title="Open full resolution in new tab"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            padding: "2px 7px",
+                            borderRadius: "5px",
+                            background: "rgba(0,0,0,0.75)",
+                            backdropFilter: "blur(6px)",
+                            color: "#FFFFFF",
+                            fontSize: "9.5px",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <ExternalLink size={10} />
+                          <span>Enlarge</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : isFailed ? (
                   <div
                     style={{
-                      position: "absolute",
-                      top: "6px",
-                      left: "6px",
-                      right: "6px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      pointerEvents: "none",
+                      padding: "20px 14px",
+                      textAlign: "center",
+                      background: "var(--sb-danger-glow)",
+                      width: "100%",
                     }}
                   >
-                    <span
-                      style={{
-                        padding: "2px 7px",
-                        borderRadius: "5px",
-                        background: "rgba(0,0,0,0.75)",
-                        backdropFilter: "blur(6px)",
-                        color: "#22C55E",
-                        fontSize: "9.5px",
-                        fontWeight: 700,
-                        border: "1px solid rgba(34,197,94,0.3)",
-                      }}
-                    >
-                      RENDER MASTER
+                    <AlertCircle size={24} style={{ color: "var(--sb-danger)", margin: "0 auto 6px" }} />
+                    <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--sb-danger)", display: "block" }}>
+                      Image Generation Failed
                     </span>
-
-                    <button
-                      type="button"
-                      onClick={handleOpenFullImage}
-                      title="Open full resolution in new tab"
-                      style={{
-                        pointerEvents: "auto",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "3px",
-                        padding: "2px 7px",
-                        borderRadius: "5px",
-                        background: "rgba(0,0,0,0.75)",
-                        backdropFilter: "blur(6px)",
-                        color: "#FFFFFF",
-                        fontSize: "9.5px",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <ExternalLink size={10} />
-                      <span>Enlarge</span>
-                    </button>
+                    <span style={{ fontSize: "10.5px", color: "var(--sb-text-secondary)", marginTop: "2px", display: "block" }}>
+                      {scene.image_error || "Diffusion process encountered an error."}
+                    </span>
+                    {onUploadImage && (
+                      <button
+                        type="button"
+                        onClick={() => detailFileInputRef.current?.click()}
+                        disabled={isUploadingImage}
+                        className="sb-mini-btn"
+                        style={{ marginTop: "10px", padding: "5px 14px", display: "inline-flex" }}
+                      >
+                        <Upload size={11} className={isUploadingImage ? "animate-spin" : ""} />
+                        <span>{isUploadingImage ? "Uploading..." : "Upload from device"}</span>
+                      </button>
+                    )}
                   </div>
-                </div>
-              ) : isFailed ? (
-                <div
-                  style={{
-                    padding: "20px 14px",
-                    textAlign: "center",
-                    background: "var(--sb-danger-glow)",
-                    width: "100%",
-                  }}
-                >
-                  <AlertCircle size={24} style={{ color: "var(--sb-danger)", margin: "0 auto 6px" }} />
-                  <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--sb-danger)", display: "block" }}>
-                    Image Generation Failed
-                  </span>
-                  <span style={{ fontSize: "10.5px", color: "var(--sb-text-secondary)", marginTop: "2px", display: "block" }}>
-                    {scene.image_error || "Diffusion process encountered an error."}
-                  </span>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: "24px 14px",
-                    textAlign: "center",
-                    color: "var(--sb-text-muted)",
-                    width: "100%",
-                  }}
-                >
-                  <Film size={24} style={{ margin: "0 auto 6px", opacity: 0.5 }} />
-                  <span style={{ fontSize: "11.5px", color: "var(--sb-text-secondary)", display: "block" }}>No Visual Generated Yet</span>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: "24px 14px",
+                      textAlign: "center",
+                      color: "var(--sb-text-muted)",
+                      width: "100%",
+                    }}
+                  >
+                    <Film size={24} style={{ margin: "0 auto 6px", opacity: 0.5 }} />
+                    <span style={{ fontSize: "11.5px", color: "var(--sb-text-secondary)", display: "block" }}>No Visual Generated Yet</span>
+                    {onUploadImage && (
+                      <button
+                        type="button"
+                        onClick={() => detailFileInputRef.current?.click()}
+                        disabled={isUploadingImage}
+                        className="sb-mini-btn"
+                        style={{ marginTop: "10px", padding: "5px 14px", display: "inline-flex" }}
+                      >
+                        <Upload size={11} className={isUploadingImage ? "animate-spin" : ""} />
+                        <span>{isUploadingImage ? "Uploading..." : "Upload from device"}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {onUploadImage && (
+                  <input
+                    type="file"
+                    ref={detailFileInputRef}
+                    accept="image/png,image/jpeg,image/webp,image/jpg"
+                    onChange={handleDetailFileChange}
+                    style={{ display: "none" }}
+                  />
+                )}
+              </div>
 
             {/* Hardware & Dispatch Telemetry Card */}
             <div
