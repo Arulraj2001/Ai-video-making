@@ -12,6 +12,7 @@ class RenderJobModel:
     progress: int = 0  # 0 to 100
     resolution: str = "1080x1920"  # "1080x1920", "1920x1080", "1080x1080"
     aspect_ratio: str = "9:16"  # "9:16", "16:9", "1:1"
+    motion_preset: str = "none"  # "none" or "ken_burns"
     output_path: Optional[str] = None
     output_filename: Optional[str] = None
     file_size: Optional[int] = None
@@ -19,3 +20,4 @@ class RenderJobModel:
     error: Optional[str] = None
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+

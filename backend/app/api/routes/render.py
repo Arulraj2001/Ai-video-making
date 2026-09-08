@@ -55,6 +55,7 @@ def create_render_job(
             project_id=project_id,
             resolution=req.resolution,
             aspect_ratio_override=req.aspect_ratio,
+            motion_preset=req.motion_preset,
             owner_id=current_user.uid,
         )
         return _to_response(job, project_id)
@@ -62,6 +63,7 @@ def create_render_job(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create render job: {e}")
+
 
 
 @router.get(

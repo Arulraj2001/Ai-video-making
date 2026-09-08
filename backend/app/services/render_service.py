@@ -392,6 +392,7 @@ class RenderService:
                                     progress=j_data.get("progress", 100),
                                     resolution=j_data.get("resolution", DEFAULT_RESOLUTION),
                                     aspect_ratio=j_data.get("aspect_ratio", "9:16"),
+                                    motion_preset=j_data.get("motion_preset", "none"),
                                     output_path=j_data.get("output_path"),
                                     output_filename=j_data.get("output_filename"),
                                     file_size=j_data.get("file_size"),
@@ -416,6 +417,7 @@ class RenderService:
                 "progress": j.progress,
                 "resolution": j.resolution,
                 "aspect_ratio": j.aspect_ratio,
+                "motion_preset": getattr(j, "motion_preset", "none"),
                 "output_path": j.output_path,
                 "output_filename": j.output_filename,
                 "file_size": j.file_size,
@@ -470,6 +472,7 @@ class RenderService:
         project_id: str,
         resolution: Optional[str] = None,
         aspect_ratio_override: Optional[str] = None,
+        motion_preset: str = "none",
         owner_id: Optional[str] = None,
     ) -> RenderJobModel:
         """Validates project and enqueues a background render job."""
@@ -499,6 +502,10 @@ class RenderService:
         if not resolution or resolution not in RESOLUTIONS:
             resolution = ASPECT_TO_RESOLUTION.get(aspect_ratio, DEFAULT_RESOLUTION)
 
+        # Validate motion_preset
+        if motion_preset not in ("none", "ken_burns"):
+            motion_preset = "none"
+
         job = RenderJobModel(
             project_id=project_id,
             status="queued",
@@ -506,6 +513,7 @@ class RenderService:
             progress=0,
             resolution=resolution,
             aspect_ratio=aspect_ratio,
+            motion_preset=motion_preset,
             output_filename=f"{project.name.lower().replace(' ', '_')[:30]}_{resolution}.mp4",
         )
         self._jobs[job.id] = job
@@ -534,6 +542,7 @@ class RenderService:
             project_id=old_job.project_id,
             resolution=old_job.resolution,
             aspect_ratio_override=old_job.aspect_ratio,
+            motion_preset=getattr(old_job, "motion_preset", "none"),
             owner_id=owner_id,
         )
 
@@ -619,6 +628,7 @@ class RenderService:
 
             # --- STAGE 2: Generating timeline... (15% -> 55%) ---
             # Render each scene clip with motion and transition filters
+            job_motion_preset = getattr(job, "motion_preset", "none")
             scene_clips: List[Path] = []
             for idx, (scene, img_path) in enumerate(zip(scenes, scene_image_paths)):
                 duration = max(0.1, scene.duration)
@@ -628,12 +638,14 @@ class RenderService:
                 # Construct safe filter chain
                 filters = self._build_scene_filters(
                     scene=scene,
+                    scene_index=idx,
                     duration=duration,
                     num_frames=num_frames,
                     target_width=target_width,
                     target_height=target_height,
                     is_last=(idx == total_scenes - 1),
                     target_fps=target_fps,
+                    motion_preset=job_motion_preset,
                 )
 
                 # Safe subprocess array
@@ -915,15 +927,81 @@ class RenderService:
             # Cleanup temp files on failure
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def _build_scene_filters(
+    # Ken Burns effect pool — cycles by scene index for natural variety within a video
+    _KB_EFFECTS = ["zoom_in", "pan_left", "zoom_out", "pan_right", "pan_up"]
+
+    def _build_ken_burns_filter(
         self,
-        scene,
-        duration: float,
+        effect: str,
         num_frames: int,
         target_width: int,
         target_height: int,
-        is_last: bool,
+        target_fps: int,
+    ) -> str:
+        """Returns an FFmpeg zoompan filter string for the given Ken Burns effect variant."""
+        # Scale to 2x canvas first so zoompan has headroom to zoom/pan without black borders
+        scale_2x_w = target_width * 2
+        scale_2x_h = target_height * 2
+        scale_prefix = (
+            f"scale={scale_2x_w}:{scale_2x_h}:force_original_aspect_ratio=increase,"
+            f"crop={scale_2x_w}:{scale_2x_h}"
+        )
+        out_size = f"{target_width}x{target_height}"
+
+        if effect == "zoom_in":
+            # Gently zoom from 1.0 → 1.15 centered
+            zp = (
+                f"zoompan=z='min(zoom+0.0008,1.15)'"
+                f":x='iw/2-(iw/zoom/2)'"
+                f":y='ih/2-(ih/zoom/2)'"
+                f":d={num_frames}:s={out_size}:fps={target_fps}"
+            )
+        elif effect == "zoom_out":
+            # Start at 1.15, gently zoom out to 1.0
+            zp = (
+                f"zoompan=z='if(lte(zoom,1.0),1.15,max(1.001,zoom-0.0008))'"
+                f":x='iw/2-(iw/zoom/2)'"
+                f":y='ih/2-(ih/zoom/2)'"
+                f":d={num_frames}:s={out_size}:fps={target_fps}"
+            )
+        elif effect == "pan_left":
+            # Drift slowly from right side to left (zoom=1.08 for safety margin)
+            zp = (
+                f"zoompan=z=1.08"
+                f":x='if(lte(on,1),(iw-iw/zoom),max(0,x-(iw*0.10/{num_frames})))'"
+                f":y='ih/2-(ih/zoom/2)'"
+                f":d={num_frames}:s={out_size}:fps={target_fps}"
+            )
+        elif effect == "pan_right":
+            # Drift slowly from left to right (zoom=1.08)
+            zp = (
+                f"zoompan=z=1.08"
+                f":x='min((iw-iw/zoom),x+(iw*0.10/{num_frames}))'"
+                f":y='ih/2-(ih/zoom/2)'"
+                f":d={num_frames}:s={out_size}:fps={target_fps}"
+            )
+        else:  # pan_up
+            # Drift slowly upward (zoom=1.08)
+            zp = (
+                f"zoompan=z=1.08"
+                f":x='iw/2-(iw/zoom/2)'"
+                f":y='if(lte(on,1),(ih-ih/zoom),max(0,y-(ih*0.10/{num_frames})))'"
+                f":d={num_frames}:s={out_size}:fps={target_fps}"
+            )
+
+        return f"{scale_prefix},{zp}"
+
+    def _build_scene_filters(
+        self,
+        scene,
+        scene_index: int = 0,
+        duration: float = 1.0,
+        num_frames: int = 30,
+        target_width: int = 1080,
+        target_height: int = 1920,
+        is_last: bool = False,
         target_fps: int = 30,
+        motion_preset: str = "none",
     ) -> str:
         """Constructs safe FFmpeg filter expressions for scaling, image transforms (fit/crop/zoom/position), motion, and transitions."""
         motion = (getattr(scene, "motion", "none") or "none").lower()
@@ -968,7 +1046,19 @@ class RenderService:
                 f"[bgblur][fgscaled]overlay=(W-w)/2:(H-h)/2"
             )
             filter_parts.append(blur_filter)
+        elif motion_preset == "ken_burns" and motion == "none":
+            # Ken Burns global preset: scene has no custom per-scene motion, apply cycling KB effect
+            kb_effect = self._KB_EFFECTS[scene_index % len(self._KB_EFFECTS)]
+            kb_filter = self._build_ken_burns_filter(
+                effect=kb_effect,
+                num_frames=num_frames,
+                target_width=target_width,
+                target_height=target_height,
+                target_fps=target_fps,
+            )
+            filter_parts.append(kb_filter)
         elif motion != "none":
+
             # Motion takes precedence with zoom factor scaling
             base_z = max(1.0, min(2.5, image_zoom))
             if motion == "slow zoom in":
@@ -1052,9 +1142,22 @@ class RenderService:
             filter_parts.append(f"eq=brightness={brightness:.2f}:contrast={contrast:.2f}:saturation={saturation:.2f}")
 
         # 5. Transition Filter Logic
-        if transition in ("fade", "crossfade") and trans_duration > 0 and duration > trans_duration:
-            fade_start = duration - trans_duration
-            filter_parts.append(f"fade=t=out:st={fade_start:.3f}:d={trans_duration:.3f}")
+        # 5. Transition Filter Logic
+        # If scene has an explicit transition use it; if Ken Burns is active and no transition set, auto-fade
+        effective_transition = transition
+        effective_trans_duration = trans_duration
+        if (
+            effective_transition in ("none", "")
+            and motion_preset == "ken_burns"
+            and not is_last
+        ):
+            effective_transition = "fade"
+            effective_trans_duration = min(0.4, duration / 2.0)
+
+        if effective_transition in ("fade", "crossfade") and effective_trans_duration > 0 and duration > effective_trans_duration:
+            fade_start = duration - effective_trans_duration
+            filter_parts.append(f"fade=t=out:st={fade_start:.3f}:d={effective_trans_duration:.3f}")
+
 
         # 6. Enforce SAR and target fps
         filter_parts.append("setsar=1")

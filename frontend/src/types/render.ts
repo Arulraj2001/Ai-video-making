@@ -26,7 +26,9 @@ export interface RenderJob {
 export interface RenderRequestInput {
   resolution?: string;
   aspect_ratio?: string;
+  motion_preset?: "none" | "ken_burns";
 }
+
 
 export interface RenderJobListResponse {
   jobs: RenderJob[];

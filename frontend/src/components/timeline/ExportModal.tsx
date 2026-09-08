@@ -14,7 +14,9 @@ import {
   Play,
   Trash2,
   Loader2,
+  Zap,
 } from "lucide-react";
+
 import type { Project } from "../../types/project";
 import type { RenderJob } from "../../types/render";
 import { api } from "../../services/api";
@@ -74,6 +76,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 }) => {
   const [selectedResolution, setSelectedResolution] =
     useState<ResolutionOption>("1080x1920");
+  const [kenBurnsEnabled, setKenBurnsEnabled] = useState(false);
   const [activeJob, setActiveJob] = useState<RenderJob | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -202,6 +205,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     try {
       const job = await api.startRender(project.id, {
         resolution: selectedResolution,
+        motion_preset: kenBurnsEnabled ? "ken_burns" : "none",
       });
       setActiveJob(job);
     } catch (err: any) {
@@ -430,6 +434,109 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Scene Motion Toggle — Ken Burns */}
+            <div
+              style={{
+                background: kenBurnsEnabled
+                  ? "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.08) 100%)"
+                  : "var(--bg-card-subtle)",
+                border: kenBurnsEnabled
+                  ? "1px solid rgba(99,102,241,0.45)"
+                  : "1px solid var(--border-subtle)",
+                borderRadius: "14px",
+                padding: "16px 20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+                transition: "all 0.25s ease",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    background: kenBurnsEnabled
+                      ? "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)"
+                      : "rgba(255,255,255,0.06)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: kenBurnsEnabled ? "#fff" : "var(--text-muted)",
+                    transition: "all 0.25s ease",
+                    boxShadow: kenBurnsEnabled ? "0 4px 12px -2px rgba(99,102,241,0.5)" : "none",
+                  }}
+                >
+                  <Zap size={18} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Scene Motion
+                    {kenBurnsEnabled && (
+                      <span
+                        style={{
+                          marginLeft: "8px",
+                          fontSize: "0.68rem",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: "10px",
+                          background: "rgba(99,102,241,0.2)",
+                          color: "#a5b4fc",
+                          border: "1px solid rgba(99,102,241,0.4)",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        KEN BURNS
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "0.77rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                    Subtle zoom &amp; pan on each scene for a cinematic feel
+                  </div>
+                </div>
+              </div>
+
+              {/* Toggle pill */}
+              <button
+                id="ken-burns-toggle"
+                type="button"
+                onClick={() => setKenBurnsEnabled((v) => !v)}
+                aria-pressed={kenBurnsEnabled}
+                aria-label="Toggle Ken Burns scene motion"
+                style={{
+                  flexShrink: 0,
+                  width: "52px",
+                  height: "28px",
+                  borderRadius: "14px",
+                  border: "none",
+                  cursor: "pointer",
+                  background: kenBurnsEnabled
+                    ? "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)"
+                    : "rgba(255,255,255,0.1)",
+                  position: "relative",
+                  transition: "background 0.25s ease",
+                  boxShadow: kenBurnsEnabled ? "0 0 12px rgba(99,102,241,0.45)" : "none",
+                  padding: 0,
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "3px",
+                    left: kenBurnsEnabled ? "27px" : "3px",
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "50%",
+                    background: "#fff",
+                    transition: "left 0.2s ease",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                  }}
+                />
+              </button>
             </div>
 
             {/* Video & Audio Specifications Summary */}
