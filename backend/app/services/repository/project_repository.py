@@ -130,6 +130,7 @@ def serialize_project(project: ProjectModel) -> Dict[str, Any]:
             "aspect_ratio": getattr(project.canvas_settings, "aspect_ratio", "9:16"),
             "resolution": getattr(project.canvas_settings, "resolution", "1080x1920"),
             "fps": getattr(project.canvas_settings, "fps", 30),
+            "motion_preset": getattr(project.canvas_settings, "motion_preset", "none"),
         } if getattr(project, "canvas_settings", None) else None,
         "video_bible": {
             "overall_style": {
@@ -329,6 +330,7 @@ def deserialize_project(data: Dict[str, Any], project_id: Optional[str] = None) 
         aspect_ratio=cv_data.get("aspect_ratio", "9:16"),
         resolution=cv_data.get("resolution", "1080x1920"),
         fps=cv_data.get("fps", 30),
+        motion_preset=cv_data.get("motion_preset", "none"),
     )
 
     return ProjectModel(

@@ -1339,6 +1339,8 @@ class ProjectService:
             project.canvas_settings.aspect_ratio = cv.aspect_ratio
             project.canvas_settings.resolution = cv.resolution
             project.canvas_settings.fps = cv.fps
+            if getattr(cv, "motion_preset", None) is not None:
+                project.canvas_settings.motion_preset = cv.motion_preset
 
         project.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_to_disk(project)

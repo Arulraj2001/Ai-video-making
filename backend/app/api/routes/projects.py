@@ -103,7 +103,8 @@ def _to_project_response(p) -> ProjectResponse:
         canvas_settings = CanvasSettingsSchema(
             aspect_ratio=p.canvas_settings.aspect_ratio,
             resolution=p.canvas_settings.resolution,
-            fps=p.canvas_settings.fps
+            fps=p.canvas_settings.fps,
+            motion_preset=getattr(p.canvas_settings, "motion_preset", "none"),
         )
 
     return ProjectResponse(

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Project, CanvasSettings } from "../../../types/project";
 import { api } from "../../../services/api";
-import { Monitor, Smartphone, Square, Check } from "lucide-react";
+import { Monitor, Smartphone, Square, Check, Sparkles } from "lucide-react";
 
 interface CanvasSettingsPanelProps {
   project: Project;
@@ -71,6 +71,30 @@ const CanvasSettingsPanelComponent: React.FC<CanvasSettingsPanelProps> = ({
       setTimeout(() => setSaveSuccess(false), 1800);
     } catch (err: any) {
       console.error("Failed to save canvas settings:", err);
+      setSettings(current);
+      onProjectUpdated(project);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleMotionPreset = async (preset: "none" | "ken_burns") => {
+    const updated: CanvasSettings = {
+      ...settings,
+      motion_preset: preset,
+    };
+    setSettings(updated);
+    onProjectUpdated({ ...project, canvas_settings: updated });
+    setIsSaving(true);
+    try {
+      const resProject = await api.updateProjectSettings(project.id, {
+        canvas_settings: updated,
+      });
+      onProjectUpdated(resProject);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 1800);
+    } catch (err: any) {
+      console.error("Failed to save motion preset:", err);
       setSettings(current);
       onProjectUpdated(project);
     } finally {
@@ -169,6 +193,94 @@ const CanvasSettingsPanelComponent: React.FC<CanvasSettingsPanelProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Scene Motion — Ken Burns Setting */}
+      <div
+        id="canvas-ken-burns-card"
+        style={{
+          background: settings.motion_preset === "ken_burns"
+            ? "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.08) 100%)"
+            : "var(--bg-card-subtle)",
+          border: settings.motion_preset === "ken_burns"
+            ? "1px solid rgba(99,102,241,0.45)"
+            : "1px solid var(--border-subtle)",
+          borderRadius: "12px",
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "16px",
+          transition: "all 0.2s ease",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: settings.motion_preset === "ken_burns"
+                ? "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)"
+                : "rgba(255,255,255,0.06)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: settings.motion_preset === "ken_burns" ? "#fff" : "var(--text-muted)",
+              boxShadow: settings.motion_preset === "ken_burns" ? "0 4px 12px rgba(99,102,241,0.4)" : "none",
+            }}
+          >
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>Ken Burns Scene Motion</span>
+              {settings.motion_preset === "ken_burns" && (
+                <span className="badge badge-success text-[10px]">Active in Stage 4</span>
+              )}
+            </div>
+            <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "2px" }}>
+              Subtle zoom &amp; pan on each scene for a cinematic feel (Live preview active in Stage 4 player)
+            </div>
+          </div>
+        </div>
+
+        <button
+          id="canvas-kb-toggle"
+          type="button"
+          onClick={() => handleToggleMotionPreset(settings.motion_preset === "ken_burns" ? "none" : "ken_burns")}
+          aria-pressed={settings.motion_preset === "ken_burns"}
+          aria-label="Toggle Ken Burns scene motion"
+          style={{
+            flexShrink: 0,
+            width: "52px",
+            height: "28px",
+            borderRadius: "14px",
+            border: "none",
+            cursor: "pointer",
+            background: settings.motion_preset === "ken_burns"
+              ? "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)"
+              : "var(--border-strong, #CBD5E1)",
+            position: "relative",
+            transition: "background 0.25s ease",
+            boxShadow: settings.motion_preset === "ken_burns" ? "0 0 12px rgba(99,102,241,0.45)" : "none",
+            padding: 0,
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: "3px",
+              left: settings.motion_preset === "ken_burns" ? "27px" : "3px",
+              width: "22px",
+              height: "22px",
+              borderRadius: "50%",
+              background: "#fff",
+              transition: "left 0.2s ease",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+            }}
+          />
+        </button>
       </div>
 
       {/* Details Bar */}

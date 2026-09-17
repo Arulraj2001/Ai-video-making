@@ -76,7 +76,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 }) => {
   const [selectedResolution, setSelectedResolution] =
     useState<ResolutionOption>("1080x1920");
-  const [kenBurnsEnabled, setKenBurnsEnabled] = useState(false);
+  const [kenBurnsEnabled, setKenBurnsEnabled] = useState(
+    project.canvas_settings?.motion_preset === "ken_burns"
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setKenBurnsEnabled(project.canvas_settings?.motion_preset === "ken_burns");
+    }
+  }, [isOpen, project.canvas_settings?.motion_preset]);
   const [activeJob, setActiveJob] = useState<RenderJob | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -651,7 +659,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   cursor: "pointer",
                   background: kenBurnsEnabled
                     ? "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)"
-                    : "rgba(255,255,255,0.1)",
+                    : "var(--border-strong, #CBD5E1)",
                   position: "relative",
                   transition: "background 0.25s ease",
                   boxShadow: kenBurnsEnabled ? "0 0 12px rgba(99,102,241,0.45)" : "none",
@@ -810,7 +818,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
-                    color: "#818cf8",
+                    color: "var(--primary, #4f46e5)",
                   }}
                 >
                   Rendering in progress
@@ -820,7 +828,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                     fontSize: "1.25rem",
                     fontWeight: 800,
                     margin: "4px 0 0 0",
-                    color: "#fff",
+                    color: "var(--text-primary)",
                   }}
                 >
                   {activeJob.stage || "Preparing..."}
@@ -830,8 +838,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 style={{
                   fontSize: "1.4rem",
                   fontWeight: 900,
-                  fontFamily: "monospace",
-                  color: "#818cf8",
+                  fontFamily: "var(--font-mono, monospace)",
+                  color: "var(--primary, #4f46e5)",
                 }}
               >
                 {activeJob.progress}%
@@ -843,7 +851,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               style={{
                 width: "100%",
                 height: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                backgroundColor: "var(--border, #E2E8F0)",
                 borderRadius: "5px",
                 overflow: "hidden",
                 position: "relative",
@@ -886,30 +894,30 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                       padding: "8px 12px",
                       borderRadius: "8px",
                       background: isCurrent
-                        ? "rgba(99, 102, 241, 0.15)"
+                        ? "rgba(99, 102, 241, 0.12)"
                         : isPassed
-                        ? "rgba(16, 185, 129, 0.08)"
-                        : "rgba(255, 255, 255, 0.02)",
+                        ? "rgba(16, 185, 129, 0.12)"
+                        : "var(--bg-surface)",
                       border: isCurrent
-                        ? "1px solid rgba(99, 102, 241, 0.4)"
+                        ? "1px solid rgba(99, 102, 241, 0.45)"
                         : isPassed
-                        ? "1px solid rgba(16, 185, 129, 0.3)"
-                        : "1px solid rgba(255, 255, 255, 0.05)",
+                        ? "1px solid rgba(16, 185, 129, 0.4)"
+                        : "1px solid var(--border-subtle)",
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
                       color: isCurrent
-                        ? "#a5b4fc"
+                        ? "var(--primary, #4338ca)"
                         : isPassed
-                        ? "#34d399"
+                        ? "#059669"
                         : "var(--text-muted)",
                       fontWeight: isCurrent || isPassed ? 700 : 500,
                     }}
                   >
                     {isCurrent ? (
-                      <RefreshCw size={12} className="animate-spin text-indigo-400 shrink-0" />
+                      <RefreshCw size={12} className="animate-spin text-indigo-500 shrink-0" />
                     ) : isPassed ? (
-                      <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                      <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
                     ) : (
                       <Clock size={12} className="shrink-0" />
                     )}
@@ -926,17 +934,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 justifyContent: "space-between",
                 padding: "10px 14px",
                 borderRadius: "10px",
-                background: "rgba(16, 185, 129, 0.08)",
-                border: "1px solid rgba(16, 185, 129, 0.2)",
+                background: "rgba(16, 185, 129, 0.1)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <CheckCircle2 size={14} className="text-emerald-400" />
-                <span style={{ fontSize: "0.78rem", color: "#e2e8f0", fontWeight: 500 }}>
+                <CheckCircle2 size={14} style={{ color: "#059669" }} className="shrink-0" />
+                <span style={{ fontSize: "0.8rem", color: "var(--text-primary)", fontWeight: 600 }}>
                   You can safely close this window — rendering continues in the background.
                 </span>
               </div>
-              <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace" }}>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono, monospace)", fontWeight: 600 }}>
                 Est: ~1–3 mins
               </span>
             </div>
@@ -956,8 +964,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             {/* Success Banner */}
             <div
               style={{
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%)",
-                border: "1px solid rgba(16, 185, 129, 0.35)",
+                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%)",
+                border: "1px solid rgba(16, 185, 129, 0.4)",
                 borderRadius: "16px",
                 padding: "18px 24px",
                 display: "flex",
@@ -972,20 +980,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                     width: "42px",
                     height: "42px",
                     borderRadius: "50%",
-                    background: "rgba(16, 185, 129, 0.2)",
+                    background: "rgba(16, 185, 129, 0.25)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "#34d399",
+                    color: "#059669",
                   }}
                 >
                   <CheckCircle2 size={24} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "#fff" }}>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
                     Render Complete!
                   </h3>
-                  <span style={{ fontSize: "0.82rem", color: "#a7f3d0" }}>
+                  <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 600 }}>
                     {activeJob.resolution} • {activeJob.duration?.toFixed(1)}s •{" "}
                     {activeJob.file_size ? `${(activeJob.file_size / (1024 * 1024)).toFixed(1)} MB` : ""}
                   </span>
@@ -1015,7 +1023,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                             alignItems: "center",
                             gap: "6px",
                             borderRadius: "8px",
-                            background: fmt.id === "mp4" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "rgba(255, 255, 255, 0.08)",
+                            background: fmt.id === "mp4" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "var(--bg-card-subtle)",
+                            color: fmt.id === "mp4" ? "#ffffff" : "var(--text-primary)",
+                            border: fmt.id === "mp4" ? "none" : "1px solid var(--border-subtle)",
                             boxShadow: fmt.id === "mp4" ? "0 8px 16px -4px rgba(16, 185, 129, 0.4)" : "none",
                             opacity: isDownloading ? 0.75 : 1,
                             transition: "all 0.15s ease",
@@ -1112,10 +1122,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
               <AlertCircle size={26} className="text-red-400 flex-shrink-0" />
               <div>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: "0 0 4px 0", color: "#fff" }}>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: "0 0 4px 0", color: "var(--text-primary)" }}>
                   Render Failed
                 </h3>
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "#fca5a5", lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--color-error-text, #b91c1c)", lineHeight: 1.4, fontWeight: 500 }}>
                   {activeJob.error || "An unexpected error occurred during FFmpeg execution."}
                 </p>
               </div>

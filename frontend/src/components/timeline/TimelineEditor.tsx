@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Film, MessageSquare, Music, Layout, Sliders, Keyboard, Tag, Plus, Wand2 } from "lucide-react";
-import type { Project, Scene, SceneUpdateInput, SceneTemplateType, SceneBackground, SceneElement } from "../../types/project";
+import { Film, MessageSquare, Music, Layout, Sliders, Keyboard, Tag, Plus, Wand2, Sparkles } from "lucide-react";
+import type { Project, Scene, SceneUpdateInput, SceneTemplateType, SceneBackground, SceneElement, CanvasSettings } from "../../types/project";
 import { CinemaPreview } from "./CinemaPreview";
 import { TimelineTracks } from "./TimelineTracks";
 import { SceneInspector } from "./SceneInspector";
@@ -70,6 +70,28 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
       showToast(err.message || "Auto-align failed", "error");
     } finally {
       setIsAligning(false);
+    }
+  };
+
+  const isKenBurnsActive = project.canvas_settings?.motion_preset === "ken_burns";
+  const handleToggleKenBurns = async () => {
+    const nextVal: "none" | "ken_burns" = isKenBurnsActive ? "none" : "ken_burns";
+    const updatedCanvas: CanvasSettings = {
+      ...(project.canvas_settings || { aspect_ratio: "9:16", resolution: "1080x1920", fps: 30 }),
+      motion_preset: nextVal,
+    };
+    const updatedProject = { ...project, canvas_settings: updatedCanvas };
+    onProjectUpdated(updatedProject);
+    showToast(
+      nextVal === "ken_burns"
+        ? "✨ Ken Burns Motion enabled! Live cinematic pan & zoom active in player."
+        : "Static scenes enabled (Ken Burns turned off).",
+      "info"
+    );
+    try {
+      await api.updateProjectSettings(project.id, { canvas_settings: updatedCanvas });
+    } catch (err: any) {
+      console.warn("Failed to persist canvas settings:", err);
     }
   };
 
@@ -814,6 +836,35 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           >
             <Plus size={14} />
             <span>+ Add Slide</span>
+          </button>
+
+          {/* Ken Burns Scene Motion Toggle */}
+          <button
+            id="timeline-ken-burns-btn"
+            onClick={handleToggleKenBurns}
+            title="Toggle Ken Burns cinematic pan & zoom across all scenes"
+            style={{
+              padding: "6px 12px",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              background: isKenBurnsActive
+                ? "linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.15) 100%)"
+                : "var(--bg-surface)",
+              border: isKenBurnsActive
+                ? "1px solid var(--primary)"
+                : "1px solid var(--border-subtle)",
+              color: isKenBurnsActive ? "var(--primary)" : "var(--text-secondary)",
+              boxShadow: isKenBurnsActive ? "0 0 10px rgba(99, 102, 241, 0.3)" : "none",
+            }}
+          >
+            <Sparkles size={14} className={isKenBurnsActive ? "text-indigo-400" : ""} />
+            <span>Ken Burns: {isKenBurnsActive ? "ON" : "OFF"}</span>
           </button>
 
           <div

@@ -95,6 +95,7 @@ export interface CanvasSettings {
   aspect_ratio: "9:16" | "16:9" | "1:1" | string;
   resolution: "1080x1920" | "1920x1080" | "1080x1080" | string;
   fps: number;
+  motion_preset?: "none" | "ken_burns";
 }
 
 export interface Scene {

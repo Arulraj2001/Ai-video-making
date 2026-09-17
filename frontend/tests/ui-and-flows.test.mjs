@@ -72,3 +72,38 @@ test("3. Studio Project Creation starts explicitly on Stage 1 (Script & Audio)",
   assert.ok(appLayout.includes("stage=script"), "AppLayout navigates with ?stage=script");
   assert.ok(createProjPage.includes("stage=script"), "CreateProjectPage navigates with ?stage=script");
 });
+
+test("4. ExportModal Lightbox contrast & readability", () => {
+  const exportModal = fs.readFileSync(path.join(frontendDir, "src/components/timeline/ExportModal.tsx"), "utf-8");
+
+  // Rendering in progress text uses theme-adaptive high contrast
+  assert.ok(exportModal.includes("var(--text-primary)"), "ExportModal uses var(--text-primary)");
+  assert.ok(!exportModal.includes('color: "#fff",\n                  }\n                >\n                  {activeJob.stage'), "No hardcoded white activeJob.stage text");
+  assert.ok(!exportModal.includes('color: "#e2e8f0", fontWeight: 500 }}>\n                  You can safely close this window'), "No low contrast reassurance text");
+  assert.ok(exportModal.includes("Render Complete!"), "Render complete banner present");
+  assert.ok(!exportModal.includes('color: "#a7f3d0"'), "No pale mint text in completed state");
+});
+
+test("5. Stage 4 Ken Burns Scene Motion & Live Player Preview", () => {
+  const timelineEditor = fs.readFileSync(path.join(frontendDir, "src/components/timeline/TimelineEditor.tsx"), "utf-8");
+  const cinemaPreview = fs.readFileSync(path.join(frontendDir, "src/components/timeline/CinemaPreview.tsx"), "utf-8");
+  const canvasSettings = fs.readFileSync(path.join(frontendDir, "src/components/timeline/settings/CanvasSettingsPanel.tsx"), "utf-8");
+  const exportModal = fs.readFileSync(path.join(frontendDir, "src/components/timeline/ExportModal.tsx"), "utf-8");
+
+  // TimelineEditor toolbar button
+  assert.ok(timelineEditor.includes("timeline-ken-burns-btn"), "TimelineEditor has Ken Burns toggle button");
+  assert.ok(timelineEditor.includes("handleToggleKenBurns"), "TimelineEditor has handleToggleKenBurns");
+
+  // CinemaPreview live preview
+  assert.ok(cinemaPreview.includes("isKenBurnsGlobal"), "CinemaPreview checks isKenBurnsGlobal");
+  assert.ok(cinemaPreview.includes("cinema-ken-burns-live-badge"), "CinemaPreview has live Ken Burns HUD badge");
+  assert.ok(cinemaPreview.includes("KB_EFFECTS"), "CinemaPreview cycles through 5 Ken Burns motion variants");
+
+  // CanvasSettingsPanel
+  assert.ok(canvasSettings.includes("canvas-ken-burns-card"), "CanvasSettingsPanel has Ken Burns settings card");
+  assert.ok(canvasSettings.includes("handleToggleMotionPreset"), "CanvasSettingsPanel can toggle motion preset");
+
+  // ExportModal initialized from project
+  assert.ok(exportModal.includes("project.canvas_settings?.motion_preset === \"ken_burns\""), "ExportModal syncs kenBurnsEnabled from Stage 4");
+});
+

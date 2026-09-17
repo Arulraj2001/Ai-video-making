@@ -40,6 +40,7 @@ class CanvasSettingsModel:
     aspect_ratio: str = "9:16"  # "9:16", "16:9", "1:1"
     resolution: str = "1080x1920"  # "1080x1920", "1920x1080", "1080x1080"
     fps: int = 30
+    motion_preset: str = "none"  # "none", "ken_burns"
 
 @dataclass
 class ProjectModel:

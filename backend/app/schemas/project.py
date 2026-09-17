@@ -244,6 +244,7 @@ class CanvasSettingsSchema(BaseModel):
     aspect_ratio: str = Field(default="9:16", description="Canvas aspect ratio: 9:16, 16:9, 1:1")
     resolution: str = Field(default="1080x1920", description="Canvas resolution: 1080x1920, 1920x1080, 1080x1080")
     fps: int = Field(default=30, description="Target framerate: 30 FPS")
+    motion_preset: Optional[str] = Field(default="none", description="Motion effect preset: 'none' or 'ken_burns'")
 
 class ProjectSettingsUpdate(BaseModel):
     caption_settings: Optional[CaptionSettingsSchema] = None

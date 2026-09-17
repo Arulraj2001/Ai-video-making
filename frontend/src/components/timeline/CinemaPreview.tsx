@@ -183,24 +183,52 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
       ? Math.max(0, Math.min(1, (currentTime - activeScene.start) / activeScene.duration))
       : 0;
 
-  // Compute transform based on motion
-  const getMotionTransform = (motion?: string, progress: number = 0) => {
-    switch (motion) {
-      case "slow zoom in":
-        return `scale(${1 + progress * 0.18})`;
-      case "slow zoom out":
-        return `scale(${1.18 - progress * 0.18})`;
-      case "pan left":
-        return `scale(1.12) translateX(${(0.5 - progress) * 8}%)`;
-      case "pan right":
-        return `scale(1.12) translateX(${(progress - 0.5) * 8}%)`;
-      case "pan up":
-        return `scale(1.12) translateY(${(0.5 - progress) * 8}%)`;
-      case "pan down":
-        return `scale(1.12) translateY(${(progress - 0.5) * 8}%)`;
-      default:
-        return "scale(1)";
+  // Ken Burns cycling effect sequence matching backend render_service._KB_EFFECTS
+  const KB_EFFECTS = ["zoom_in", "pan_left", "zoom_out", "pan_right", "pan_up"] as const;
+  const isKenBurnsGlobal = project.canvas_settings?.motion_preset === "ken_burns";
+
+  // Compute transform based on motion & Ken Burns live preview
+  const getMotionTransform = (motion?: string, progress: number = 0, sceneIdx: number = 0) => {
+    // If scene has explicit per-scene motion, that takes priority
+    if (motion && motion !== "none") {
+      switch (motion) {
+        case "slow zoom in":
+          return `scale(${1 + progress * 0.18})`;
+        case "slow zoom out":
+          return `scale(${1.18 - progress * 0.18})`;
+        case "pan left":
+          return `scale(1.12) translateX(${(0.5 - progress) * 8}%)`;
+        case "pan right":
+          return `scale(1.12) translateX(${(progress - 0.5) * 8}%)`;
+        case "pan up":
+          return `scale(1.12) translateY(${(0.5 - progress) * 8}%)`;
+        case "pan down":
+          return `scale(1.12) translateY(${(progress - 0.5) * 8}%)`;
+        default:
+          return "scale(1)";
+      }
     }
+
+    // When Ken Burns is enabled in Stage 4, cycle the 5 cinematic motion effects
+    if (isKenBurnsGlobal) {
+      const effect = KB_EFFECTS[sceneIdx % KB_EFFECTS.length];
+      switch (effect) {
+        case "zoom_in":
+          return `scale(${1.0 + progress * 0.15})`;
+        case "zoom_out":
+          return `scale(${1.15 - progress * 0.15})`;
+        case "pan_left":
+          return `scale(1.12) translateX(${(0.5 - progress) * 8}%)`;
+        case "pan_right":
+          return `scale(1.12) translateX(${(progress - 0.5) * 8}%)`;
+        case "pan_up":
+          return `scale(1.12) translateY(${(0.5 - progress) * 8}%)`;
+        default:
+          return `scale(${1.0 + progress * 0.15})`;
+      }
+    }
+
+    return "scale(1)";
   };
 
   // Compute CSS visual filter based on brightness, contrast, saturation, and color filter preset
@@ -685,6 +713,42 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
             </div>
           )}
 
+          {/* Ken Burns Live Preview Badge */}
+          {isKenBurnsGlobal && activeScene?.image_url && (
+            <div
+              id="cinema-ken-burns-live-badge"
+              style={{
+                position: "absolute",
+                top: "14px",
+                right: "14px",
+                zIndex: 35,
+                background: "rgba(15, 23, 42, 0.82)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(99, 102, 241, 0.5)",
+                borderRadius: "999px",
+                padding: "4px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                color: "#e0e7ff",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                pointerEvents: "none",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              <span style={{ color: "#a855f7" }}>✨</span>
+              <span>
+                Ken Burns: {
+                  activeScene.motion && activeScene.motion !== "none"
+                    ? activeScene.motion.toUpperCase()
+                    : KB_EFFECTS[safeActiveIndex % KB_EFFECTS.length].replace("_", " ").toUpperCase()
+                }
+              </span>
+            </div>
+          )}
+
           {/* Drag & Drop Canvas Overlay */}
           {isDraggingCanvas && (
             <div
@@ -928,7 +992,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
                                   : ((activeScene.image_fit || "cover") as any),
                               objectPosition: activeScene.image_position || "center",
                               filter: getCssFilter(activeScene),
-                              transform: `${getMotionTransform(activeScene.motion, sceneProgress)} scale(${activeScene.image_zoom || 1.0})`,
+                              transform: `${getMotionTransform(activeScene.motion, sceneProgress, safeActiveIndex)} scale(${activeScene.image_zoom || 1.0})`,
                               clipPath: cropClipPath,
                               transition: isPlaying ? "none" : "transform 0.2s ease-out",
                               willChange: "transform",

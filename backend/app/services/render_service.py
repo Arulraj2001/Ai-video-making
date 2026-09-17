@@ -637,6 +637,8 @@ class RenderService:
             resolution = ASPECT_TO_RESOLUTION.get(aspect_ratio, DEFAULT_RESOLUTION)
 
         # Validate motion_preset
+        if not motion_preset or motion_preset == "none":
+            motion_preset = getattr(project.canvas_settings, "motion_preset", "none") if getattr(project, "canvas_settings", None) else "none"
         if motion_preset not in ("none", "ken_burns"):
             motion_preset = "none"
 
