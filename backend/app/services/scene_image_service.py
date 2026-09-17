@@ -464,14 +464,29 @@ class SceneImageService:
         async def _gen_worker(scene: SceneModel) -> SceneModel:
             async with sem:
                 try:
-                    return await self.generate_scene_image(
-                        project=project,
-                        scene_id=scene.id,
-                        force=force,
-                        style_mode=style_mode,
-                        generator=active_generator,
-                        user_id=effective_uid,
+                    return await asyncio.wait_for(
+                        self.generate_scene_image(
+                            project=project,
+                            scene_id=scene.id,
+                            force=force,
+                            style_mode=style_mode,
+                            generator=active_generator,
+                            user_id=effective_uid,
+                        ),
+                        timeout=90.0,
                     )
+                except asyncio.TimeoutError:
+                    logger.warning(f"Batch generation for scene {scene.id} timed out after 90s.")
+                    project_service.update_scene_image_state(
+                        project_id=project.id,
+                        scene_id=scene.id,
+                        status="failed",
+                        error="Image generation timed out after 90 seconds. Please retry.",
+                    )
+                    refreshed_scene = next((s for s in project.scenes if s.id == scene.id), scene)
+                    refreshed_scene.image_status = "failed"
+                    refreshed_scene.image_error = "Image generation timed out after 90 seconds. Please retry."
+                    return refreshed_scene
                 except Exception as e:
                     logger.warning(f"Batch generation for scene {scene.id} failed: {e}")
                     # Scene has already been marked as 'failed' in generate_scene_image
@@ -512,16 +527,31 @@ class SceneImageService:
 
             async with sem:
                 try:
-                    return await self.generate_scene_image(
-                        project=project,
-                        scene_id=scene.id,
-                        force=True,
-                        style_mode=style_mode,
-                        provider_name=provider_name,
-                        model_name=model_name,
-                        generator=active_generator,
-                        user_id=effective_uid,
+                    return await asyncio.wait_for(
+                        self.generate_scene_image(
+                            project=project,
+                            scene_id=scene.id,
+                            force=True,
+                            style_mode=style_mode,
+                            provider_name=provider_name,
+                            model_name=model_name,
+                            generator=active_generator,
+                            user_id=effective_uid,
+                        ),
+                        timeout=90.0,
                     )
+                except asyncio.TimeoutError:
+                    logger.warning(f"Retry generation for scene {scene.id} timed out after 90s.")
+                    project_service.update_scene_image_state(
+                        project_id=project.id,
+                        scene_id=scene.id,
+                        status="failed",
+                        error="Image generation timed out after 90 seconds. Please retry.",
+                    )
+                    refreshed_scene = next((s for s in project.scenes if s.id == scene.id), scene)
+                    refreshed_scene.image_status = "failed"
+                    refreshed_scene.image_error = "Image generation timed out after 90 seconds. Please retry."
+                    return refreshed_scene
                 except Exception as e:
                     logger.warning(f"Retry generation for scene {scene.id} failed: {e}")
                     refreshed_scene = next((s for s in project.scenes if s.id == scene.id), scene)

@@ -61,7 +61,33 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [selectedModelId, setSelectedModelId] = useState<string>("flux-realism");
   const [selectedProvider, setSelectedProvider] = useState<string>("pollinations");
   const [usageStats, setUsageStats] = useState<ProviderUsageStats | null>(null);
-  const [styleMode, setStyleMode] = useState<string>("photorealistic");
+  const resolveInitialStyleMode = (proj: Project): string => {
+    const vbStyle = (proj.video_bible?.overall_style?.visual_style || "").toLowerCase();
+    const vbRealism = (proj.video_bible?.overall_style?.realism_level || "").toLowerCase();
+    const combined = `${vbStyle} ${vbRealism}`;
+    if (combined.includes("anime") || combined.includes("manga")) return "anime";
+    if (combined.includes("3d") || combined.includes("pixar") || combined.includes("animation")) return "3d";
+    if (combined.includes("sketch") || combined.includes("hand drawn") || combined.includes("pencil")) return "sketch";
+    if (combined.includes("documentary") || combined.includes("journalism")) return "documentary";
+    if (combined.includes("flat") || combined.includes("vector")) return "flat";
+    if (combined.includes("cartoon")) return "cartoon";
+    if (combined.includes("whiteboard")) return "whiteboard";
+    if (combined.includes("stick")) return "stickfigure";
+    if (combined.includes("cinematic") || combined.includes("film")) return "cinematic";
+    return "photorealistic";
+  };
+
+  const [styleMode, setStyleMode] = useState<string>(() => resolveInitialStyleMode(project));
+
+  // Sync styleMode if Video Bible style updates
+  useEffect(() => {
+    if (project.video_bible?.overall_style) {
+      setStyleMode(resolveInitialStyleMode(project));
+    }
+  }, [
+    project.video_bible?.overall_style?.visual_style,
+    project.video_bible?.overall_style?.realism_level,
+  ]);
 
   // Multi-select & Merge state
   const [selectedSceneIds, setSelectedSceneIds] = useState<Set<string>>(new Set());
@@ -365,7 +391,6 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
     } catch (err: any) {
       const msg = err.message || "Failed to upload image";
       setError(`Failed to upload image for scene: ${msg}`);
-      alert(msg);
       throw err;
     } finally {
       setUploadingSceneIds((prev) => {
@@ -742,7 +767,7 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
                 : "No scenes match the selected status filter."}
             </div>
           ) : (
-            <div className={`sb-scene-grid ${viewLayout === "compact" ? "is-compact" : ""}`}>
+            <div className={`sb-scene-grid storyboard-scene-grid ${viewLayout === "compact" ? "is-compact" : ""}`}>
               {filteredScenes.map((scene) => {
                 const index = scenes.findIndex((s) => s.id === scene.id);
                 const isSelected = selectedSceneIds.has(scene.id);

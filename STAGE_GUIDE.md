@@ -7,8 +7,8 @@
 ## The 5-Stage Video Pipeline
 1. **Stage 1: Script & Audio / Master Timeline** — Audio ingestion, Edge-TTS synthesis, sentence timecodes, and contiguous timeline locking. *(Completed & Audited)*
 2. **Stage 2: Video Bible Consistency Engine** — Visual continuity for characters, locations, key props, artistic style, and prompt rules. *(Completed & Audited)*
-3. **Stage 3: Visual Storyboard & AI Generation** — Scene-by-scene AI prompt generation, image rendering, and variation testing. *(Next)*
-4. **Stage 4: Timeline Studio & Motion Engine** — Animation dynamics, camera pans/zooms, transitions, and audio-visual syncing.
+3. **Stage 3: Visual Storyboard & AI Generation** — Scene-by-scene AI prompt synthesis, multi-provider image rendering (Flux, Cloudflare, OpenAI, Local GPU, Mock), A/B variations, and graphic cards. *(Completed & Audited)*
+4. **Stage 4: Timeline Studio & Motion Engine** — Animation dynamics, camera pans/zooms, transitions, and audio-visual syncing. *(Next)*
 5. **Stage 5: Export & Deliver** — High-definition MP4 rendering, captions burning, audio mixing, and delivery.
 
 ---
@@ -226,21 +226,169 @@ Generative image models (Flux, Stable Diffusion, Imagen) suffer from **style dri
 
 ---
 
+## Stage 3: Visual Storyboard & AI Generation
+
+### 1. Overview & Purpose
+Stage 3 transforms the Master Timeline sentences and Video Bible continuity database into a living, visual storyboard:
+- It compiles comprehensive, cinematic AI image prompts that combine narration context, character identities, wardrobe, location lighting, camera angles, and negative rules.
+- It interfaces with multiple generative AI image providers (Free Cloud, Cloudflare Workers AI, Local SANA GPU, OpenAI, Gemini, and offline Mock).
+- It enables rapid directorial tweaking, parallel candidate generation (A/B testing), custom image uploads from disk, and 1-click graphic card templates.
+- It provides non-destructive scene clustering and merging to cure rapid, strobe-like subtitle pacing.
+
+---
+
+### 2. Complete Inventory of Fields & Controls
+
+#### A. Storyboard Command Header (`StoryboardHeader.tsx`)
+- **Title & Aspect Ratio Pill**: Displays active project aspect ratio badge (`16:9`, `9:16`, or `1:1`).
+- **Telemetry Stat Chips**:
+  - `Scenes Count`: Total scenes on the Master Timeline.
+  - `Prompts Ready`: Number of scenes with synthesized image prompts.
+  - `Ready Count` (Green): Number of scenes with completed high-res visual assets.
+  - `Failed Count` (Red): Count of scenes that encountered generation errors.
+  - `Pending Count` (Amber): Count of scenes awaiting visual synthesis.
+- **AI Image Model Picker Dropdown (`Cpu`)**:
+  - Categorized menu displaying:
+    - *Free Cloud (Zero Setup / Unlimited)*: e.g. Flux Realism, Flux Anime, SDXL.
+    - *Cloudflare Workers AI (Daily Quota)*: Cloudflare @cf/black-forest-labs/flux-1-schnell with live daily quota readout.
+    - *Local Machine (Offline GPU)*: SANA-Sprint local offline generator.
+    - *Advanced Cloud (API Keys Required)*: OpenAI DALL-E 3, Gemini Imagen 3 with `ACTIVE KEY` or `NEEDS KEY` badges.
+    - *Offline Testing / Mock*: Instant local placeholder generation.
+- **Visual Art Style Selector (`Palette`)**:
+  - Synchronizes automatically with the Video Bible overall style.
+  - Options: *Photorealistic*, *Cinematic*, *Documentary*, *3D Animation*, *Anime*, *Flat Vector*, *Minimal Cartoon*, *Hand Drawn Sketch*, *Whiteboard*, *Stickman*, *Custom Directives*.
+- **"Retry Failed" Button (`RefreshCw` Danger)**:
+  - Appears automatically whenever `imagesFailedCount > 0`.
+  - Retries generation exclusively for failed scenes, strictly preserving all completed visuals.
+- **"Generate All Images" / "Regenerate All" Primary CTA (`ImageIcon`)**:
+  - Batch orchestrates image generation across all scenes in parallel with concurrency semaphore and timeout guards.
+- **Rapid Pacing Advisory Banner (`AlertTriangle`)**:
+  - Appears when average scene duration is under 8 seconds.
+  - Warns that rapid 2-3s cuts cause flashing and provides a 1-click **"Cluster to 15s Pacing"** CTA.
+- **Live Progress Bar**:
+  - Real-time animated percentage fill and counter during batch generation or retry.
+
+#### B. Search, Filter & Bulk Actions Toolbar (`StoryboardToolbar.tsx`)
+- **Search Input (`Search`)**: Instant real-time filtering across narration text, image prompts, and scene IDs.
+- **Status Filter Chips**:
+  - `All (N)`: Shows entire scene list.
+  - `Ready (N)`: Filters to scenes with completed visuals.
+  - `Pending (N)`: Filters to scenes waiting for visual synthesis.
+  - `Failed (N)`: Filters to scenes that encountered errors.
+- **Multi-Select & Bulk Merge Actions**:
+  - Selection counter badge (`N selected`).
+  - **"Merge N" Button (`Merge`)**: Combines 2 or more sequential scenes into a single composite scene.
+  - **"Clear" Button**: Clears all active selections.
+  - **"Select All Filtered"**: 1-click selection of all currently visible scenes.
+- **View Layout Switcher**:
+  - `Cards View` (`LayoutGrid`): Rich visual cards showing hero previews, prompts, and controls.
+  - `Compact View` (`List`): Dense list layout for rapid skimming and high scene counts.
+
+#### C. Storyboard Scene Card (`StoryboardSceneCard.tsx`)
+- **Card Header**:
+  - Checkbox for multi-selection.
+  - Scene Index Tag (`SC_001`, `SC_002`) and Timecode range (`00:00 → 00:04 (4.0s)`).
+  - Status badge (`Ready`, `Synthesizing`, `Failed`, or `Pending`).
+  - **Edit Button (`Edit3`)**: Opens inline directives editor.
+  - **Details Button (`PanelRight`)**: Opens full telemetry modal.
+- **Hero Image Canvas**:
+  - Strict aspect ratio preview matching project dimensions.
+  - **Drag-and-Drop Dropzone**: Drag any `.png` or `.jpg` from your desktop directly onto the canvas to replace the scene visual instantly.
+  - **Source Pill**: Displays origin badge (`🎨 Flux`, `📁 Device Upload`, or `📊 Graphic Card`).
+  - **Resolution Pill**: Displays exact dimensions (e.g. `1024×576`).
+  - **Hover Zoom**: Click anywhere to open Cinema Lightbox.
+  - **Quick Controls Overlay**: Fullscreen (`Maximize2`), Upload replacement (`Upload`), and Single-scene Regenerate (`RefreshCw`).
+- **Card Body**:
+  - **Narration Quote**: Scene dialogue/captions.
+  - **Scene Direction (`ChevronDown`)**: Expandable visual description.
+  - **Prompt Directive (`ChevronDown`)**: Expandable compiled prompt with:
+    - **Copy Button (`Copy`)**: Copies prompt to clipboard with temporary `Copied` confirmation.
+    - **Tweak Button (`Sparkles`)**: Opens direct guidance modal.
+    - **Variations Button (`Palette`)**: Opens candidate variations modal.
+- **Card Bottom Actions**:
+  - **Graphic Card (`Layers`)**: Opens graphic card generator.
+  - **Variations (`Palette`)**: Generates 3 candidate visual options.
+  - **Upload (`Upload`)**: File selector for desktop image replacement.
+  - **Generate / Regenerate / Retry CTA**: Primary action tailored to the current scene state.
+
+#### D. Inline Scene Directives Editor
+- Slides in directly below the image canvas when clicking **Edit**:
+  - `Image Generation Prompt` (monospace textarea).
+  - `Visual Description` (scene direction textarea).
+  - `Camera Motion` (e.g. *Slow Zoom In*, *Pan Right*).
+  - `Transition` (e.g. *Cross Dissolve*, *Match Cut*).
+  - `Image Aspect Ratio` (Override selector: `16:9`, `9:16`, `1:1`).
+  - `Save Changes` & `Cancel` buttons with loading spinner.
+
+#### E. Dedicated Root-Level Modals
+1. **Scene Telemetry & Technical Spec Modal (`StoryboardDetailsModal.tsx`)**:
+   - Comprehensive diagnostic inspector displaying raw prompt text, prompt hash, seed, dimensions, file size, storage paths, resolved Video Bible entities, and reference image modes.
+2. **Direct Prompt Guidance & Tweak Modal (`StoryboardTweakModal.tsx`)**:
+   - Allows creator to input specific instructions (e.g. *“Dramatic rim lighting with rain”*) and inject curated directorial presets (*35mm Anamorphic*, *Golden Hour Rim*, *Cyberpunk Rain*, *Macro Close-Up*, *Volumetric Fog*, *Teal & Orange Grade*).
+3. **Fullscreen Cinema Image Lightbox Modal (`StoryboardLightboxModal.tsx`)**:
+   - Darkened theater modal with left/right keyboard navigation, metadata chip, scene narration overlay, and direct high-resolution image download.
+4. **Smart Scene Clustering Modal (`StoryboardClusteringModal.tsx`)**:
+   - Groups rapid micro-captions into cohesive 10–25s scenes using either fixed duration or semantic LLM grouping.
+5. **Parallel Candidate Variations Modal (`StoryboardVariationsModal.tsx`)**:
+   - Generates 3 distinct framing variations (Medium framing, Wide establishing, Close-up detail) with randomized seeds for creator A/B selection.
+6. **Graphic Card Template Modal (`StoryboardGraphicModal.tsx`)**:
+   - Renders instant high-resolution graphic cards (*Title Card*, *Quote Card*, *Stats Card*, *Step Card*, *Split Overview*) with custom headlines, subtext, and brand accent colors without calling external AI APIs.
+
+---
+
+### 3. How to Use Stage 3 (Step-by-Step)
+
+#### Step 1: Synthesize AI Prompts from Timeline & Video Bible
+1. Upon arriving at Stage 3 from Stage 2, if no prompts exist yet, you will see the **Storyboard Empty State**.
+2. Click **"Synthesize Storyboard"**.
+3. The LLM engine pairs each scene's narration with the Video Bible characters, locations, and art style to compile scene directions, image prompts, suggested camera motions, and transitions.
+
+#### Step 2: Select Your AI Image Provider & Model
+1. In the top command bar, click the **AI Model Picker** (`Cpu`).
+2. Choose your preferred model based on your workflow:
+   - For fast free generation: Choose **Flux Realism** or **Flux Anime** (*Free Cloud*).
+   - For deterministic daily quota: Choose **Cloudflare Workers AI**.
+   - For complete offline GPU rendering: Choose **SANA-Sprint** (*Local Machine*).
+   - For premium high-fidelity models: Choose **OpenAI DALL-E 3** or **Gemini Imagen 3** (*Advanced Cloud*).
+3. Verify that the **Style** dropdown matches your Video Bible art direction (e.g., *Cinematic*, *3D Animation*, or *Anime*).
+
+#### Step 3: Generate Scene Visuals (Single or Batch)
+- **To generate all scenes at once**: Click **"Generate All Images"** in the top right. A live progress bar will track completion.
+- **To generate a single scene**: Click **"Generate Visual"** on that specific scene card.
+- **If any scenes fail**: Click the red **"Retry Failed"** button in the command header to re-run only the incomplete scenes.
+
+#### Step 4: Refine with Directorial Tweaks, Variations, and Replacements
+1. **A/B Variation Testing**: Click **"Variations"** on any scene card to generate 3 framing options. Click **"Select Visual"** on your favorite candidate.
+2. **Direct Prompt Tweaks**: Click **"Tweak"** on any card, select a directorial preset (e.g., *Golden Hour Rim* or *35mm Anamorphic*), and click **"Regenerate Prompt"**.
+3. **Replace with Your Own Image**: Either click **"Upload"** on the card or drag any image directly from your desktop onto the canvas.
+4. **Create a Graphic Card**: Click **"Graphic Card"**, select a template (*Quote Card*, *Stats Card*), type your headline, and click **"Apply Template"**.
+5. **Inspect Fullscreen**: Click on any completed image thumbnail to open the Cinema Lightbox; use arrow keys to step through your video.
+
+#### Step 5: Advance to Stage 4
+- When all scene images look compelling, click **"Proceed to Stage 4: Timeline Studio"** at the bottom navigation bar.
+
+---
+
+### 4. Stage 3 Audit & Production Upgrades Done
+- **Non-Blocking Error Handling**: Eliminated browser-freezing `alert()` on failed image uploads in `StoryboardView.tsx`, routing all errors to the non-blocking inline error banner and toast notifications.
+- **Video Bible Style Synchronization**: Implemented dynamic `styleMode` initialization from `project.video_bible.overall_style.visual_style` and `realism_level`, ensuring artistic choices from Stage 2 carry over seamlessly into Stage 3 prompt rendering.
+- **Batch Generation Timeout Protection**: Added `asyncio.wait_for(..., timeout=90.0)` in `_gen_worker` and `_retry_worker` in `scene_image_service.py` to ensure hanging external APIs release worker slots gracefully and mark timed-out scenes cleanly without blocking the rest of the batch.
+- **CSS Grid Compatibility**: Preserved `storyboard-scene-grid` alongside `sb-scene-grid` for complete selector and automated test backward compatibility.
+- **Automated Test Validation**: Frontend tests (14/14 passed), backend storyboard suite (5/5 passed), and regression tests for Stages 1 & 2 (9/9 passed).
+
+---
+
 ## Roadmap: Upcoming Stages (To Be Updated)
 
-### Stage 3: Visual Storyboard & AI Generation *(Next)*
-- AI prompt compilation pairing Master Timeline captions with Video Bible descriptors.
-- Image generation capabilities (Flux, Imagen, Stable Diffusion, Mock Provider).
-- Image regeneration, variations, and prompt tweak workflows.
-- Batch generation and scene clustering.
-
-### Stage 4: Timeline Studio & Motion Engine *(Pending)*
-- Camera animations (pans, zooms, tilts).
-- Visual transitions (crossfades, cuts, wipes).
-- Audio waveform synchronization and background music mixing.
+### Stage 4: Timeline Studio & Motion Engine *(Next)*
+- Multi-track timeline sequencing with real-time playback preview.
+- Camera motion dynamic controls (Ken Burns pans, zooms, tilts).
+- Visual transitions (crossfades, cuts, wipes, dissolves).
+- Audio waveform synchronization, speech speed adjustments, and background music (BGM) mixing.
 
 ### Stage 5: Export & Deliver *(Pending)*
-- Multi-track FFmpeg rendering engine.
-- Subtitles & caption burning.
-- Resolution & aspect ratio delivery (1080p, 4K, 9:16 vertical vs. 16:9 horizontal).
-- Project backups and cloud export downloads.
+- Multi-track FFmpeg rendering pipeline.
+- Subtitle synchronization and on-screen caption burning.
+- Aspect ratio conversions (16:9 widescreen, 9:16 vertical shorts/reels).
+- Cloud asset packaging and instant MP4 export delivery.
+
