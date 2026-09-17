@@ -1,0 +1,861 @@
+/* ==========================================================================
+   SCENORAEDITS — UPGRADE TO PRO (CREATOR PASS) MODERN STYLESHEET
+   High-Converting, Editorial SaaS Luxury, Light & Dark Mode Native
+   ========================================================================== */
+
+.upg-page {
+  max-width: 1140px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 40px 24px 80px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: upgFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes upgFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Hero / Header ───────────────────────────────────────────────────────── */
+.upg-header-title {
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+
+.upg-header-subtitle {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  max-width: 720px;
+}
+
+/* ─── Transparency Platform License Notice ────────────────────────────────── */
+.upg-notice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 160, 50, 0.03) 100%), var(--color-surface);
+  border: 1px solid rgba(255, 107, 0, 0.22);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.upg-notice-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 107, 0, 0.15);
+  color: #FF6B00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(255, 107, 0, 0.25);
+}
+
+.upg-notice-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.upg-notice-desc {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ─── Status Banners (Active, Pending, Rejected) ──────────────────────────── */
+.upg-status-banner {
+  padding: 20px 24px;
+  border-radius: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--color-surface);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.upg-status-banner.is-active-member {
+  border: 2px solid #10B981;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, transparent 100%), var(--color-surface);
+}
+
+.upg-status-banner.is-pending {
+  border: 2px solid rgba(245, 158, 11, 0.5);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, transparent 100%), var(--color-surface);
+}
+
+.upg-status-banner.is-rejected {
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, transparent 100%), var(--color-surface);
+}
+
+.upg-status-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.upg-status-banner.is-active-member .upg-status-icon {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+}
+
+.upg-status-banner.is-pending .upg-status-icon {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.upg-status-banner.is-rejected .upg-status-icon {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ─── DURATION SWITCHER (HERO COMPONENT) ──────────────────────────────────── */
+.upg-duration-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 640px) {
+  .upg-duration-wrapper {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.upg-duration-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+}
+
+.upg-duration-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-sunken, #F1F5F9);
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border-subtle);
+  overflow-x: auto;
+}
+
+.upg-duration-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-saas, sans-serif);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+/* Inactive button */
+.upg-duration-btn:not(.is-active) {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.upg-duration-btn:not(.is-active):hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Active button (Selected) */
+.upg-duration-btn.is-active {
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  color: #FFFFFF;
+  font-weight: 800;
+  box-shadow: 0 4px 18px rgba(255, 107, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Duration Days Pill Badge */
+.upg-duration-badge {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.upg-duration-btn.is-active .upg-duration-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.upg-duration-btn:not(.is-active) .upg-duration-badge {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Optional "SAVE 20%" mini tag */
+.upg-save-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #10B981;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+}
+
+/* ─── MAIN CONTENT GRID (PLAN CARD + PAYMENT) ────────────────────────────── */
+.upg-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .upg-grid {
+    grid-template-columns: 380px 1fr;
+  }
+}
+
+/* ─── Left Column: Plan Card ──────────────────────────────────────────────── */
+.upg-plan-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 30px 26px;
+  background: linear-gradient(180deg, rgba(255, 107, 0, 0.05) 0%, transparent 45%), var(--color-surface);
+  border: 2px solid rgba(255, 107, 0, 0.35);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.upg-plan-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.upg-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
+  color: #FF6B00;
+}
+
+.upg-plan-days {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: rgba(255, 107, 0, 0.12);
+  color: #FF6B00;
+  border: 1px solid rgba(255, 107, 0, 0.25);
+}
+
+.upg-plan-name {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.upg-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.upg-price-main {
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.upg-price-sub {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-muted);
+}
+
+.upg-plan-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.upg-features-box {
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upg-features-header {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.upg-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.45;
+}
+
+.upg-feature-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ─── Right Column: Payment Methods & Proof Form ─────────────────────────── */
+.upg-payment-card {
+  border-radius: 20px;
+  padding: 30px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.upg-section-header h3 {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.upg-section-header p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* Method Selection Tabs */
+.upg-method-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .upg-method-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.upg-method-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.upg-method-btn:hover {
+  border-color: rgba(255, 107, 0, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.upg-method-btn.is-active {
+  border: 2px solid #FF6B00;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 160, 0, 0.02) 100%), var(--color-surface);
+  box-shadow: 0 4px 18px rgba(255, 107, 0, 0.16);
+}
+
+.upg-method-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.upg-method-btn.is-active .upg-method-icon {
+  background: #FF6B00;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.35);
+}
+
+.upg-method-btn:not(.is-active) .upg-method-icon {
+  background: var(--color-surface-sunken, #F1F5F9);
+  color: var(--color-text-secondary);
+}
+
+.upg-method-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.upg-method-btn.is-active .upg-method-title {
+  color: #FF6B00;
+}
+
+.upg-method-sub {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-muted);
+}
+
+/* ─── UPI & Payment Details Section ──────────────────────────────────────── */
+.upg-method-box {
+  padding: 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.04) 0%, transparent 100%), var(--color-surface);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.upg-qr-row {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+@media (min-width: 640px) {
+  .upg-qr-row {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.upg-qr-frame {
+  width: 120px;
+  height: 120px;
+  background: #FFFFFF;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.upg-qr-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.upg-qr-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .upg-qr-info {
+    text-align: left;
+  }
+}
+
+.upg-upi-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--color-surface-sunken, #F1F5F9);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  word-break: break-all;
+  user-select: all;
+}
+
+.upg-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .upg-btn-group {
+    justify-content: flex-start;
+  }
+}
+
+.upg-btn-open-app {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 107, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.upg-btn-open-app:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(255, 107, 0, 0.45);
+}
+
+.upg-btn-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upg-btn-copy:hover {
+  background: var(--color-surface-sunken, #F1F5F9);
+  border-color: var(--color-border-strong);
+}
+
+/* 3-Step Guide */
+.upg-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.upg-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.upg-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 107, 0, 0.12);
+  color: #FF6B00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ─── Proof Submission Form ──────────────────────────────────────────────── */
+.upg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 8px;
+}
+
+.upg-input-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+
+.upg-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: var(--font-mono, monospace);
+  transition: all 0.2s ease;
+}
+
+.upg-input:focus {
+  outline: none;
+  border-color: #FF6B00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15);
+}
+
+.upg-file-upload-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upg-file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 12px;
+  border: 1.5px dashed rgba(255, 107, 0, 0.4);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upg-file-label:hover {
+  border-color: #FF6B00;
+  background: rgba(255, 107, 0, 0.04);
+}
+
+.upg-submit-btn {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 107, 0, 0.38);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.upg-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 26px rgba(255, 107, 0, 0.5);
+}
+
+.upg-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Buy Me A Coffee Box & Button ────────────────────────────────────────── */
+.upg-bmc-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+@media (min-width: 640px) {
+  .upg-bmc-box {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.upg-bmc-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #FF6B00;
+  font-family: var(--font-mono, monospace);
+  margin-bottom: 4px;
+}
+
+.upg-bmc-headline {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.upg-bmc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.35);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.upg-bmc-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(255, 107, 0, 0.45);
+  color: #FFFFFF;
+}
+
+/* ─── Payment History Section ────────────────────────────────────────────── */
+.upg-history-wrap {
+  margin-top: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.upg-history-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.upg-history-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.upg-badge-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.upg-badge-status.is-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.upg-badge-status.is-approved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.upg-badge-status.is-rejected {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}

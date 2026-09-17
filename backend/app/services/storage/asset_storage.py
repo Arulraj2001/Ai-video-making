@@ -142,6 +142,7 @@ class FirebaseStorageAdapter(AssetStorage):
     def __init__(self, local_fallback: Optional[LocalAssetStorage] = None):
         self.local_storage = local_fallback or LocalAssetStorage()
         self.bucket = get_storage_bucket()
+        self._url_cache: dict = {}  # {cloud_blob_path: (url, expiry_timestamp)}
 
     def save_asset(
         self,
@@ -165,14 +166,14 @@ class FirebaseStorageAdapter(AssetStorage):
         # If Cloud Storage bucket is available and owner is specified, upload to Firebase Storage
         if self.bucket and owner_id:
             try:
+                import time
                 safe_name = sanitize_filename(filename)
                 cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
                 blob = self.bucket.blob(cloud_blob_path)
                 blob.upload_from_string(content, content_type=content_type)
                 signed_url = blob.generate_signed_url(expiration=timedelta(days=7))
+                self._url_cache[cloud_blob_path] = (signed_url, time.time() + 86400 * 6)
                 logger.info(f"Uploaded asset to Firebase Storage: {cloud_blob_path}")
-                # Keep the LOCAL relative path as storage_path (needed by the render
-                # pipeline), but hand the browser a durable signed Firebase URL.
                 return local_rel, signed_url
             except Exception as e:
                 logger.warning(f"Firebase Storage upload failed, keeping local fallback: {e}")
@@ -200,8 +201,8 @@ class FirebaseStorageAdapter(AssetStorage):
 
         Serves the fast local `/media/...` URL whenever the file still exists
         locally. When Render recycles its disk (or the file was never kept
-        locally), falls back to a freshly-signed Firebase Storage URL so media
-        keeps working and never goes stale.
+        locally), falls back to a freshly-signed Firebase Storage URL with
+        in-memory TTL caching so media never blocks on synchronous network roundtrips.
         """
         safe_name = sanitize_filename(filename)
 
@@ -210,11 +211,19 @@ class FirebaseStorageAdapter(AssetStorage):
             return local
 
         if self.bucket and owner_id:
+            cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
+            import time
+            now = time.time()
+            cached = self._url_cache.get(cloud_blob_path)
+            if cached and cached[1] > now:
+                return cached[0]
+
             try:
-                cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
                 blob = self.bucket.blob(cloud_blob_path)
                 if blob.exists():
-                    return blob.generate_signed_url(expiration=timedelta(days=7))
+                    url = blob.generate_signed_url(expiration=timedelta(days=7))
+                    self._url_cache[cloud_blob_path] = (url, now + 86400 * 6)
+                    return url
             except Exception as e:
                 logger.warning(f"Could not generate signed URL for {asset_category}/{safe_name}: {e}")
 

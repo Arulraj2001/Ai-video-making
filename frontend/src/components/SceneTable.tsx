@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Edit3, Check, X, Clock, AlertCircle } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Edit3, Check, X, Clock, AlertCircle, Play, Pause, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import type { Scene, AudioFile } from "../types";
 
@@ -7,12 +7,14 @@ interface SceneTableProps {
   scenes: Scene[];
   audioFile?: AudioFile | null;
   onUpdateScene: (sceneId: string, update: { start?: number; end?: number; caption?: string }) => Promise<any>;
+  onDeleteScene?: (sceneId: string) => Promise<any>;
 }
 
 export const SceneTable: React.FC<SceneTableProps> = ({
   scenes,
   audioFile,
   onUpdateScene,
+  onDeleteScene,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState<string>("");
@@ -20,6 +22,77 @@ export const SceneTable: React.FC<SceneTableProps> = ({
   const [editCaption, setEditCaption] = useState<string>("");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [playingSceneId, setPlayingSceneId] = useState<string | null>(null);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playingTargetEndRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => {
+      if (playingTargetEndRef.current !== null && audio.currentTime >= playingTargetEndRef.current) {
+        audio.pause();
+        playingTargetEndRef.current = null;
+        setPlayingSceneId(null);
+      }
+    };
+
+    const handleEnded = () => {
+      playingTargetEndRef.current = null;
+      setPlayingSceneId(null);
+    };
+
+    const handlePause = () => {
+      setPlayingSceneId(null);
+    };
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("pause", handlePause);
+
+    return () => {
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("pause", handlePause);
+    };
+  }, []);
+
+  const handleTogglePlayScene = (scene: Scene) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (playingSceneId === scene.id) {
+      audio.pause();
+      setPlayingSceneId(null);
+      playingTargetEndRef.current = null;
+      return;
+    }
+
+    audio.currentTime = scene.start;
+    playingTargetEndRef.current = scene.end;
+    setPlayingSceneId(scene.id);
+    audio.play().catch((err) => {
+      console.warn("Audio playback error:", err);
+      setPlayingSceneId(null);
+    });
+  };
+
+  const handleDeleteScene = async (sceneId: string) => {
+    if (!onDeleteScene) return;
+    if (!confirm(`Are you sure you want to delete scene ${sceneId}?`)) return;
+    try {
+      setDeletingId(sceneId);
+      setSaveError(null);
+      await onDeleteScene(sceneId);
+    } catch (err: any) {
+      setSaveError(err.message || "Failed to delete scene");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const startEdit = (scene: Scene) => {
     setEditingId(scene.id);
@@ -108,7 +181,7 @@ export const SceneTable: React.FC<SceneTableProps> = ({
             </div>
           </div>
           {audioFile.url && (
-            <audio controls className="h-8 max-w-xs w-full" src={api.getMediaUrl(audioFile.url)}>
+            <audio ref={audioRef} controls className="h-8 max-w-xs w-full" src={api.getMediaUrl(audioFile.url)}>
               Your browser does not support audio element.
             </audio>
           )}
@@ -140,31 +213,42 @@ export const SceneTable: React.FC<SceneTableProps> = ({
               <th className="w-28">End (s)</th>
               <th className="w-28">Duration</th>
               <th>Caption Narration</th>
-              <th className="w-24 text-right">Actions</th>
+              <th className="w-36 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {scenes.map((scene) => {
               const isEditing = editingId === scene.id;
+              const isPlayingThisScene = playingSceneId === scene.id;
 
               return (
                 <tr
                   key={scene.id}
                   style={{
-                    background: isEditing ? "var(--accent-primary-subtle)" : undefined,
+                    background: isEditing
+                      ? "var(--accent-primary-subtle)"
+                      : isPlayingThisScene
+                      ? "rgba(255, 107, 0, 0.08)"
+                      : undefined,
+                    transition: "background-color 0.15s ease",
                   }}
                 >
                   <td>
-                    <span
-                      className="font-mono font-bold px-2 py-0.5 rounded text-xs"
-                      style={{
-                        background: "var(--bg-card-subtle)",
-                        color: "var(--accent-primary)",
-                        border: "1px solid var(--border-subtle)",
-                      }}
-                    >
-                      {scene.id}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {isPlayingThisScene && (
+                        <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-ping shrink-0" />
+                      )}
+                      <span
+                        className="font-mono font-bold px-2 py-0.5 rounded text-xs"
+                        style={{
+                          background: isPlayingThisScene ? "var(--color-primary-subtle)" : "var(--bg-card-subtle)",
+                          color: "var(--accent-primary)",
+                          border: "1px solid var(--border-subtle)",
+                        }}
+                      >
+                        {scene.id}
+                      </span>
+                    </div>
                   </td>
 
                   {/* Start time */}
@@ -256,14 +340,40 @@ export const SceneTable: React.FC<SceneTableProps> = ({
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => startEdit(scene)}
-                        className="btn-ghost text-xs py-1 px-2"
-                        title="Edit Timestamps or Caption"
-                      >
-                        <Edit3 size={13} />
-                        <span className="hidden sm:inline">Edit</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        {audioFile?.url && (
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePlayScene(scene)}
+                            className={`btn-ghost text-xs py-1 px-2 flex items-center gap-1 ${
+                              isPlayingThisScene ? "text-[var(--color-primary)] font-bold bg-[var(--color-primary-subtle)]" : ""
+                            }`}
+                            title={isPlayingThisScene ? "Pause narration" : `Listen to audio (${scene.start.toFixed(1)}s - ${scene.end.toFixed(1)}s)`}
+                          >
+                            {isPlayingThisScene ? <Pause size={12} className="text-[var(--color-primary)]" /> : <Play size={12} />}
+                            <span className="hidden md:inline">{isPlayingThisScene ? "Playing" : "Listen"}</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => startEdit(scene)}
+                          className="btn-ghost text-xs py-1 px-2"
+                          title="Edit Timestamps or Caption"
+                        >
+                          <Edit3 size={12} />
+                          <span className="hidden sm:inline">Edit</span>
+                        </button>
+                        {onDeleteScene && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteScene(scene.id)}
+                            disabled={deletingId === scene.id}
+                            className="btn-ghost text-xs py-1 px-1.5 text-[var(--color-error)] hover:bg-rose-500/10"
+                            title="Delete scene"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>

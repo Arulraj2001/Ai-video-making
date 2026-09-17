@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 import subprocess
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -89,7 +90,7 @@ def get_render_status(
     "/{project_id}/render/{job_id}/download",
     summary="Download rendered video in requested format & quality",
 )
-def download_rendered_video(
+async def download_rendered_video(
     project_id: str,
     job_id: str,
     format: str = Query("mp4", description="Output format: mp4, 720p, mp3, webm, gif"),
@@ -139,6 +140,7 @@ def download_rendered_video(
     disp_type = "inline" if disposition == "inline" else "attachment"
     base_name = Path(job.output_filename or f"{project_id}_{job.resolution}").stem
     ffmpeg_exe = get_ffmpeg_executable()
+    loop = asyncio.get_running_loop()
 
     if format == "mp3":
         # Extract audio-only master mix
@@ -153,7 +155,7 @@ def download_rendered_video(
                 "-q:a", "2",
                 str(mp3_path)
             ]
-            res = subprocess.run(cmd, capture_output=True)
+            res = await loop.run_in_executor(None, lambda: subprocess.run(cmd, capture_output=True))
             if res.returncode != 0:
                 raise HTTPException(status_code=500, detail="Failed to extract audio MP3.")
         return FileResponse(
@@ -178,7 +180,7 @@ def download_rendered_video(
                 "-c:a", "copy",
                 str(p720_path)
             ]
-            res = subprocess.run(cmd, capture_output=True)
+            res = await loop.run_in_executor(None, lambda: subprocess.run(cmd, capture_output=True))
             if res.returncode != 0:
                 p720_path = master_path
         return FileResponse(
@@ -202,7 +204,7 @@ def download_rendered_video(
                 "-c:a", "libopus",
                 str(webm_path)
             ]
-            res = subprocess.run(cmd, capture_output=True)
+            res = await loop.run_in_executor(None, lambda: subprocess.run(cmd, capture_output=True))
             if res.returncode != 0:
                 raise HTTPException(status_code=500, detail="Failed to transcode WebM video.")
         return FileResponse(
@@ -224,7 +226,7 @@ def download_rendered_video(
                 "-vf", "fps=12,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
                 str(gif_path)
             ]
-            res = subprocess.run(cmd, capture_output=True)
+            res = await loop.run_in_executor(None, lambda: subprocess.run(cmd, capture_output=True))
             if res.returncode != 0:
                 raise HTTPException(status_code=500, detail="Failed to generate animated preview GIF.")
         return FileResponse(

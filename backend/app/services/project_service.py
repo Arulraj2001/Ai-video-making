@@ -45,6 +45,17 @@ import re
 STORAGE_DIR = Path(os.getenv("STORAGE_DIR", "storage"))
 PROJECTS_DIR = STORAGE_DIR / "projects"
 
+import threading
+
+_project_locks: dict[str, threading.Lock] = {}
+_locks_mutex = threading.Lock()
+
+def get_project_lock(project_id: str) -> threading.Lock:
+    with _locks_mutex:
+        if project_id not in _project_locks:
+            _project_locks[project_id] = threading.Lock()
+        return _project_locks[project_id]
+
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".ogg"}
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
@@ -513,41 +524,42 @@ class ProjectService:
         error: Optional[str] = None,
         metadata: Optional[dict] = None
     ) -> SceneModel:
-        project = self.get_project(project_id)
-        if not project:
-            raise ValueError(f"Project '{project_id}' not found")
-        target = next((s for s in project.scenes if s.id == scene_id), None)
-        if not target:
-            raise ValueError(f"Scene '{scene_id}' not found in project")
+        with get_project_lock(project_id):
+            project = self.get_project(project_id)
+            if not project:
+                raise ValueError(f"Project '{project_id}' not found")
+            target = next((s for s in project.scenes if s.id == scene_id), None)
+            if not target:
+                raise ValueError(f"Scene '{scene_id}' not found in project")
 
-        # Stale state protection:
-        # Never allow an older slow generation request to overwrite a newer successful state
-        if status == "completed" and target.image_status == "completed" and metadata:
-            req_started = metadata.get("gen_started_at")
-            current_completed = (target.image_metadata or {}).get("gen_completed_at")
-            if req_started and current_completed and req_started < current_completed:
-                # Newer image already completed; keep newer image state
+            # Stale state protection:
+            # Never allow an older slow generation request to overwrite a newer successful state
+            if status == "completed" and target.image_status == "completed" and metadata:
+                req_started = metadata.get("gen_started_at")
+                current_completed = (target.image_metadata or {}).get("gen_completed_at")
+                if req_started and current_completed and req_started < current_completed:
+                    # Newer image already completed; keep newer image state
+                    return target
+
+            if status == "failed" and target.image_status == "completed":
+                # Never erase an already completed image on failure
+                target.image_error = error
+                project.updated_at = datetime.now(timezone.utc).isoformat()
+                self._save_to_disk(project)
                 return target
 
-        if status == "failed" and target.image_status == "completed":
-            # Never erase an already completed image on failure
+            target.image_status = status
+            if url is not None:
+                target.image_url = url
+            if path is not None:
+                target.image_path = path
             target.image_error = error
+            if metadata is not None:
+                target.image_metadata = metadata
+
             project.updated_at = datetime.now(timezone.utc).isoformat()
             self._save_to_disk(project)
             return target
-
-        target.image_status = status
-        if url is not None:
-            target.image_url = url
-        if path is not None:
-            target.image_path = path
-        target.image_error = error
-        if metadata is not None:
-            target.image_metadata = metadata
-
-        project.updated_at = datetime.now(timezone.utc).isoformat()
-        self._save_to_disk(project)
-        return target
 
     # --- Phase 3: Video Bible Methods ---
 

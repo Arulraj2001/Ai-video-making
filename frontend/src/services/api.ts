@@ -250,6 +250,12 @@ class ApiService {
     return this.request<VisualContext>(`/api/projects/${projectId}/bible/visual-context`);
   }
 
+  async autoExtractVideoBible(projectId: string): Promise<VideoBible> {
+    return this.request<VideoBible>(`/api/projects/${projectId}/bible/auto-extract`, {
+      method: "POST",
+    });
+  }
+
   // Characters
   async addCharacter(projectId: string, data: Partial<Character>): Promise<Character> {
     return this.request<Character>(`/api/projects/${projectId}/bible/characters`, {

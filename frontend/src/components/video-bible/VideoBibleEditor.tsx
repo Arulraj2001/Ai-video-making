@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, RefreshCw } from "lucide-react";
+import { Eye, RefreshCw, Sparkles, CheckCircle2 } from "lucide-react";
 import { api } from "../../services/api";
 import type { VideoBible, OverallStyle, Character, Location, VideoObject } from "../../types";
 import { OverallStyleSection } from "./OverallStyleSection";
@@ -25,8 +25,26 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
   const [bible, setBible] = useState<VideoBible | null>(initialBible || null);
   const [activeTab, setActiveTab] = useState<TabType>("style");
   const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [extractSuccess, setExtractSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inspectContextOpen, setInspectContextOpen] = useState(false);
+
+  const handleAutoExtract = async () => {
+    try {
+      setExtracting(true);
+      setError(null);
+      const updated = await api.autoExtractVideoBible(projectId);
+      setBible(updated);
+      if (onBibleUpdated) onBibleUpdated(updated);
+      setExtractSuccess("Continuity entities automatically extracted from script!");
+      setTimeout(() => setExtractSuccess(null), 4000);
+    } catch (err: any) {
+      setError(err.message || "Failed to auto-extract Video Bible");
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   // Internal fetch — does NOT call onBibleUpdated to avoid re-render loops.
   // onBibleUpdated is only called when the user mutates the bible (add/update/delete).
@@ -279,6 +297,15 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
 
           <div className="flex items-center gap-2.5 shrink-0">
             <button
+              onClick={handleAutoExtract}
+              disabled={extracting}
+              className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 shadow-sm"
+              title="Automatically extract recurring characters, locations, and artistic tone from script narration"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${extracting ? "animate-spin" : ""}`} />
+              <span>{extracting ? "Analyzing Script..." : "AI Auto-Extract Bible"}</span>
+            </button>
+            <button
               onClick={fetchBible}
               className="btn-secondary p-2"
               title="Refresh Bible data"
@@ -294,6 +321,13 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
             </button>
           </div>
         </div>
+
+        {extractSuccess && (
+          <div className="mt-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs flex items-center gap-2 text-emerald-400 animate-in fade-in">
+            <CheckCircle2 size={15} />
+            <span>{extractSuccess}</span>
+          </div>
+        )}
       </div>
 
       {/* Sub-navigation */}

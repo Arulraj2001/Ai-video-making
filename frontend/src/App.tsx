@@ -7,6 +7,7 @@ import { LoadingState } from "./components/ui/StateViews";
 
 // Layouts
 import { PublicLayout } from "./layouts/PublicLayout";
+import { AppLayout } from "./layouts/AppLayout";
 
 // Public Pages
 import { HomePage } from "./pages/public/HomePage";
@@ -14,8 +15,12 @@ import { SignInPage } from "./pages/public/SignInPage";
 import { SignUpPage } from "./pages/public/SignUpPage";
 import { NotFoundPage } from "./pages/public/NotFoundPage";
 
-// Authenticated App Pages
-const AppLayout = lazy(() => import("./layouts/AppLayout").then(({ AppLayout }) => ({ default: AppLayout })));
+// Primary App Pages (eagerly loaded for instant 0ms transitions)
+import { AppDashboardPage } from "./pages/app/AppDashboardPage";
+import { ProjectsListPage } from "./pages/app/ProjectsListPage";
+import { StudioPage } from "./pages/app/StudioPage";
+
+// Authenticated App Shell Secondary Pages (lazy)
 const AdminLayout = lazy(() => import("./layouts/AdminLayout").then(({ AdminLayout }) => ({ default: AdminLayout })));
 
 const FeaturesPage = lazy(() => import("./pages/public/FeaturesPage").then(({ FeaturesPage }) => ({ default: FeaturesPage })));
@@ -30,10 +35,7 @@ const SecurityPage = lazy(() => import("./pages/public/SecurityPage").then(({ Se
 const CookiesPage = lazy(() => import("./pages/public/CookiesPage").then(({ CookiesPage }) => ({ default: CookiesPage })));
 const StatusPage = lazy(() => import("./pages/public/StatusPage").then(({ StatusPage }) => ({ default: StatusPage })));
 
-const AppDashboardPage = lazy(() => import("./pages/app/AppDashboardPage").then(({ AppDashboardPage }) => ({ default: AppDashboardPage })));
-const ProjectsListPage = lazy(() => import("./pages/app/ProjectsListPage").then(({ ProjectsListPage }) => ({ default: ProjectsListPage })));
 const CreateProjectPage = lazy(() => import("./pages/app/CreateProjectPage").then(({ CreateProjectPage }) => ({ default: CreateProjectPage })));
-const StudioPage = lazy(() => import("./pages/app/StudioPage").then(({ StudioPage }) => ({ default: StudioPage })));
 const AppSettingsPage = lazy(() => import("./pages/app/AppSettingsPage").then(({ AppSettingsPage }) => ({ default: AppSettingsPage })));
 const ApiKeysPage = lazy(() => import("./pages/app/ApiKeysPage").then(({ ApiKeysPage }) => ({ default: ApiKeysPage })));
 const AccountPage = lazy(() => import("./pages/app/AccountPage").then(({ AccountPage }) => ({ default: AccountPage })));
@@ -116,11 +118,11 @@ function AppContent() {
     else if (path === "/admin/settings") adminContent = <AdminSettingsPage />;
 
     return (
-      <Suspense fallback={<div className="p-8"><LoadingState message="Loading administrative view..." /></div>}>
-        <AdminLayout>
+      <AdminLayout>
+        <Suspense fallback={<div className="p-8"><LoadingState message="Loading administrative view..." /></div>}>
           {adminContent}
-        </AdminLayout>
-      </Suspense>
+        </Suspense>
+      </AdminLayout>
     );
   }
 
@@ -154,11 +156,12 @@ function AppContent() {
       appContent = <HelpPage />;
     }
 
-
     return (
-      <Suspense fallback={<LoadingState message="Loading studio..." className="py-20" />}>
-        <AppLayout>{appContent}</AppLayout>
-      </Suspense>
+      <AppLayout>
+        <Suspense fallback={<LoadingState message="Loading..." className="py-12" />}>
+          {appContent}
+        </Suspense>
+      </AppLayout>
     );
   }
 

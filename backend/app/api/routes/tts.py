@@ -12,6 +12,7 @@ from app.schemas.project import (
     GenerateVoiceoverRequest,
     ImportTTSProjectRequest,
 )
+from app.api.routes.projects import _to_project_response
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ async def generate_voiceover_for_project(
             owner_id=current_user.uid,
         )
 
-        return updated_project
+        return _to_project_response(updated_project)
 
     except HTTPException:
         raise
@@ -108,12 +109,13 @@ async def import_tts_project(
     """
     Creates a new project and synthesizes the script into audio and timeline scenes in one atomic operation.
     """
-    # 1. Create project
+    parse_result_initial = parse_and_validate_captions(req.script_text)
+
+    # 1. Create empty project
     created = project_service.create_project(
         ProjectCreate(
-            name=req.name.strip(),
-            description=req.description.strip() if req.description else "",
-            raw_captions="",
+            name=req.name or "Script Narration Video",
+            description=req.description or "Generated from Edge-TTS script narration",
         ),
         owner_id=current_user.uid,
     )
@@ -126,15 +128,15 @@ async def import_tts_project(
             rate_multiplier=req.speed or 1.0,
         )
 
-        # 3. Parse captions
+        # 3. Parse synchronized SRT captions into timestamped scenes
         parse_result = parse_and_validate_captions(srt_content)
         if not parse_result.valid:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Failed to generate timeline scenes: {'; '.join(parse_result.errors)}",
+                detail=f"Failed to parse synchronized captions: {'; '.join(parse_result.errors)}",
             )
 
-        # 4. Save audio
+        # 4. Save audio file
         project_service.save_audio(
             project_id=created.id,
             filename=f"voiceover_{req.voice or 'default'}.mp3",
@@ -151,7 +153,7 @@ async def import_tts_project(
             owner_id=current_user.uid,
         )
 
-        return updated_project
+        return _to_project_response(updated_project)
 
     except Exception as e:
         # Clean up project if synthesis failed

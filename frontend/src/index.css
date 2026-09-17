@@ -3559,54 +3559,84 @@ button .text-white,
 
 /* ─── Pro Navigation Item & Badge (Senior SaaS Pattern) ──────────────── */
 .sb-nav-item.is-pro-item {
-  color: var(--color-text-secondary);
+  color: var(--color-text);
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(245, 158, 11, 0.03) 100%);
+  border: 1px solid rgba(255, 107, 0, 0.22);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sb-nav-item.is-pro-item .sb-nav-icon {
+  color: #FF6B00;
+  filter: drop-shadow(0 1px 4px rgba(255, 107, 0, 0.35));
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .sb-nav-item.is-pro-item:hover {
   color: var(--color-text);
-  background: color-mix(in srgb, #f59e0b 8%, var(--color-card-subtle));
-  border-color: color-mix(in srgb, #f59e0b 25%, var(--color-border-subtle));
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: rgba(255, 107, 0, 0.45);
+  box-shadow: 0 4px 14px rgba(255, 107, 0, 0.15);
+  transform: translateX(2px);
+}
+
+.sb-nav-item.is-pro-item:hover .sb-nav-icon {
+  transform: scale(1.12) rotate(6deg);
+  filter: drop-shadow(0 2px 8px rgba(255, 107, 0, 0.5));
 }
 
 .sb-nav-item.is-pro-item.is-active {
-  color: #f59e0b;
-  background: color-mix(in srgb, #f59e0b 12%, transparent);
-  border-color: color-mix(in srgb, #f59e0b 35%, transparent);
+  color: #FFFFFF !important;
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%) !important;
+  border-color: #FF6B00 !important;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
   font-weight: 700;
 }
 
+.sb-nav-item.is-pro-item.is-active .sb-nav-icon {
+  color: #FFFFFF !important;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3)) !important;
+}
+
+.sb-nav-item.is-pro-item.is-active .sb-nav-label {
+  color: #FFFFFF !important;
+}
+
 .sb-nav-item.is-pro-item::before {
-  background: #f59e0b;
+  display: none;
 }
 
 .sb-pro-badge {
   display: inline-flex;
   align-items: center;
-  padding: 1.5px 6px;
-  border-radius: 5px;
+  padding: 2.5px 7.5px;
+  border-radius: 6px;
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-family: var(--font-mono, monospace);
-  background: color-mix(in srgb, #f59e0b 15%, transparent);
-  color: #f59e0b;
-  border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+  background: linear-gradient(135deg, #FF6B00 0%, #FFA033 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(255, 107, 0, 0.35);
   flex-shrink: 0;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   line-height: 1.2;
 }
 
 .sb-nav-item:hover .sb-pro-badge {
-  background: color-mix(in srgb, #f59e0b 22%, transparent);
-  border-color: color-mix(in srgb, #f59e0b 50%, transparent);
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 2px 10px rgba(255, 107, 0, 0.55);
+  transform: scale(1.06);
 }
 
 .sb-nav-item.is-active .sb-pro-badge {
-  background: #f59e0b;
-  color: #000;
-  border-color: #f59e0b;
+  background: rgba(255, 255, 255, 0.28);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: none;
   font-weight: 900;
 }
 

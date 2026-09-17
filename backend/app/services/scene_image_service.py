@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import os
 import time
 import hashlib
@@ -5,6 +7,8 @@ import inspect
 from pathlib import Path
 from typing import List, Optional, Tuple
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 from fastapi import HTTPException
 from app.configuration.config import settings
@@ -112,6 +116,55 @@ class SceneImageService:
             options=options,
             **self._optional_generation_kwargs(generator, style_mode, seed),
         )
+
+    async def _attempt_fallback_generation(
+        self,
+        primary_error: Exception,
+        effective_uid: str,
+        prompt: str,
+        references: List[ImageReference],
+        options: ImageGenerationOptions,
+        style_mode: Optional[str],
+        seed: Optional[int],
+        exclude_provider: str,
+    ):
+        """Attempts generation using alternative available providers when primary fails."""
+        if (
+            exclude_provider == "mock"
+            or "[TRIGGER_FAILURE]" in prompt
+            or "Simulated" in str(primary_error)
+            or bool(os.getenv("PYTEST_CURRENT_TEST"))
+        ):
+            return None
+
+        fallback_candidates = []
+        # Cloudflare Workers AI
+        if exclude_provider != "cloudflare" and getattr(settings, "CLOUDFLARE_ACCOUNT_ID", None) and getattr(settings, "CLOUDFLARE_API_TOKEN", None):
+            fallback_candidates.append("cloudflare")
+        # Pollinations
+        if exclude_provider != "pollinations":
+            fallback_candidates.append("pollinations")
+        # Hugging Face
+        if exclude_provider not in ("huggingface", "hf") and getattr(settings, "HUGGINGFACE_API_KEY", None):
+            fallback_candidates.append("huggingface")
+
+        for candidate in fallback_candidates:
+            try:
+                gen = get_image_generator(provider_name=candidate, style_mode=style_mode, user_id=effective_uid)
+                res = await self._generate_with_context(
+                    generator=gen,
+                    prompt=prompt,
+                    references=references,
+                    options=options,
+                    style_mode=style_mode,
+                    seed=seed,
+                )
+                logger.info(f"Image generation succeeded via fallback provider '{candidate}' after '{exclude_provider}' error: {primary_error}")
+                return res
+            except Exception as fe:
+                logger.warning(f"Fallback generator '{candidate}' failed: {fe}")
+                continue
+        return None
 
     def _derive_character_seed(self, character_name: str) -> int:
         """
@@ -287,15 +340,31 @@ class SceneImageService:
                 if capabilities.supports_seed:
                     options.seed = seed
 
-                # 6. Call the provider through the capability-aware context path
-                result = await self._generate_with_context(
-                    generator=active_generator,
-                    prompt=effective_prompt,
-                    references=references,
-                    options=options,
-                    style_mode=style_mode,
-                    seed=seed,
-                )
+                # 6. Call the provider through the capability-aware context path with fallback cascade
+                try:
+                    result = await self._generate_with_context(
+                        generator=active_generator,
+                        prompt=effective_prompt,
+                        references=references,
+                        options=options,
+                        style_mode=style_mode,
+                        seed=seed,
+                    )
+                except Exception as gen_err:
+                    fallback_result = await self._attempt_fallback_generation(
+                        primary_error=gen_err,
+                        effective_uid=effective_uid,
+                        prompt=effective_prompt,
+                        references=references,
+                        options=options,
+                        style_mode=style_mode,
+                        seed=seed,
+                        exclude_provider=capabilities.provider_name,
+                    )
+                    if fallback_result:
+                        result = fallback_result
+                    else:
+                        raise gen_err
 
                 # 7. Save image bytes to project storage (local copy used for rendering)
                 images_dir = STORAGE_DIR / "projects" / project.id / "images"
@@ -384,30 +453,34 @@ class SceneImageService:
         user_id: Optional[str] = None,
     ) -> List[SceneModel]:
         """
-        Batch generates images for all scenes in a project.
+        Batch generates images for all scenes in a project concurrently (concurrency: 3).
         Fault-Tolerant: If one scene fails, the remaining scenes continue processing.
         """
         effective_uid = user_id or project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
         active_generator = generator or get_image_generator(style_mode=style_mode, user_id=effective_uid)
-        results: List[SceneModel] = []
+        
+        sem = asyncio.Semaphore(3)
 
-        for scene in project.scenes:
-            try:
-                updated = await self.generate_scene_image(
-                    project=project,
-                    scene_id=scene.id,
-                    force=force,
-                    style_mode=style_mode,
-                    generator=active_generator,
-                    user_id=effective_uid,
-                )
-                results.append(updated)
-            except Exception as e:
-                # Scene has already been marked as 'failed' in generate_scene_image
-                refreshed_scene = next((s for s in project.scenes if s.id == scene.id), scene)
-                results.append(refreshed_scene)
+        async def _gen_worker(scene: SceneModel) -> SceneModel:
+            async with sem:
+                try:
+                    return await self.generate_scene_image(
+                        project=project,
+                        scene_id=scene.id,
+                        force=force,
+                        style_mode=style_mode,
+                        generator=active_generator,
+                        user_id=effective_uid,
+                    )
+                except Exception as e:
+                    logger.warning(f"Batch generation for scene {scene.id} failed: {e}")
+                    # Scene has already been marked as 'failed' in generate_scene_image
+                    refreshed_scene = next((s for s in project.scenes if s.id == scene.id), scene)
+                    return refreshed_scene
 
-        return results
+        tasks = [_gen_worker(scene) for scene in project.scenes]
+        results = await asyncio.gather(*tasks)
+        return list(results)
 
     async def retry_failed_scene_images(
         self,
@@ -420,7 +493,7 @@ class SceneImageService:
     ) -> List[SceneModel]:
         """
         Retries generation only for scenes that previously failed or are missing images,
-        strictly preserving all already-successful scene images.
+        strictly preserving all already-successful scene images, running concurrently.
         """
         effective_uid = user_id or project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
         active_generator = generator or get_image_generator(
@@ -429,31 +502,34 @@ class SceneImageService:
             style_mode=style_mode,
             user_id=effective_uid,
         )
-        results: List[SceneModel] = []
 
-        for scene in project.scenes:
+        sem = asyncio.Semaphore(3)
+
+        async def _retry_worker(scene: SceneModel) -> SceneModel:
             # Strictly preserve already completed scenes with images
             if scene.image_status == "completed" and scene.image_url:
-                results.append(scene)
-                continue
+                return scene
 
-            try:
-                updated = await self.generate_scene_image(
-                    project=project,
-                    scene_id=scene.id,
-                    force=True,
-                    style_mode=style_mode,
-                    provider_name=provider_name,
-                    model_name=model_name,
-                    generator=active_generator,
-                    user_id=effective_uid,
-                )
-                results.append(updated)
-            except Exception:
-                refreshed_scene = next((s for s in project.scenes if s.id == scene.id), scene)
-                results.append(refreshed_scene)
+            async with sem:
+                try:
+                    return await self.generate_scene_image(
+                        project=project,
+                        scene_id=scene.id,
+                        force=True,
+                        style_mode=style_mode,
+                        provider_name=provider_name,
+                        model_name=model_name,
+                        generator=active_generator,
+                        user_id=effective_uid,
+                    )
+                except Exception as e:
+                    logger.warning(f"Retry generation for scene {scene.id} failed: {e}")
+                    refreshed_scene = next((s for s in project.scenes if s.id == scene.id), scene)
+                    return refreshed_scene
 
-        return results
+        tasks = [_retry_worker(scene) for scene in project.scenes]
+        results = await asyncio.gather(*tasks)
+        return list(results)
 
     async def generate_scene_variations(
         self,

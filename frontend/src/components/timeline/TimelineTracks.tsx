@@ -64,6 +64,15 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
     }));
   }, [totalDuration, pixelsPerSecond]);
 
+  // Memoized narration waveform bars
+  const pseudoNarrationBars = useMemo(() => {
+    const count = Math.min(200, Math.floor((totalDuration * pixelsPerSecond) / 6));
+    return Array.from({ length: count }).map((_, i) => ({
+      i,
+      height: 8 + ((i * 17 + 7) % 18),
+    }));
+  }, [totalDuration, pixelsPerSecond]);
+
   // --- Drag-to-Scrub on Ruler & Playhead Needle ---
   const [isScrubbing, setIsScrubbing] = useState(false);
 
@@ -211,7 +220,7 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
             className="timeline-playhead-line"
             style={{
               left: `${playheadLeft}px`,
-              transition: isScrubbing ? "none" : "left 0.05s linear",
+              transition: "none",
               cursor: "ew-resize",
               zIndex: 40,
             }}
@@ -840,22 +849,17 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
                   overflow: "hidden",
                 }}
               >
-                {Array.from({
-                  length: Math.min(200, Math.floor((totalDuration * pixelsPerSecond) / 6)),
-                }).map((_, i) => {
-                  const pseudoRandomHeight = 8 + ((i * 17 + 7) % 18);
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        width: "3px",
-                        height: `${pseudoRandomHeight}px`,
-                        background: "rgba(16, 185, 129, 0.6)",
-                        borderRadius: "1px",
-                      }}
-                    />
-                  );
-                })}
+                {pseudoNarrationBars.map((bar) => (
+                  <div
+                    key={bar.i}
+                    style={{
+                      width: "3px",
+                      height: `${bar.height}px`,
+                      background: "rgba(16, 185, 129, 0.6)",
+                      borderRadius: "1px",
+                    }}
+                  />
+                ))}
               </div>
             ) : (
               <div

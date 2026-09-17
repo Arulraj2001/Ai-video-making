@@ -764,10 +764,14 @@ class RenderService:
             await asyncio.sleep(0.1)
 
             # --- STAGE 2: Generating timeline... (15% -> 55%) ---
-            # Render each scene clip with motion and transition filters
+            # Render scene clips concurrently with motion and transition filters
             job_motion_preset = getattr(job, "motion_preset", "none")
-            scene_clips: List[Path] = []
-            for idx, (scene, img_path) in enumerate(zip(scenes, scene_image_paths)):
+            loop = asyncio.get_running_loop()
+            render_sem = asyncio.Semaphore(3)
+            completed_scenes = 0
+
+            async def _render_scene_clip(idx: int, scene, img_path) -> Path:
+                nonlocal completed_scenes
                 duration = max(0.1, scene.duration)
                 num_frames = int(round(duration * target_fps))
                 clip_path = temp_dir / f"scene_{idx:03d}.mp4"
@@ -801,23 +805,29 @@ class RenderService:
                     str(clip_path)
                 ]
 
-                # Run non-blocking subprocess in executor thread
-                loop = asyncio.get_running_loop()
-                result = await loop.run_in_executor(
-                    None,
-                    lambda cmd=cmd_clip: subprocess.run(cmd, capture_output=True, text=True)
-                )
+                # Run non-blocking subprocess in executor thread bounded by semaphore
+                async with render_sem:
+                    result = await loop.run_in_executor(
+                        None,
+                        lambda cmd=cmd_clip: subprocess.run(cmd, capture_output=True, text=True)
+                    )
 
                 if result.returncode != 0:
                     raise RuntimeError(f"FFmpeg failed rendering scene {idx + 1}: {result.stderr[-400:]}")
 
-                scene_clips.append(clip_path)
-
-                # Incremental progress
-                scene_progress = 15 + int(40 * ((idx + 1) / total_scenes))
+                completed_scenes += 1
+                scene_progress = 15 + int(40 * (completed_scenes / total_scenes))
                 job.progress = min(55, scene_progress)
                 job.updated_at = datetime.now(timezone.utc).isoformat()
                 self._save_jobs_for_project(job.project_id)
+                return clip_path
+
+            render_tasks = [
+                _render_scene_clip(idx, scene, img_path)
+                for idx, (scene, img_path) in enumerate(zip(scenes, scene_image_paths))
+            ]
+            rendered_clips = await asyncio.gather(*render_tasks)
+            scene_clips = list(rendered_clips)
 
             # --- STAGE 3: Rendering... (55% -> 85%) ---
             job.stage = "Rendering..."

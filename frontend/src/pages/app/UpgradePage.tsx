@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "../../components/ui/Headers";
-import { Card } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
 import { Alert } from "../../components/ui/Feedback";
 import { LoadingState } from "../../components/ui/StateViews";
+import "./UpgradePage.css";
 import { api } from "../../services/api";
 import type {
   PlanConfigResponse,
@@ -155,7 +154,7 @@ export const UpgradePage: React.FC = () => {
   const monthlyUsd = (priceUsd / (durationMonths || 1)).toFixed(2);
 
   return (
-    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 pt-16 sm:pt-20 pb-16 space-y-8">
+    <div className="upg-page">
       <PageHeader
         title="Creator Pro Membership Pass"
         subtitle="Transparent platform & development pass for the studio timeline, Video Bible™ continuity, audio ducking, and BYOK unlimited generations."
@@ -163,19 +162,17 @@ export const UpgradePage: React.FC = () => {
       />
 
       {/* ─── PLATFORM DEVELOPMENT & BYOK TRANSPARENCY NOTICE ─────────────────── */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
-            <Zap size={20} />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-[var(--color-text)]">
-              Transparent Software Platform License (Zero Token Markup)
-            </h4>
-            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5 leading-relaxed max-w-3xl">
-              You are paying for our software engineering, timeline studio, and workflow automation. Connect your own API keys (BYOK: Gemini, OpenAI, Replicate, Fal.ai) or run unlimited on local RTX GPUs with zero token markups. No monthly token expiration anxiety.
-            </p>
-          </div>
+      <div className="upg-notice-card">
+        <div className="upg-notice-icon">
+          <Zap size={22} />
+        </div>
+        <div>
+          <h4 className="upg-notice-title">
+            Transparent Software Platform License (Zero Token Markup)
+          </h4>
+          <p className="upg-notice-desc">
+            You are paying for our software engineering, timeline studio, and workflow automation. Connect your own API keys (BYOK: Gemini, OpenAI, Replicate, Fal.ai) or run unlimited on local RTX GPUs with zero token markups. No monthly token expiration anxiety.
+          </p>
         </div>
       </div>
 
@@ -193,96 +190,91 @@ export const UpgradePage: React.FC = () => {
 
       {/* ─── ACTIVE MEMBERSHIP BANNER ────────────────────────────────────────── */}
       {hasActiveMembership && (
-        <div className="p-6 rounded-2xl bg-[var(--color-surface)] border-2 border-[var(--color-success)] shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-              <ShieldCheck size={28} />
+        <div className="upg-status-banner is-active-member">
+          <div className="upg-status-icon">
+            <ShieldCheck size={26} />
+          </div>
+          <div className="space-y-1 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                👑 Active ScenoraEdits Creator Pro Member
+              </h3>
+              <span className="upg-badge-status is-approved">
+                ACTIVE
+              </span>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-[var(--color-text)]">
-                  👑 Active ScenoraEdits Creator Pro Member
-                </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  ACTIVE
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                You have full access to priority cloud rendering and the studio pipeline. Expiration date:{" "}
-                <strong>{new Date(entitlement.expires_at).toLocaleDateString()}</strong> (
-                {entitlement.days_remaining} days remaining).
-              </p>
-            </div>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              You have full access to priority cloud rendering and the studio pipeline. Expiration date:{" "}
+              <strong>{new Date(entitlement.expires_at).toLocaleDateString()}</strong> (
+              {entitlement.days_remaining} days remaining).
+            </p>
           </div>
         </div>
       )}
 
       {/* ─── PENDING VERIFICATION BANNER ─────────────────────────────────────── */}
       {!hasActiveMembership && pendingPayment && (
-        <div className="p-6 rounded-2xl bg-[var(--color-surface)] border-2 border-amber-500/50 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-              <Clock size={28} />
+        <div className="upg-status-banner is-pending">
+          <div className="upg-status-icon">
+            <Clock size={26} />
+          </div>
+          <div className="space-y-1 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Payment Verification Pending
+              </h3>
+              <span className="upg-badge-status is-pending">
+                PENDING REVIEW
+              </span>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-[var(--color-text)]">
-                  Payment Verification Pending
-                </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  PENDING REVIEW
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                Transaction Reference: <span className="font-mono">{pendingPayment.reference}</span> ·{" "}
-                Submitted: {new Date(pendingPayment.submitted_at).toLocaleString()}
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)] pt-1">
-                Our team is reviewing your transaction. Your account will automatically activate once approved.
-              </p>
-            </div>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Transaction Reference: <span className="font-mono font-bold text-[var(--color-text)]">{pendingPayment.reference}</span> ·{" "}
+              Submitted: {new Date(pendingPayment.submitted_at).toLocaleString()}
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)] pt-1">
+              Our team is reviewing your transaction. Your account will automatically activate once approved.
+            </p>
           </div>
         </div>
       )}
 
       {/* ─── REJECTED PAYMENT BANNER ───────────────────────────────────────── */}
       {!hasActiveMembership && !pendingPayment && rejectedPayment && (
-        <div className="p-6 rounded-2xl bg-[var(--color-surface)] border-2 border-red-500/50 shadow-sm space-y-2">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
-              <AlertTriangle size={28} />
+        <div className="upg-status-banner is-rejected">
+          <div className="upg-status-icon">
+            <AlertTriangle size={26} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-[var(--color-text)]">
+                Previous Payment Submission Rejected
+              </h3>
+              <span className="upg-badge-status is-rejected">
+                ACTION REQUIRED
+              </span>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-[var(--color-text)]">
-                  Previous Payment Submission Rejected
-                </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-red-500/10 text-red-500 border border-red-500/20">
-                  ACTION REQUIRED
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                Reference submitted: <span className="font-mono font-bold text-[var(--color-text)]">{rejectedPayment.reference}</span> ·{" "}
-                Date: {new Date(rejectedPayment.submitted_at).toLocaleDateString()}
-              </p>
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300">
-                <strong>Admin Reason: </strong>{rejectedPayment.rejection_reason || "Payment could not be verified by admin."}
-              </div>
-              <p className="text-xs text-[var(--color-text-muted)] pt-1">
-                Please verify your transaction details in your banking app and submit your corrected reference/screenshot below.
-              </p>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Reference submitted: <span className="font-mono font-bold text-[var(--color-text)]">{rejectedPayment.reference}</span> ·{" "}
+              Date: {new Date(rejectedPayment.submitted_at).toLocaleDateString()}
+            </p>
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-500">
+              <strong>Admin Reason: </strong>{rejectedPayment.rejection_reason || "Payment could not be verified by admin."}
             </div>
+            <p className="text-xs text-[var(--color-text-muted)] pt-1">
+              Please verify your transaction details in your banking app and submit your corrected reference/screenshot below.
+            </p>
           </div>
         </div>
       )}
 
       {/* ─── DURATION SWITCHER (6 MONTHS VS 1 YEAR) ─────────────────────────── */}
       {plans.length > 1 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)]">
-          <div className="text-xs font-bold text-[var(--color-text)] px-3">
+        <div className="upg-duration-wrapper">
+          <div className="upg-duration-title">
+            <Sparkles size={16} className="text-amber-500" />
             Choose Your Access Duration:
           </div>
-          <div className="flex items-center gap-2">
+          <div className="upg-duration-pills">
             {plans.map((p) => {
               const isSelected = p.plan_id === activePlan?.plan_id;
               const isYear = p.duration_days >= 300;
@@ -291,18 +283,11 @@ export const UpgradePage: React.FC = () => {
                   key={p.plan_id}
                   type="button"
                   onClick={() => setSelectedPlanId(p.plan_id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                    isSelected
-                      ? "bg-[#FF6B00] text-white shadow-sm"
-                      : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                  }`}
+                  className={`upg-duration-btn ${isSelected ? "is-active" : ""}`}
                 >
                   <span>{isYear ? "1 Year (Annual Pass)" : "6 Months Pass"}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${
-                    isSelected ? "bg-white/20 text-white" : "bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]"
-                  }`}>
-                    {p.duration_days} Days
-                  </span>
+                  <span className="upg-duration-badge">{p.duration_days} Days</span>
+                  {isYear && <span className="upg-save-badge">Save 25%</span>}
                 </button>
               );
             })}
@@ -312,165 +297,140 @@ export const UpgradePage: React.FC = () => {
 
       {/* ─── PLAN OVERVIEW & PAYMENT SECTION ─────────────────────────────── */}
       {activePlan && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="upg-grid">
           {/* ─── LEFT COLUMN: PLAN OVERVIEW ───────────────────────────────── */}
-          <Card className="lg:col-span-4 p-6 flex flex-col justify-between border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/[0.04] via-transparent to-transparent shadow-sm">
+          <div className="upg-plan-card">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold meta-mono uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+              <div className="upg-plan-top">
+                <span className="upg-plan-badge">
                   <Sparkles size={13} />
                   CREATOR PASS
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold meta-mono bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                <span className="upg-plan-days">
                   {activePlan.duration_days} DAYS
                 </span>
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold font-display tracking-tight text-[var(--color-text)]">
+                <h2 className="upg-plan-name">
                   {activePlan.name}
                 </h2>
 
-                <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-[var(--color-border-subtle)]">
-                  <span className="text-3xl sm:text-4xl font-black text-[var(--color-text)] font-display tracking-tight">
+                <div className="upg-price-row">
+                  <span className="upg-price-main">
                     {method === "upi" ? `₹${priceInr.toLocaleString()}` : `$${priceUsd}`}
                   </span>
-                  <span className="text-xs meta-mono font-semibold text-[var(--color-text-muted)]">
+                  <span className="upg-price-sub">
                     {method === "upi"
-                      ? `INR / ${activePlan.duration_days} days (~₹${monthlyInr}/mo)`
-                      : `USD / ${activePlan.duration_days} days (~$${monthlyUsd}/mo)`}
+                      ? `INR / ${activePlan.duration_days} DAYS (~₹${monthlyInr}/MO)`
+                      : `USD / ${activePlan.duration_days} DAYS (~$${monthlyUsd}/MO)`}
                   </span>
                 </div>
               </div>
 
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+              <p className="upg-plan-desc">
                 {activePlan.description}
               </p>
 
-              <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-2.5">
-                <div className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+              <div className="upg-features-box">
+                <div className="upg-features-header">
                   What's Included
                 </div>
                 {activePlan.features.map((feat, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-xs text-[var(--color-text)]">
-                    <div className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+                  <div key={i} className="upg-feature-item">
+                    <div className="upg-feature-check">
                       <Check size={11} strokeWidth={3} />
                     </div>
-                    <span className="leading-snug">{feat}</span>
+                    <span>{feat}</span>
                   </div>
                 ))}
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* ─── RIGHT COLUMN: PAYMENT & SUBMISSION SECTION ───────────────── */}
-          <Card className="lg:col-span-8 p-6 space-y-6 shadow-sm border border-[var(--color-border)]">
-            <div>
-              <h3 className="text-base font-bold text-[var(--color-text)] flex items-center gap-2">
+          <div className="upg-payment-card">
+            <div className="upg-section-header">
+              <h3>
                 <Sparkles size={17} className="text-amber-500" />
                 Select Payment Method
               </h3>
-              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+              <p>
                 Pay using India UPI or International Buy Me a Coffee / Card, then submit your reference below.
               </p>
             </div>
 
             {/* Method Switcher Tabs */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="upg-method-grid">
               <button
                 type="button"
                 onClick={() => setMethod("upi")}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                  method === "upi"
-                    ? "border-amber-500 bg-amber-500/10 shadow-xs"
-                    : "border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border)]"
-                }`}
+                className={`upg-method-btn ${method === "upi" ? "is-active" : ""}`}
               >
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                  method === "upi" ? "bg-amber-500 text-white" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
-                }`}>
-                  <QrCode size={18} />
+                <div className="upg-method-icon">
+                  <QrCode size={19} />
                 </div>
                 <div>
-                  <div className={`text-xs font-bold ${method === "upi" ? "text-amber-500" : "text-[var(--color-text)]"}`}>
-                    India UPI / QR
-                  </div>
-                  <div className="text-[11px] meta-mono text-[var(--color-text-muted)]">
-                    ₹{priceInr.toLocaleString()} INR
-                  </div>
+                  <div className="upg-method-title">India UPI / QR</div>
+                  <div className="upg-method-sub">₹{priceInr.toLocaleString()} INR</div>
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setMethod("buymeacoffee")}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                  method === "buymeacoffee"
-                    ? "border-amber-500 bg-amber-500/10 shadow-xs"
-                    : "border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border)]"
-                }`}
+                className={`upg-method-btn ${method === "buymeacoffee" ? "is-active" : ""}`}
               >
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                  method === "buymeacoffee" ? "bg-amber-500 text-white" : "bg-[var(--color-surface-sunken)] text-amber-500"
-                }`}>
-                  <Coffee size={18} />
+                <div className="upg-method-icon">
+                  <Coffee size={19} />
                 </div>
                 <div>
-                  <div className={`text-xs font-bold ${method === "buymeacoffee" ? "text-amber-500" : "text-[var(--color-text)]"}`}>
-                    Buy Me a Coffee / Card
-                  </div>
-                  <div className="text-[11px] meta-mono text-[var(--color-text-muted)]">
-                    ${priceUsd} USD (Intl)
-                  </div>
+                  <div className="upg-method-title">Buy Me a Coffee / Card</div>
+                  <div className="upg-method-sub">${priceUsd} USD (Intl)</div>
                 </div>
               </button>
             </div>
 
             {/* Method Payment Box */}
             {method === "upi" ? (
-              <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/[0.04] border border-amber-500/30 space-y-4">
+              <div className="upg-method-box">
                 {/* Hero QR & Payee Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-4 sm:p-5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-xs">
+                <div className="upg-qr-row">
                   {activePlan.upi_qr_url && activePlan.upi_qr_url.trim() !== "" && (
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 bg-white p-1.5 rounded-xl flex items-center justify-center shadow-xs border border-gray-200 overflow-hidden">
+                    <div className="upg-qr-frame">
                       <img
                         src={activePlan.upi_qr_url}
                         alt="Scan to pay with UPI"
-                        className="w-full h-full object-contain"
                       />
                     </div>
                   )}
-                  <div className="flex-1 min-w-0 w-full space-y-3 text-center sm:text-left">
-                    <div className="space-y-1.5">
-                      <span className="block text-xs font-bold text-[var(--color-text)]">
-                        {activePlan.upi_qr_url && activePlan.upi_qr_url.trim() !== ""
-                          ? "Scan QR or pay via UPI"
-                          : "Pay via UPI"}
-                      </span>
-                      <div className="text-2xl font-black text-[var(--color-text)] font-display leading-none">
-                        ₹{priceInr.toLocaleString()}{" "}
-                        <span className="text-xs font-mono font-normal text-[var(--color-text-muted)]">INR</span>
-                      </div>
-                      <div className="px-3 py-2 rounded-lg bg-[var(--color-card-subtle)] border border-amber-500/30 inline-block max-w-full">
-                        <span className="text-xs font-mono font-bold text-[var(--color-primary)] break-all select-all" title="UPI ID">
-                          {activePlan.upi_id}
-                        </span>
+                  <div className="upg-qr-info">
+                    <span className="block text-xs font-bold text-[var(--color-text)]">
+                      {activePlan.upi_qr_url && activePlan.upi_qr_url.trim() !== ""
+                        ? "Scan QR or pay directly via UPI"
+                        : "Pay directly via UPI"}
+                    </span>
+                    <div className="text-2xl font-black text-[var(--color-text)] font-display leading-none">
+                      ₹{priceInr.toLocaleString()}{" "}
+                      <span className="text-xs font-mono font-normal text-[var(--color-text-muted)]">INR</span>
+                    </div>
+                    <div>
+                      <div className="upg-upi-tag" title="UPI ID">
+                        {activePlan.upi_id}
                       </div>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center sm:justify-start gap-2 pt-1">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap px-3.5 py-2"
+                    <div className="upg-btn-group">
+                      <button
+                        type="button"
+                        className="upg-btn-copy"
                         onClick={handleCopyUpi}
                       >
                         {copiedUpi ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                         <span>{copiedUpi ? "Copied!" : "Copy UPI ID"}</span>
-                      </Button>
+                      </button>
                       <a
                         href={`upi://pay?pa=${encodeURIComponent(activePlan.upi_id)}&pn=ScenoraEdits&am=${priceInr}&cu=INR&tn=${encodeURIComponent(activePlan.name)}`}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+                        className="upg-btn-open-app"
                       >
                         Open UPI App
                       </a>
@@ -479,47 +439,41 @@ export const UpgradePage: React.FC = () => {
                 </div>
 
                 {/* 3-Step Guide */}
-                <div className="space-y-2 pt-1 border-t border-[var(--color-border-subtle)]">
+                <div className="upg-steps">
                   <div className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
                     How to complete payment
                   </div>
-                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      1
-                    </div>
-                    <p className="leading-snug">
+                  <div className="upg-step-item">
+                    <div className="upg-step-num">1</div>
+                    <p>
                       {activePlan.upi_qr_url && activePlan.upi_qr_url.trim() !== ""
                         ? "Scan the QR code above or pay to the UPI ID"
                         : "Pay to the UPI ID above"}{" "}
                       using <strong>Google Pay, PhonePe, Paytm, or BHIM</strong>.
                     </p>
                   </div>
-                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      2
-                    </div>
-                    <p className="leading-snug">
+                  <div className="upg-step-item">
+                    <div className="upg-step-num">2</div>
+                    <p>
                       Complete the transfer of <strong>₹{priceInr.toLocaleString()} INR</strong> for {activePlan.name}.
                     </p>
                   </div>
-                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      3
-                    </div>
-                    <p className="leading-snug">
+                  <div className="upg-step-item">
+                    <div className="upg-step-num">3</div>
+                    <p>
                       Copy the 12-digit <strong>UTR / UPI Reference ID</strong> from your transaction receipt and submit below.
                     </p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-subtle)] shadow-xs">
+              <div className="upg-method-box">
+                <div className="upg-bmc-box">
                   <div>
-                    <span className="text-[10px] meta-mono font-bold uppercase tracking-wider text-amber-500">
+                    <div className="upg-bmc-title">
                       International Membership
-                    </span>
-                    <div className="text-base font-bold text-[var(--color-text)]">
+                    </div>
+                    <div className="upg-bmc-headline">
                       Buy Me a Coffee · ${priceUsd} USD
                     </div>
                   </div>
@@ -529,43 +483,37 @@ export const UpgradePage: React.FC = () => {
                     rel="noopener noreferrer"
                     aria-label="Open Buy Me a Coffee payment page in a new tab"
                     title="Open Buy Me a Coffee page"
-                    className="inline-flex w-full sm:w-auto min-h-10 items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-bold shadow-sm hover:shadow-md cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 whitespace-nowrap"
+                    className="upg-bmc-btn"
                   >
-                    <Coffee size={14} />
-                    Open BMC Page
+                    <Coffee size={15} />
+                    <span>Open BMC Page</span>
                     <ExternalLink size={14} />
                   </a>
                 </div>
-                <div className="space-y-2 pt-1 border-t border-[var(--color-border-subtle)]">
+                <div className="upg-steps">
                   <div className="text-[10px] font-bold meta-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
                     How to complete payment
                   </div>
-                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      1
-                    </div>
-                    <p className="leading-snug">Click the button above to visit our official Buy Me a Coffee page.</p>
+                  <div className="upg-step-item">
+                    <div className="upg-step-num">1</div>
+                    <p>Click the button above to visit our official Buy Me a Coffee page.</p>
                   </div>
-                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      2
-                    </div>
-                    <p className="leading-snug">Pay the supporter membership of <strong>${priceUsd} USD</strong>.</p>
+                  <div className="upg-step-item">
+                    <div className="upg-step-num">2</div>
+                    <p>Pay the supporter membership of <strong>${priceUsd} USD</strong>.</p>
                   </div>
-                  <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-secondary)]">
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      3
-                    </div>
-                    <p className="leading-snug">Enter your supporter display name or order receipt ID in the form below.</p>
+                  <div className="upg-step-item">
+                    <div className="upg-step-num">3</div>
+                    <p>Enter your supporter display name or order receipt ID in the form below.</p>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Submission Form */}
-            <form onSubmit={handleSubmitPayment} className="space-y-4 pt-1">
+            <form onSubmit={handleSubmitPayment} className="upg-form">
               <div>
-                <label className="block text-xs font-bold text-[var(--color-text)] mb-1">
+                <label className="upg-input-label">
                   {method === "upi" ? "UPI Reference / UTR Number *" : "Supporter Name / Receipt ID *"}
                 </label>
                 <input
@@ -574,18 +522,18 @@ export const UpgradePage: React.FC = () => {
                   placeholder={method === "upi" ? "e.g. 423589012345" : "e.g. John Doe / Order #12345"}
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-500/60 bg-[var(--color-surface)] text-xs text-[var(--color-text)] focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 font-mono"
+                  className="upg-input"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[var(--color-text)] mb-1">
+                <label className="upg-input-label">
                   Upload Payment Screenshot / Proof (Optional, max 5MB)
                 </label>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border-2 border-amber-500/60 bg-[var(--color-surface)] text-xs text-[var(--color-text)] hover:border-amber-500 cursor-pointer transition-colors">
-                    <Upload size={14} className="text-[var(--color-text-muted)]" />
-                    <span className="truncate max-w-[200px]">{proofFile ? proofFile.name : "Choose screenshot (JPG/PNG/WebP)..."}</span>
+                <div className="upg-file-upload-box">
+                  <label className="upg-file-label">
+                    <Upload size={15} className="text-[var(--color-text-muted)]" />
+                    <span className="truncate max-w-[220px]">{proofFile ? proofFile.name : "Choose screenshot (JPG/PNG/WebP)..."}</span>
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -597,7 +545,7 @@ export const UpgradePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setProofFile(null)}
-                      className="text-[11px] text-red-500 hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-red-500 hover:underline cursor-pointer"
                     >
                       Remove
                     </button>
@@ -606,78 +554,76 @@ export const UpgradePage: React.FC = () => {
               </div>
 
               <div className="pt-2">
-                <Button
+                <button
                   type="submit"
-                  variant="primary"
-                  size="md"
                   disabled={submitting}
-                  className="w-full font-bold flex items-center justify-center gap-2 py-2.5 shadow-sm"
+                  className="upg-submit-btn"
                 >
                   {submitting ? "Submitting Verification..." : `Submit Payment for ${activePlan.name}`}
-                </Button>
+                </button>
               </div>
             </form>
-          </Card>
+          </div>
         </div>
       )}
 
       {/* ─── PAYMENT HISTORY TABLE ─────────────────────────────────────────── */}
       {payments.length > 0 && (
-        <div className="space-y-4 pt-4 border-t border-[var(--color-border-subtle)]">
-          <h3 className="text-sm font-bold text-[var(--color-text)] font-display">
+        <div className="upg-history-wrap">
+          <h3 className="upg-history-title">
             Your Payment Submissions
           </h3>
-          <div className="overflow-hidden rounded-xl border border-[var(--color-border-subtle)]">
+          <div className="upg-history-card">
             <table className="w-full text-left text-xs app-data-table">
               <thead className="bg-[var(--color-surface-sunken)] border-b border-[var(--color-border-subtle)] text-[var(--color-text-muted)] meta-mono uppercase tracking-wider">
                 <tr>
-                  <th className="p-3 font-semibold">Payment ID</th>
-                  <th className="p-3 font-semibold">Date</th>
-                  <th className="p-3 font-semibold">Method</th>
-                  <th className="p-3 font-semibold">Amount</th>
-                  <th className="p-3 font-semibold">Reference</th>
-                  <th className="p-3 font-semibold">Status</th>
+                  <th className="p-3.5 font-semibold">Payment ID</th>
+                  <th className="p-3.5 font-semibold">Date</th>
+                  <th className="p-3.5 font-semibold">Method</th>
+                  <th className="p-3.5 font-semibold">Amount</th>
+                  <th className="p-3.5 font-semibold">Reference</th>
+                  <th className="p-3.5 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border-subtle)] bg-[var(--color-surface)]">
                 {payments.map((p) => {
                   let statusBadge = (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <span className="upg-badge-status is-pending">
                       PENDING
                     </span>
                   );
                   if (p.status === "approved") {
                     statusBadge = (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <span className="upg-badge-status is-approved">
                         APPROVED
                       </span>
                     );
                   } else if (p.status === "rejected") {
                     statusBadge = (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold meta-mono bg-red-500/10 text-red-600 dark:text-red-400">
+                      <span className="upg-badge-status is-rejected">
                         REJECTED
                       </span>
                     );
                   }
 
                   return (
-                    <tr key={p.payment_id} className="hover:bg-[var(--color-surface-sunken)]/50">
-                      <td className="p-3 font-mono text-[11px] text-[var(--color-text-muted)]">
+                    <tr key={p.payment_id} className="hover:bg-[var(--color-surface-sunken)]/50 transition-colors">
+                      <td className="p-3.5 font-mono text-[11px] text-[var(--color-text-muted)]">
                         {p.payment_id}
                       </td>
-                      <td className="p-3 text-[var(--color-text-secondary)]">
+                      <td className="p-3.5 text-[var(--color-text-secondary)]">
                         {new Date(p.submitted_at).toLocaleDateString()}
                       </td>
-                      <td className="p-3 uppercase text-[11px] meta-mono font-bold text-[var(--color-text)]">
+                      <td className="p-3.5 uppercase text-[11px] meta-mono font-bold text-[var(--color-text)]">
                         {p.payment_method}
                       </td>
-                      <td className="p-3 font-mono font-bold text-[var(--color-text)]">
+                      <td className="p-3.5 font-mono font-bold text-[var(--color-text)]">
                         {p.currency === "INR" ? `₹${p.amount}` : `$${p.amount}`}
                       </td>
-                      <td className="p-3 font-mono text-[11px] text-[var(--color-text)]">
+                      <td className="p-3.5 font-mono text-[11px] text-[var(--color-text)]">
                         {p.reference}
                       </td>
-                      <td className="p-3">
+                      <td className="p-3.5">
                         <div className="flex flex-col gap-0.5">
                           {statusBadge}
                           {p.rejection_reason && (

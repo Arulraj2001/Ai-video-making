@@ -218,6 +218,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 scenes={project.scenes}
                 audioFile={project.audio_file}
                 onUpdateScene={onUpdateScene}
+                onDeleteScene={async (sceneId) => {
+                  const updated = await api.deleteTimelineScene(project.id, sceneId);
+                  if (onProjectUpdated) onProjectUpdated(updated);
+                }}
               />
 
               {/* Stage 1 Guided Navigation Bar */}

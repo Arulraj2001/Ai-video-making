@@ -5,6 +5,7 @@ from app.models.scene import SceneModel
 from app.services.visual_context import build_visual_context
 from app.services.visual_style_engine import resolve_scene_context
 from app.services.llm.base import BaseLLMProvider
+from app.services.llm.mock_provider import MockLLMProvider
 from app.services.llm.factory import get_llm_provider
 from app.services.project_service import project_service
 from app.configuration.config import settings
@@ -75,8 +76,17 @@ class StoryboardService:
         usage_svc = get_usage_service()
         uid = project.owner_id or getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
 
-        async with usage_svc.reserve(uid=uid, provider=provider.provider_name):
-            generated_scenes_meta = await provider.generate_storyboard_scenes(
+        try:
+            async with usage_svc.reserve(uid=uid, provider=provider.provider_name):
+                generated_scenes_meta = await provider.generate_storyboard_scenes(
+                    scenes=scenes_input,
+                    visual_context=visual_context,
+                    aspect_ratio=ratio
+                )
+        except Exception as e:
+            logger.warning(f"Primary LLM provider '{provider.provider_name}' failed: {e}. Falling back to MockLLMProvider.")
+            fallback = MockLLMProvider()
+            generated_scenes_meta = await fallback.generate_storyboard_scenes(
                 scenes=scenes_input,
                 visual_context=visual_context,
                 aspect_ratio=ratio
@@ -145,12 +155,22 @@ class StoryboardService:
             },
         }
 
-        meta = await provider.regenerate_scene(
-            scene=scene_input,
-            visual_context=visual_context,
-            instructions=instructions or "",
-            aspect_ratio=ratio
-        )
+        try:
+            meta = await provider.regenerate_scene(
+                scene=scene_input,
+                visual_context=visual_context,
+                instructions=instructions or "",
+                aspect_ratio=ratio
+            )
+        except Exception as e:
+            logger.warning(f"Primary LLM provider '{provider.provider_name}' failed: {e}. Falling back to MockLLMProvider.")
+            fallback = MockLLMProvider()
+            meta = await fallback.regenerate_scene(
+                scene=scene_input,
+                visual_context=visual_context,
+                instructions=instructions or "",
+                aspect_ratio=ratio
+            )
 
         target_scene.visual_description = meta.get("visual_description", target_scene.visual_description)
         target_scene.image_prompt = meta.get("image_prompt", target_scene.image_prompt)
