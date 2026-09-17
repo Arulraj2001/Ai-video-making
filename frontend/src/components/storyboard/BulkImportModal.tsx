@@ -132,38 +132,117 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(6px)" }}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(3, 7, 18, 0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
+        padding: "20px",
+      }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 animate-in fade-in zoom-in-95 duration-200"
-        style={{ maxHeight: "90vh" }}
+        style={{
+          width: "100%",
+          maxWidth: "680px",
+          maxHeight: "90vh",
+          backgroundColor: "#ffffff",
+          color: "#0f172a",
+          borderRadius: "20px",
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 font-bold text-lg shadow-sm">
+        <div
+          style={{
+            padding: "20px 24px",
+            borderBottom: "1px solid #e2e8f0",
+            backgroundColor: "#f8fafc",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                backgroundColor: "#fef3c7",
+                border: "1px solid #fde68a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#d97706",
+                fontWeight: 700,
+                fontSize: "18px",
+              }}
+            >
               📥
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-900 leading-tight">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#0f172a", lineHeight: 1.2 }}>
                   Bulk Scene Image Import
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-500 text-white shadow-xs">
+                <span
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    backgroundColor: "#f59e0b",
+                    color: "#ffffff",
+                  }}
+                >
                   PRO
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p style={{ margin: "3px 0 0", fontSize: "12px", color: "#64748b" }}>
                 Drop multiple files or a ZIP archive to automatically align images to scenes
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#94a3b8",
+              backgroundColor: "transparent",
+              border: "1px solid transparent",
+              cursor: "pointer",
+              fontSize: "14px",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#f1f5f9";
+              e.currentTarget.style.color = "#334155";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "#94a3b8";
+            }}
             title="Close"
           >
             ✕
@@ -171,67 +250,123 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
         </div>
 
         {/* Body Content */}
-        <div className="p-6 flex-1 overflow-y-auto bg-slate-50/40">
+        <div
+          style={{
+            padding: "24px",
+            flex: 1,
+            overflowY: "auto",
+            backgroundColor: "#f8fafc",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}
+        >
           {checkingEntitlement ? (
-            <div className="py-20 flex flex-col items-center justify-center text-slate-400">
-              <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-              <p className="text-xs font-medium">Checking Pro entitlement...</p>
+            <div style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
+              <div style={{ width: "32px", height: "32px", border: "2px solid #f59e0b", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "12px" }}></div>
+              <p style={{ margin: 0, fontSize: "12px", fontWeight: 500 }}>Checking Pro entitlement...</p>
             </div>
           ) : !isPro ? (
             /* Pro Upgrade Banner */
-            <div className="py-8 px-6 text-center bg-white rounded-2xl border border-amber-100 shadow-sm">
-              <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 mx-auto flex items-center justify-center text-2xl shadow-inner mb-4">
+            <div
+              style={{
+                padding: "32px 24px",
+                textAlign: "center",
+                backgroundColor: "#ffffff",
+                borderRadius: "16px",
+                border: "1px solid #fef3c7",
+                boxShadow: "0 4px 12px rgba(245, 158, 11, 0.08)",
+              }}
+            >
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "16px",
+                  backgroundColor: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  margin: "0 auto 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "24px",
+                }}
+              >
                 👑
               </div>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
                 Unlock Bulk Scene Alignment with Pro
               </h3>
-              <p className="text-xs text-slate-600 max-w-md mx-auto mt-2 leading-relaxed">
+              <p style={{ margin: "8px auto 0", fontSize: "12px", color: "#475569", maxWidth: "440px", lineHeight: 1.5 }}>
                 Save hours by dropping a folder or ZIP of images. Scenora automatically maps each file to its exact scene, sanitizes color profiles for zero-crash rendering, and updates your video instantly.
               </p>
 
-              <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto my-5 text-left text-xs text-slate-700">
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center gap-2">
-                  <span className="text-emerald-500 font-bold">✓</span> ZIP & Multi-file drag
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "8px",
+                  maxWidth: "380px",
+                  margin: "20px auto",
+                  textAlign: "left",
+                  fontSize: "12px",
+                  color: "#334155",
+                }}
+              >
+                <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ color: "#10b981", fontWeight: 700 }}>✓</span> ZIP & Multi-file drag
                 </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center gap-2">
-                  <span className="text-emerald-500 font-bold">✓</span> Auto-scene detection
+                <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ color: "#10b981", fontWeight: 700 }}>✓</span> Auto-scene detection
                 </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center gap-2">
-                  <span className="text-emerald-500 font-bold">✓</span> 100% FFmpeg-safe
+                <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ color: "#10b981", fontWeight: 700 }}>✓</span> 100% FFmpeg-safe
                 </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center gap-2">
-                  <span className="text-emerald-500 font-bold">✓</span> Full HD MP4 render
+                <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "#f8fafc", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ color: "#10b981", fontWeight: 700 }}>✓</span> Full HD MP4 render
                 </div>
               </div>
 
               <Link
                 to="/pricing"
                 onClick={onClose}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 24px",
+                  borderRadius: "12px",
+                  fontWeight: 700,
+                  fontSize: "12px",
+                  backgroundColor: "#f59e0b",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  boxShadow: "0 4px 14px rgba(245, 158, 11, 0.3)",
+                  transition: "all 0.15s ease",
+                }}
               >
                 ⚡ View Pro Plans & Upgrade
               </Link>
             </div>
           ) : (
             /* Upload Workflow for Pro Creators */
-            <div className="space-y-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {error && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                <div style={{ padding: "12px 16px", borderRadius: "12px", backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", fontSize: "12px", fontWeight: 500 }}>
                   {error}
                 </div>
               )}
 
               {successResult && (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-1">
-                  <p className="font-bold flex items-center gap-1.5 text-emerald-700 text-sm">
-                    <span>✓</span> {successResult.matched_count} scenes aligned and updated!
+                <div style={{ padding: "16px", borderRadius: "14px", backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", fontSize: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: "14px", color: "#15803d" }}>
+                    ✓ {successResult.matched_count} scenes aligned and updated!
                   </p>
-                  <p className="text-slate-600">
+                  <p style={{ margin: 0, color: "#475569" }}>
                     Your scene images have been processed with 100% FFmpeg rendering safety and are now live in your storyboard and timeline.
                   </p>
                   {successResult.unmatched_files.length > 0 && (
-                    <p className="text-amber-700 font-medium pt-1">
+                    <p style={{ margin: "4px 0 0", color: "#b45309", fontWeight: 600 }}>
                       Note: {successResult.unmatched_files.length} files could not be mapped: {successResult.unmatched_files.join(", ")}
                     </p>
                   )}
@@ -244,52 +379,81 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
-                  isDragging
-                    ? "border-amber-500 bg-amber-50/50 scale-[1.01]"
-                    : "border-slate-300 hover:border-amber-400 bg-white hover:bg-slate-50/50"
-                }`}
+                style={{
+                  border: isDragging ? "2px dashed #f59e0b" : "2px dashed #cbd5e1",
+                  borderRadius: "16px",
+                  padding: "36px 20px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  backgroundColor: isDragging ? "#fffbeb" : "#ffffff",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  transition: "all 0.2s ease",
+                }}
               >
                 <input
                   ref={fileInputRef}
                   type="file"
                   multiple
                   accept=".png,.jpg,.jpeg,.webp,.avif,.zip"
-                  className="hidden"
+                  style={{ display: "none" }}
                   onChange={(e) => handleFilesSelected(e.target.files)}
                 />
 
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 mx-auto flex items-center justify-center text-xl mb-3 shadow-xs">
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "14px",
+                    backgroundColor: "#fef3c7",
+                    border: "1px solid #fde68a",
+                    color: "#d97706",
+                    margin: "0 auto 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "22px",
+                  }}
+                >
                   📁
                 </div>
-                <p className="text-sm font-bold text-slate-800">
+                <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
                   Click to browse or drop images / ZIP archive
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#64748b" }}>
                   Supports .png, .jpg, .webp, or a single .zip containing numbered scenes
                 </p>
-                <p className="text-[11px] text-slate-400 mt-2">
-                  Naming tip: <span className="font-mono bg-slate-100 px-1 py-0.5 rounded">scene_01.png</span>, <span className="font-mono bg-slate-100 px-1 py-0.5 rounded">1.jpg</span>, or <span className="font-mono bg-slate-100 px-1 py-0.5 rounded">shot-2.webp</span>
+                <p style={{ margin: "8px 0 0", fontSize: "11px", color: "#94a3b8" }}>
+                  Naming tip: <span style={{ fontFamily: "monospace", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", color: "#475569" }}>scene_01.png</span>, <span style={{ fontFamily: "monospace", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", color: "#475569" }}>1.jpg</span>, or <span style={{ fontFamily: "monospace", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", color: "#475569" }}>shot-2.webp</span>
                 </p>
               </div>
 
               {/* Selected Files Preview List */}
               {files.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
-                  <div className="flex items-center justify-between text-xs pb-1 border-b border-slate-100">
-                    <span className="font-bold text-slate-700">
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "14px",
+                    border: "1px solid #e2e8f0",
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", paddingBottom: "6px", borderBottom: "1px solid #f1f5f9" }}>
+                    <span style={{ fontWeight: 700, color: "#334155" }}>
                       Selected Files ({files.length})
                     </span>
                     <button
                       type="button"
                       onClick={() => setFiles([])}
-                      className="text-red-600 hover:underline text-[11px]"
+                      style={{ background: "none", border: "none", color: "#dc2626", textDecoration: "underline", fontSize: "11px", cursor: "pointer" }}
                     >
                       Clear Selection
                     </button>
                   </div>
 
-                  <div className="max-h-48 overflow-y-auto space-y-1.5 pt-1">
+                  <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px", paddingTop: "4px" }}>
                     {files.map((file, idx) => {
                       const isZip = file.name.toLowerCase().endsWith(".zip");
                       const guess = isZip ? null : guessSceneNum(file.name);
@@ -300,30 +464,39 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                       return (
                         <div
                           key={idx}
-                          className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-100 text-xs"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            backgroundColor: "#f8fafc",
+                            border: "1px solid #f1f5f9",
+                            fontSize: "12px",
+                          }}
                         >
-                          <div className="flex items-center gap-2 truncate pr-2">
-                            <span className="text-slate-400 font-mono text-[11px]">
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "8px" }}>
+                            <span style={{ color: "#94a3b8", fontFamily: "monospace", fontSize: "11px" }}>
                               {idx + 1}.
                             </span>
-                            <span className="font-medium text-slate-800 truncate">
+                            <span style={{ fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {file.name}
                             </span>
-                            <span className="text-[10px] text-slate-400">
+                            <span style={{ fontSize: "10px", color: "#94a3b8" }}>
                               ({(file.size / 1024).toFixed(0)} KB)
                             </span>
                           </div>
 
                           {isZip ? (
-                            <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-700">
+                            <span style={{ flexShrink: 0, padding: "2px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, backgroundColor: "#f3e8ff", color: "#7e22ce" }}>
                               ZIP Archive
                             </span>
                           ) : targetScene ? (
-                            <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                            <span style={{ flexShrink: 0, padding: "2px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, backgroundColor: "#dcfce7", color: "#15803d" }}>
                               → Scene {guess}
                             </span>
                           ) : (
-                            <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-200 text-slate-600">
+                            <span style={{ flexShrink: 0, padding: "2px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 500, backgroundColor: "#e2e8f0", color: "#475569" }}>
                               Auto-sequential
                             </span>
                           )}
@@ -338,11 +511,30 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-white flex items-center justify-between">
+        <div
+          style={{
+            padding: "16px 24px",
+            borderTop: "1px solid #e2e8f0",
+            backgroundColor: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+            style={{
+              padding: "8px 16px",
+              borderRadius: "10px",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "#475569",
+              backgroundColor: "#f1f5f9",
+              border: "1px solid #e2e8f0",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
           >
             {successResult ? "Done" : "Cancel"}
           </button>
@@ -352,15 +544,25 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
               type="button"
               onClick={handleUpload}
               disabled={uploading || files.length === 0}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center gap-2 ${
-                uploading || files.length === 0
-                  ? "bg-slate-300 cursor-not-allowed"
-                  : "bg-amber-500 hover:bg-amber-600 shadow-amber-500/20 hover:scale-[1.02]"
-              }`}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "12px",
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#ffffff",
+                backgroundColor: uploading || files.length === 0 ? "#cbd5e1" : "#f59e0b",
+                border: "none",
+                cursor: uploading || files.length === 0 ? "not-allowed" : "pointer",
+                boxShadow: uploading || files.length === 0 ? "none" : "0 4px 14px rgba(245, 158, 11, 0.3)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.15s ease",
+              }}
             >
               {uploading ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div style={{ width: "14px", height: "14px", border: "2px solid #ffffff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
                   <span>Sanitizing & Aligning...</span>
                 </>
               ) : (

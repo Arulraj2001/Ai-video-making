@@ -78,33 +78,101 @@ export const ExportCaptionsModal: React.FC<ExportCaptionsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(6px)" }}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(3, 7, 18, 0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
+        padding: "20px",
+      }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 animate-in fade-in zoom-in-95 duration-200"
-        style={{ maxHeight: "88vh" }}
+        style={{
+          width: "100%",
+          maxWidth: "680px",
+          maxHeight: "88vh",
+          backgroundColor: "#ffffff",
+          color: "#0f172a",
+          borderRadius: "20px",
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shadow-sm">
+        <div
+          style={{
+            padding: "20px 24px",
+            borderBottom: "1px solid #e2e8f0",
+            backgroundColor: "#f8fafc",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                backgroundColor: "#eff6ff",
+                border: "1px solid #dbeafe",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#2563eb",
+                fontWeight: 700,
+                fontSize: "18px",
+              }}
+            >
               📄
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 leading-tight">
+              <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#0f172a", lineHeight: 1.2 }}>
                 Export Captions & Narration Timing
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p style={{ margin: "3px 0 0", fontSize: "12px", color: "#64748b" }}>
                 Exact spoken dialogue and timestamps across {sceneCount} scenes
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#94a3b8",
+              backgroundColor: "transparent",
+              border: "1px solid transparent",
+              cursor: "pointer",
+              fontSize: "14px",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#f1f5f9";
+              e.currentTarget.style.color = "#334155";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "#94a3b8";
+            }}
             title="Close"
           >
             ✕
@@ -112,79 +180,148 @@ export const ExportCaptionsModal: React.FC<ExportCaptionsModalProps> = ({
         </div>
 
         {/* Format Selector Pills */}
-        <div className="px-6 pt-4 pb-2 flex items-center gap-2 border-b border-slate-100 bg-white">
+        <div
+          style={{
+            padding: "12px 24px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            borderBottom: "1px solid #e2e8f0",
+            backgroundColor: "#ffffff",
+          }}
+        >
           <button
             type="button"
             onClick={() => setFormat("timed_txt")}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              format === "timed_txt"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
-            }`}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "none",
+              backgroundColor: format === "timed_txt" ? "#2563eb" : "#f1f5f9",
+              color: format === "timed_txt" ? "#ffffff" : "#475569",
+              transition: "all 0.15s ease",
+            }}
           >
             ⏱️ Timed Text
           </button>
           <button
             type="button"
             onClick={() => setFormat("srt")}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              format === "srt"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
-            }`}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "none",
+              backgroundColor: format === "srt" ? "#2563eb" : "#f1f5f9",
+              color: format === "srt" ? "#ffffff" : "#475569",
+              transition: "all 0.15s ease",
+            }}
           >
             🎬 SRT Subtitles
           </button>
           <button
             type="button"
             onClick={() => setFormat("clean_txt")}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              format === "clean_txt"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
-            }`}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "none",
+              backgroundColor: format === "clean_txt" ? "#2563eb" : "#f1f5f9",
+              color: format === "clean_txt" ? "#ffffff" : "#475569",
+              transition: "all 0.15s ease",
+            }}
           >
             📝 Clean Script Text
           </button>
         </div>
 
         {/* Content Preview Box */}
-        <div className="p-6 flex-1 overflow-y-auto bg-slate-50/50">
+        <div
+          style={{
+            padding: "24px",
+            flex: 1,
+            overflowY: "auto",
+            backgroundColor: "#f8fafc",
+          }}
+        >
           {error && (
-            <div className="p-3 mb-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+            <div style={{ padding: "12px 16px", marginBottom: "12px", borderRadius: "10px", backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", fontSize: "12px" }}>
               {error}
             </div>
           )}
 
           {loading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-slate-400">
-              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-              <p className="text-xs font-medium">Formatting narration captions...</p>
+            <div style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
+              <div style={{ width: "32px", height: "32px", border: "2px solid #2563eb", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "12px" }}></div>
+              <p style={{ margin: 0, fontSize: "12px", fontWeight: 500 }}>Formatting narration captions...</p>
             </div>
           ) : (
-            <div className="relative">
+            <div>
               <textarea
                 readOnly
                 value={content}
                 rows={14}
-                className="w-full font-mono text-xs text-slate-800 bg-white p-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-inner resize-none select-all"
-                style={{ lineHeight: "1.6" }}
+                style={{
+                  width: "100%",
+                  fontFamily: "monospace",
+                  fontSize: "12px",
+                  color: "#1e293b",
+                  backgroundColor: "#ffffff",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                  outline: "none",
+                  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.04)",
+                  resize: "none",
+                  lineHeight: "1.6",
+                  boxSizing: "border-box",
+                }}
               />
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-white flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-mono">
+        <div
+          style={{
+            padding: "16px 24px",
+            borderTop: "1px solid #e2e8f0",
+            backgroundColor: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "monospace" }}>
             {filename}
           </span>
-          <div className="flex items-center gap-2">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
               type="button"
               onClick={handleCopy}
               disabled={loading || !content}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5"
+              style={{
+                padding: "8px 16px",
+                borderRadius: "10px",
+                fontSize: "12px",
+                fontWeight: 600,
+                backgroundColor: "#f1f5f9",
+                color: "#334155",
+                border: "1px solid #e2e8f0",
+                cursor: loading || !content ? "not-allowed" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
             >
               {copied ? "✓ Copied!" : "📋 Copy All"}
             </button>
@@ -192,7 +329,21 @@ export const ExportCaptionsModal: React.FC<ExportCaptionsModalProps> = ({
               type="button"
               onClick={handleDownload}
               disabled={loading || !content}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors flex items-center gap-1.5"
+              style={{
+                padding: "8px 18px",
+                borderRadius: "10px",
+                fontSize: "12px",
+                fontWeight: 600,
+                backgroundColor: "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                cursor: loading || !content ? "not-allowed" : "pointer",
+                boxShadow: "0 2px 8px rgba(37, 99, 235, 0.3)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
             >
               ⬇️ Download File
             </button>
