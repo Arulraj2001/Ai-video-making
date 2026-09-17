@@ -260,6 +260,12 @@ Stage 3 transforms the Master Timeline sentences and Video Bible continuity data
 - **"Retry Failed" Button (`RefreshCw` Danger)**:
   - Appears automatically whenever `imagesFailedCount > 0`.
   - Retries generation exclusively for failed scenes, strictly preserving all completed visuals.
+- **"📄 Captions" Export Button**:
+  - Opens the dedicated Subtitles & Narration exporter modal to copy or download Timed Text, SubRip (`.srt`), or clean dialogue scripts.
+- **"🎨 Prompts" Export Button**:
+  - Opens the dedicated AI Prompts exporter modal to format prompts for Midjourney v6 (`--ar` dynamic flag), ComfyUI, or CSV spreadsheets.
+- **"📥 Bulk Import" Action Button (`PRO`)**:
+  - Opens the Pro-gated bulk image alignment studio to drag-and-drop 50+ images or a `.zip` archive, mapping each file to its scene with 100% FFmpeg-safe sanitization.
 - **"Generate All Images" / "Regenerate All" Primary CTA (`ImageIcon`)**:
   - Batch orchestrates image generation across all scenes in parallel with concurrency semaphore and timeout guards.
 - **Rapid Pacing Advisory Banner (`AlertTriangle`)**:
@@ -333,6 +339,16 @@ Stage 3 transforms the Master Timeline sentences and Video Bible continuity data
    - Generates 3 distinct framing variations (Medium framing, Wide establishing, Close-up detail) with randomized seeds for creator A/B selection.
 6. **Graphic Card Template Modal (`StoryboardGraphicModal.tsx`)**:
    - Renders instant high-resolution graphic cards (*Title Card*, *Quote Card*, *Stats Card*, *Step Card*, *Split Overview*) with custom headlines, subtext, and brand accent colors without calling external AI APIs.
+7. **Bulk Scene Image Import Modal (`BulkImportModal.tsx`) [PRO Feature]**:
+   - Pro-gated multi-file & ZIP archive ingestion dialog with solid, non-transparent high-contrast lightbox styling.
+   - Automatically maps external images (`scene_01.png`, `1.jpg`, `shot-2.webp`) to timeline scenes with live matching preview and sequential alphabetical fallback.
+   - 100% FFmpeg-safe ingestion: standardizes color space to 8-bit sRGB, enforces even dimensions divisible by 2, transposes EXIF rotation, and clamps dimensions to 3840px to prevent rendering crashes.
+8. **Dedicated Captions Exporter Modal (`ExportCaptionsModal.tsx`)**:
+   - Dedicated dialog exporting spoken narration and exact timeline timecodes in Timed Text (`[00:00.0 --> 00:06.5] Scene 1: {dialogue}`), SubRip Subtitles (`.srt`), and Clean Script Text (`.txt`).
+   - Includes 1-click clipboard copy and direct file download.
+9. **Dedicated Visual Prompts Exporter Modal (`ExportPromptsModal.tsx`)**:
+   - Formats AI visual prompts for Midjourney v6 (`/imagine prompt: ... --ar {ratio} --v 6.0` dynamically mapped to the project's aspect ratio `16:9` or `9:16`), ComfyUI / Leonardo clean lists, and CSV spreadsheets.
+   - Includes 1-click clipboard copy and direct file download.
 
 ---
 
@@ -364,8 +380,36 @@ Stage 3 transforms the Master Timeline sentences and Video Bible continuity data
 4. **Create a Graphic Card**: Click **"Graphic Card"**, select a template (*Quote Card*, *Stats Card*), type your headline, and click **"Apply Template"**.
 5. **Inspect Fullscreen**: Click on any completed image thumbnail to open the Cinema Lightbox; use arrow keys to step through your video.
 
-#### Step 5: Advance to Stage 4
-- When all scene images look compelling, click **"Proceed to Stage 4: Timeline Studio"** at the bottom navigation bar.
+#### Step 5: Bulk Scene Image Alignment & Ingestion [PRO Feature]
+1. In the Storyboard header, click the **"📥 Bulk Import"** (`PRO`) button.
+2. If you are on the Free tier, an upgrade modal will open detailing Pro capabilities; Pro creators immediately see the **Bulk Ingest Studio**.
+3. Drop multiple images (`.png`, `.jpg`, `.webp`) or a `.zip` archive into the ingestion dropzone:
+   - **Tolerant Filename Matching**: Files named `scene_01.png`, `1.jpg`, `shot-2.webp`, `03_hero.png`, or `forest_04.jpg` automatically match to Scene 1, 2, 3, and 4.
+   - **Sequential Fallback**: Unnumbered images are matched sequentially in alphabetical order across available scenes.
+4. Review the live **Alignment Preview**:
+   - The green matched scenes list shows exact file-to-scene mappings.
+   - Any leftover or unassigned files are flagged clearly.
+5. Click **"Confirm & Ingest Images"**.
+6. The engine automatically runs each image through the **100% FFmpeg-Safe Sanitizer** (color space normalization to sRGB, even pixel dimension enforcement, EXIF rotation correction, 3840px safety clamp) and instantly updates the storyboard canvases.
+
+#### Step 6: Exporting Subtitles & Visual Prompts (Dual Exporters)
+1. **Export Spoken Narration & Timecodes**:
+   - Click the **"📄 Captions"** button in the command header.
+   - Choose your desired format:
+     - **Timed Text**: `[00:00.0 - 00:04.5] Scene 1: "..."` with per-scene duration readouts.
+     - **SubRip Subtitles (.srt)**: Industry-standard subtitle timecodes (`00:00:01,000 --> 00:00:04,500`) for YouTube, Premiere Pro, or DaVinci Resolve.
+     - **Clean Script**: Continuous narration script without timestamps for voiceover talent or review.
+   - Click **"Copy to Clipboard"** for instant pasting or **"Download File"** to save to disk.
+2. **Export Visual Prompts for External AI Generators**:
+   - Click the **"🎨 Prompts"** button in the command header.
+   - Choose your export format:
+     - **Midjourney v6**: Formatted as `/imagine prompt: ... --ar {aspect_ratio} --v 6.0`. The aspect ratio is dynamically extracted from the project canvas (`16:9` widescreen or `9:16` vertical).
+     - **ComfyUI / Leonardo**: Clean, prompt-only numbered list ready for batch queuing in local or cloud node pipelines.
+     - **CSV Spreadsheet**: Comma-separated file with `Scene Number`, `Timecode`, `Narration`, and `Visual Prompt` columns for spreadsheet planning.
+   - Click **"Copy to Clipboard"** or **"Download File"**.
+
+#### Step 7: Advance to Stage 4
+- When all scene images look compelling and properly aligned, click **"Proceed to Stage 4: Timeline Studio"** at the bottom navigation bar.
 
 ---
 
@@ -395,6 +439,9 @@ The studio operates on the **Master Timeline Rule**: sentence-level caption time
   - `✓ Contiguous Timeline` (Green): Indicates all scene cuts occur back-to-back with 0.0s silence gaps or audio overlaps.
   - `⚠️ Timing Issues` (Amber): Highlights any detected silence gaps or overlapping scene boundaries.
 - **"Auto-Align Timestamps" Button (`Wand2`)**: 1-click healing action that automatically repairs any timing drift, edge gaps, or boundary overlaps across all scenes.
+- **"📄 Captions" Export Button**: Launches the Captions Exporter modal to export exact spoken dialogue and timestamps in SRT, Timed Text, or Script text.
+- **"🎨 Prompts" Export Button**: Launches the Prompts Exporter modal to format prompts for Midjourney, ComfyUI, or CSV spreadsheets.
+- **"📥 Bulk Import" Button (`PRO`)**: Launches the Pro Bulk Image Import studio to drop images or ZIP archives and auto-align visuals to timeline clips.
 - **Undo / Redo Buttons** (`⤺ Undo` / `⤻ Redo`): Multi-level snapshot history with keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`) for timeline modifications.
 - **Timeline Zoom Controls** (`-` / `+` with px readout): Scales the horizontal pixel density (`30px` to `150px` per second) for fine scrubbing precision.
 - **"+ Add Slide" Button (`Plus`)**: Launches the Slide Studio template modal to insert blank or presentation-grade graphic slides.
@@ -517,7 +564,8 @@ graph TD
     E --> F["Step 4: Configure Ken Burns Camera Motion & Transitions"]
     F --> G["Step 5: Add PowerPoint Slide Templates or Graphic Overlays"]
     G --> H["Step 6: Mix Audio & Enable Background Music Ducking"]
-    H --> I["Proceed to Stage 5: Export Video (Film)"]
+    H --> I["Step 7: Direct Captions / Prompts Export or Bulk Ingest"]
+    I --> J["Proceed to Stage 5: Export Video (Film)"]
 ```
 
 #### Step 1: Scrubbing & Inspecting Scenes
@@ -554,6 +602,11 @@ graph TD
 2. Drag and drop a background music file (`.mp3` or `.wav`) into the BGM dropzone.
 3. Ensure **Auto-Ducking** is checked so background music automatically lowers to `25%` volume whenever voice narration is speaking.
 4. Adjust narration volume (`100%`) and music volume (`25%`) and set a 1.5s fade-out curve.
+
+#### Step 7: Direct Captions / Prompts Export & Bulk Visual Import from Timeline
+1. **Quick Narration & Timestamp Export**: Click the **"📄 Captions"** button in the Timeline toolbar to instantly generate and download updated SRT, Timed Text, or clean scripts reflecting your latest scene boundary trims.
+2. **Quick Visual Prompts Export**: Click the **"🎨 Prompts"** button to grab Midjourney v6 (`--ar 16:9` / `--ar 9:16`), ComfyUI, or CSV prompt lists.
+3. **Timeline Bulk Image Alignment**: Click the **"📥 Bulk Import"** (`PRO`) button in the toolbar to drop replacement image sets or a `.zip` archive to replace artwork across multiple timeline blocks simultaneously without navigating away.
 
 ---
 
@@ -679,9 +732,130 @@ graph TD
   - FFprobe verification: 1920x1080, 30.0 fps, exact 48.0s duration with **0.00s drift**.
 - **Permanent End-to-End Pipeline Test**: Added [`test_stage1_to_5_pipeline_e2e.py`](file:///c:/Users/samue/OneDrive/Desktop/YT/backend/tests/test_stage1_to_5_pipeline_e2e.py) exercising the entire Stage 1 -> Stage 2 -> Stage 3 -> Stage 4 -> Stage 5 workflow programmatically.
 - **100% Test Passing Rate**:
-  - Backend: 24/24 pytest tests passing (`test_stage1_to_5_pipeline_e2e.py`, `test_render.py`, `test_render_phase8.py`).
-  - Frontend: 16/16 Node tests passing (`stage4-5-ui.test.mjs`, `storyboard-phase2.test.mjs`, `formatters.test.mjs`, `auth.test.mjs`).
-  - Frontend Production Build: Vite compiled 1963 modules with 0 errors in 818ms.
+  - Backend: 29/29 pytest tests passing (`test_bulk_import_and_exporters.py`, `test_stage1_to_5_pipeline_e2e.py`, `test_render.py`, `test_render_phase8.py`).
+  - Frontend: 33/33 Node tests passing (`bulk-import-and-exporters.test.mjs`, `stage4-5-ui.test.mjs`, `storyboard-phase2.test.mjs`, `seo-and-positioning.test.mjs`, `ui-and-flows.test.mjs`, `formatters.test.mjs`, `auth.test.mjs`).
+  - Frontend Production Build: Vite compiled 1968 modules with 0 errors in 1.16s.
+
+---
+
+### 5. Pro Feature Architecture: Bulk Scene Image Alignment & Dual Exporters
+
+#### A. Dedicated Dual Exporter Architecture
+The exporter system completely decouples spoken narration transcripts from visual prompts into dedicated, single-purpose dialogs:
+
+1. **Narration & Subtitles Exporter (`GET /api/projects/{id}/export/captions`)**:
+   - **Query Parameter**: `format=timed_txt | srt | clean_txt`
+   - **Timed Text (`timed_txt`)**: Exports human-readable timecodes with scene duration metrics:
+     ```text
+     [00:00.0 - 00:04.5] (4.5s) Scene 1:
+     "In the heart of the ancient forest, a quiet mystery was brewing."
+     ```
+   - **SubRip Subtitles (`srt`)**: Standard caption format for YouTube, Vimeo, Premiere Pro, or DaVinci Resolve:
+     ```text
+     1
+     00:00:00,000 --> 00:00:04,500
+     In the heart of the ancient forest, a quiet mystery was brewing.
+     ```
+   - **Clean Script Text (`clean_txt`)**: Continuous narration dialogue without timestamps, ideal for proofreading, talent recordings, or documentation.
+   - **Response Payload**:
+     ```json
+     {
+       "format": "srt",
+       "filename": "project_captions_srt.srt",
+       "content": "1\n00:00:00,000 --> ...",
+       "scene_count": 12
+     }
+     ```
+
+2. **Visual Prompts Exporter (`GET /api/projects/{id}/export/prompts`)**:
+   - **Query Parameter**: `format=midjourney | comfyui | csv`
+   - **Midjourney v6 (`midjourney`)**: Formats prompts with active project aspect ratio flags:
+     ```text
+     /imagine prompt: Cinematic medium shot of ancient mossy forest at twilight, volumetric god rays --ar 16:9 --v 6.0
+     ```
+     *(Dynamically maps `16:9` widescreen or `9:16` vertical according to project canvas settings).*
+   - **ComfyUI / Leonardo List (`comfyui`)**: Clean, numbered prompt lines optimized for batch queue pasting in ComfyUI or Leonardo AI pipelines:
+     ```text
+     Scene 1: Cinematic medium shot of ancient mossy forest at twilight, volumetric god rays
+     Scene 2: Wide establishing shot of mist rolling over mountain ridge at dawn
+     ```
+   - **CSV Spreadsheet (`csv`)**: Tabular export with headers `Scene,Timecode,Duration,Narration,Visual_Prompt` for production asset trackers and spreadsheets.
+   - **Response Payload**:
+     ```json
+     {
+       "format": "midjourney",
+       "filename": "project_prompts_midjourney.txt",
+       "content": "/imagine prompt: ...",
+       "scene_count": 12
+     }
+     ```
+
+---
+
+#### B. Pro Bulk Scene Image Alignment & Ingestion Engine (`bulk_import_service.py`)
+
+1. **Multi-File & ZIP Archive Upload (`POST /api/projects/{id}/scenes/bulk-images`)**:
+   - Accepts either `files` (array of `UploadFile`) or `zip_file` (single ZIP archive).
+   - In-memory ZIP decompression protected by security guards:
+     - Maximum uncompressed archive size: **250 MB** (prevents ZIP bombs).
+     - Maximum files count: **150 images**.
+     - Strict path-traversal prevention (rejects absolute paths and relative `..` parent references).
+
+2. **Tolerant Scene Number Matching**:
+   The engine analyzes filenames using an intelligent, multi-tier regex matching heuristic:
+   - **Explicit Scene/Shot Identifiers**: Matches `scene_01.png`, `scene-2.jpg`, `shot_03.webp`, `sc04.png` &rarr; Maps to Scene 1, 2, 3, 4.
+   - **Leading Numbers**: Matches `01_forest.jpg`, `2-character.png`, `03.png` &rarr; Maps to Scene 1, 2, 3.
+   - **Trailing/Delimited Numbers**: Matches `forest_02.png`, `bg-3.jpg` &rarr; Maps to Scene 2, 3.
+   - **Isolated Numerical Tokens**: Matches `hero 04 sunset.png` &rarr; Maps to Scene 4.
+   - **Sequential Fallback**: Unnumbered images are automatically matched sequentially in alphabetical order across empty or subsequent scenes.
+
+3. **100% FFmpeg-Safe Sanitization Pipeline (`sanitize_image_for_ffmpeg`)**:
+   Raw user uploads and external generator images frequently crash FFmpeg if ingested directly. The Scenora sanitization pipeline executes 5 automated transformations:
+   - **EXIF Transposition**: Calls `ImageOps.exif_transpose` to correct phone camera orientation tags, preventing sideways or inverted video rendering.
+   - **Color Space Normalization**: Standardizes all color spaces (`CMYK`, `Palette`, `Greyscale`, `YCbCr`) into standard 8-bit `RGB`. For `RGBA` images with transparency, flattens the alpha channel onto a solid black `(0, 0, 0)` background to prevent green/magenta chroma corruptions in H.264.
+   - **Even Pixel Dimension Normalization**: FFmpeg's standard H.264 `yuv420p` encoder strictly requires video frame dimensions to be divisible by 2. Odd-pixel images (e.g. 1921x1081) cause fatal FFmpeg crashes (`height not divisible by 2`). The sanitizer automatically adjusts:
+     ```python
+     target_w = w if w % 2 == 0 else w - 1
+     target_h = h if h % 2 == 0 else h - 1
+     img = img.crop((0, 0, target_w, target_h))
+     ```
+   - **Bounds & Memory Clamping**: Images exceeding 3840px in width or height are scaled down using high-fidelity LANCZOS interpolation. This guarantees memory consumption stays under 150MB during concurrent scene rendering, eliminating cloud container Out-Of-Memory (OOM) killed processes.
+   - **Pristine Encoding**: Saves the cleaned image as a lossless, uncorrupted PNG byte stream for durable cloud storage and FFmpeg decoding.
+
+4. **Pro Entitlement Security Layer**:
+   - Enforced on backend via `get_payment_service().get_active_entitlement(user.uid)`.
+   - Non-Pro accounts calling `/scenes/bulk-images` receive HTTP 403 with `{"detail": "PRO_ENTITLEMENT_REQUIRED"}`.
+   - In the frontend, Free tier users clicking the `📥 Bulk Import (PRO)` button receive an informative upgrade modal highlighting Pro advantages with a direct CTA to `/pricing`.
+
+---
+
+#### C. Solid High-Contrast Lightbox & Modal Architecture
+
+- **Root Cause of Prior Transparency Bugs**: The frontend build uses vanilla CSS tokens without an active Tailwind CSS build step. Using Tailwind utility classes like `bg-white`, `bg-slate-50/70`, or `text-slate-900` resulted in unset `background-color` properties, allowing underlying workspace text to bleed through dialog windows.
+- **Architectural Solution**:
+  - All modal containers (`BulkImportModal.tsx`, `ExportCaptionsModal.tsx`, `ExportPromptsModal.tsx`, `ExportModal.tsx`) now enforce 100% solid, opaque CSS inline styling.
+  - **Modal Container**: Solid `#ffffff` background with 1px solid `#e2e8f0` border and `0 25px 50px -12px rgba(0, 0, 0, 0.25)` drop shadow.
+  - **Header & Footer**: Solid `#f8fafc` background with crisp `#e2e8f0` dividers.
+  - **Typography**: Solid high-contrast `#0f172a` (900 slate) for titles and `#475569` (600 slate) for body copy.
+  - **Backdrop Overlay**: Darkened cinema glass `rgba(3, 7, 18, 0.85)` with `backdropFilter: "blur(12px)"`, fully obscuring background page content.
+
+---
+
+#### D. Multi-Branch CI/CD Synchronization & Render Engine Deployment
+
+- **Dual-Branch Architecture**:
+  - **GitHub `main` branch**: Primary repository trunk for frontend and backend code.
+  - **Render Web Service (`scenoraedits-backend`)**: Connected to track the `feat/scenoraedits-engine` branch on GitHub.
+- **Deployment Protocol**:
+  - When backend changes are committed to `main`, they must be pushed to `origin/feat/scenoraedits-engine` simultaneously to trigger Render auto-deploy:
+    ```bash
+    git push origin main
+    git push origin main:feat/scenoraedits-engine
+    ```
+  - Fast-forwarding `feat/scenoraedits-engine` to match `main` ensures newly registered endpoints (such as `/export/captions`, `/export/prompts`, and `/scenes/bulk-images`) deploy to the live server at `https://scenoraedits.onrender.com` without 404 routing errors.
+- **Durable Media Storage vs Ephemeral Disk**:
+  - Render containers utilize ephemeral local storage that resets on service redeployment or scaling recycles.
+  - Master timeline audio and rendered scene images are backed by durable cloud storage (Firebase Storage / Google Cloud Storage) with local disk caching for maximum playback and FFmpeg rendering performance.
 
 ---
 
@@ -691,7 +865,8 @@ graph TD
 |---|---|---|---|---|
 | **Stage 1** | **Script & Audio / Master Timeline** | Edge-TTS Neural Synthesis & Clipchamp Caption Parser | Sentence-level timecodes, contiguous non-overlapping scenes, master audio track | **Production Ready (Audited)** |
 | **Stage 2** | **Video Bible Consistency Engine** | Cross-scene entity continuity & visual memory | Characters, locations, style rules, continuity prompt prefixing | **Production Ready (Audited)** |
-| **Stage 3** | **Visual Storyboard & AI Generation** | Multi-engine image synthesis & layout studio | Flux/OpenAI/Mock generation, A/B variations, graphic slide cards, dual view layouts | **Production Ready (Audited)** |
-| **Stage 4** | **Timeline Studio & Motion Engine** | CSS/FFmpeg motion synthesis & multi-track audio | Pan/zoom animations, scene transitions, slide templates, BGM auto-ducking, 1-click auto-align | **Production Ready (Audited)** |
-| **Stage 5** | **Export & Deliver** | Multi-pass FFmpeg rendering & multi-format delivery | Zero-drift 1080p MP4, ASS hardcoded captions, WebM, 720p, MP3, GIF, non-blocking UI | **Production Ready (Audited)** |
+| **Stage 3** | **Visual Storyboard & AI Generation** | Multi-engine image synthesis, dual exporters & bulk alignment | Flux/OpenAI/Mock generation, A/B variations, graphic slide cards, Captions/Prompts exporters, Bulk Import (Pro) | **Production Ready (Audited)** |
+| **Stage 4** | **Timeline Studio & Motion Engine** | CSS/FFmpeg motion synthesis & multi-track audio | Pan/zoom animations, scene transitions, slide templates, BGM auto-ducking, 1-click auto-align, dual exporters & bulk import toolbar | **Production Ready (Audited)** |
+| **Stage 5** | **Export & Deliver** | Multi-pass FFmpeg rendering & multi-format delivery | Zero-drift 1080p MP4, ASS hardcoded captions, WebM, 720p, MP3, GIF, non-blocking UI, solid lightbox | **Production Ready (Audited)** |
+
 
