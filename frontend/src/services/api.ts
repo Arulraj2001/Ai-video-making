@@ -1125,6 +1125,52 @@ class ApiService {
     const clean = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
     return `${this.baseUrl}/${clean}`;
   }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // BULK SCENE IMPORT & DUAL EXPORTERS
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  async exportTimelineCaptions(
+    projectId: string,
+    format: "timed_txt" | "srt" | "clean_txt" = "timed_txt"
+  ): Promise<{ format: string; filename: string; content: string; scene_count: number }> {
+    return this.request<{ format: string; filename: string; content: string; scene_count: number }>(
+      `/api/projects/${encodeURIComponent(projectId)}/export/captions?format=${encodeURIComponent(format)}`
+    );
+  }
+
+  async exportSystemPrompts(
+    projectId: string,
+    format: "midjourney" | "comfyui" | "csv" = "midjourney"
+  ): Promise<{ format: string; filename: string; content: string; prompt_count: number }> {
+    return this.request<{ format: string; filename: string; content: string; prompt_count: number }>(
+      `/api/projects/${encodeURIComponent(projectId)}/export/prompts?format=${encodeURIComponent(format)}`
+    );
+  }
+
+  async bulkImportSceneImages(
+    projectId: string,
+    files: File[]
+  ): Promise<{
+    matched_count: number;
+    unmatched_files: string[];
+    updated_scenes: Scene[];
+    project: Project;
+  }> {
+    const formData = new FormData();
+    for (const f of files) {
+      formData.append("files", f);
+    }
+    return this.request<{
+      matched_count: number;
+      unmatched_files: string[];
+      updated_scenes: Scene[];
+      project: Project;
+    }>(`/api/projects/${encodeURIComponent(projectId)}/scenes/bulk-images`, {
+      method: "POST",
+      body: formData,
+    });
+  }
 }
 
 export interface UsageResponse {

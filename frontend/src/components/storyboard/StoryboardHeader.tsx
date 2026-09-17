@@ -41,6 +41,9 @@ interface StoryboardHeaderProps {
   dismissRapidAlert: boolean;
   onDismissRapidAlert: () => void;
   onOpenClusteringModal: () => void;
+  onOpenExportCaptions?: () => void;
+  onOpenExportPrompts?: () => void;
+  onOpenBulkImport?: () => void;
 }
 
 export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
@@ -69,6 +72,9 @@ export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
   dismissRapidAlert,
   onDismissRapidAlert,
   onOpenClusteringModal,
+  onOpenExportCaptions,
+  onOpenExportPrompts,
+  onOpenBulkImport,
 }) => {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -309,6 +315,59 @@ export const StoryboardHeader: React.FC<StoryboardHeaderProps> = ({
             >
               <RefreshCw size={13} className={retryingFailed ? "animate-spin" : ""} />
               <span>Retry {imagesFailedCount} Failed</span>
+            </button>
+          )}
+
+          {/* Export Captions */}
+          {onOpenExportCaptions && (
+            <button
+              type="button"
+              id="storyboard-export-captions-btn"
+              onClick={onOpenExportCaptions}
+              className="sb-btn-secondary"
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px" }}
+              title="Export exact timeline narration and timecodes (SRT / text)"
+            >
+              <span>📄 Captions</span>
+            </button>
+          )}
+
+          {/* Export Prompts */}
+          {onOpenExportPrompts && (
+            <button
+              type="button"
+              id="storyboard-export-prompts-btn"
+              onClick={onOpenExportPrompts}
+              className="sb-btn-secondary"
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px" }}
+              title="Export visual image prompts for Midjourney, Leonardo, or CSV"
+            >
+              <span>🎨 Prompts</span>
+            </button>
+          )}
+
+          {/* Bulk Import (Pro) */}
+          {onOpenBulkImport && (
+            <button
+              type="button"
+              id="storyboard-bulk-import-btn"
+              onClick={onOpenBulkImport}
+              className="sb-btn-secondary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "12px",
+                border: "1px solid rgba(245, 158, 11, 0.4)",
+                background: "rgba(245, 158, 11, 0.08)",
+                color: "#d97706",
+              }}
+              title="Bulk import & align image files or ZIP archive (Pro)"
+            >
+              <span>📥 Bulk Import</span>
+              <span style={{ fontSize: "9px", padding: "1px 5px", background: "#f59e0b", color: "#fff", borderRadius: "10px", fontWeight: 800 }}>
+                PRO
+              </span>
             </button>
           )}
 

@@ -1,7 +1,12 @@
+import csv
+import io
 import json
+import re
+import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional, Union
-from fastapi import APIRouter, UploadFile, File, Form, Body, Request, HTTPException, status, Depends
+from typing import List, Optional, Union, Tuple, Dict, Any
+from fastapi import APIRouter, UploadFile, File, Form, Body, Request, HTTPException, status, Depends, Query
 from fastapi.responses import JSONResponse
 from app.schemas.project import (
     ProjectCreate,
@@ -19,11 +24,28 @@ from app.schemas.project import (
 )
 from app.services.project_service import project_service
 from app.services.caption_parser import parse_and_validate_captions
+from app.services.bulk_import_service import bulk_import_service
+from app.services.payments.payment_service import get_payment_service
 from app.utils.errors import NotFoundException
 from app.api.routes.video_bible import _serialize_bible
 from app.api.dependencies.auth import get_current_user, AuthenticatedUser
+import logging
+
+logger = logging.getLogger("scenora.projects")
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+def _format_srt_time(seconds: float) -> str:
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int(round((seconds - int(seconds)) * 1000))
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+def _format_display_time(seconds: float) -> str:
+    minutes = int(seconds // 60)
+    secs = seconds % 60
+    return f"{minutes:02d}:{secs:04.1f}"
 
 def _scene_image_url(project_id, scene, owner_id) -> Optional[str]:
     """Returns a fresh/durable URL for a completed scene image, falling back to the stored one."""
@@ -492,11 +514,235 @@ def cleanup_project_temp_files(project_id: str, current_user: AuthenticatedUser 
         raise NotFoundException("Project", project_id)
     res = project_service.cleanup_temp_files(project_id)
     return {"message": "Cleanup complete", **res}
-    return {"message": "Cleanup complete", **res}
 
 @router.post("/cleanup")
 def cleanup_all_temp_files():
     """Cleans up temporary render directories across all projects."""
     res = project_service.cleanup_temp_files(None)
     return {"message": "Cleanup complete", **res}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BULK SCENE IMAGE IMPORT (PAID PRO FEATURE) & DUAL EXPORTERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.post("/{project_id}/scenes/bulk-images")
+async def bulk_import_scene_images(
+    project_id: str,
+    files: List[UploadFile] = File(...),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    PRO FEATURE: Ingests multiple images or a ZIP archive, matches files to scenes,
+    sanitizes each image for 100% FFmpeg rendering safety, and updates project scenes.
+    """
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not project:
+        raise NotFoundException("Project", project_id)
+
+    # 1. Pro Entitlement Check
+    is_pro = False
+    if current_user.is_admin:
+        is_pro = True
+    else:
+        payment_svc = get_payment_service()
+        ent = payment_svc.get_active_entitlement(current_user.uid)
+        if ent and ent.status == "active":
+            is_pro = True
+
+    if not is_pro:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="PRO_ENTITLEMENT_REQUIRED: Bulk scene image alignment is a Pro creator feature. Upgrade to Pro to unlock bulk imports and automated alignment."
+        )
+
+    if not files:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No files uploaded.")
+
+    # 2. Extract files (supporting single .zip or multi-file drops)
+    extracted: List[Tuple[str, bytes]] = []
+    if len(files) == 1 and (files[0].filename or "").lower().endswith(".zip"):
+        zip_bytes = await files[0].read()
+        try:
+            extracted = bulk_import_service.extract_zip_files(zip_bytes)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid ZIP archive: {e}")
+    else:
+        for f in files:
+            content = await f.read()
+            extracted.append((f.filename or "image.png", content))
+
+    if not extracted:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid image files found in upload.")
+
+    # 3. Match files to scenes
+    assigned, leftover = bulk_import_service.match_files_to_scenes(extracted, project.scenes)
+
+    # 4. Sanitize and assign to matched scenes
+    updated_scenes = []
+    timestamp = int(time.time() * 1000)
+
+    for scene_num, (filename, raw_bytes) in assigned.items():
+        # scene_num is 1-indexed
+        target_scene = next((s for s in project.scenes if getattr(s, "scene_number", None) == scene_num), None)
+        if not target_scene and 1 <= scene_num <= len(project.scenes):
+            target_scene = project.scenes[scene_num - 1]
+
+        if not target_scene:
+            continue
+
+        try:
+            clean_bytes, w, h = bulk_import_service.sanitize_image_for_ffmpeg(raw_bytes, filename)
+        except Exception as e:
+            logger.warning(f"Skipping corrupted bulk image '{filename}': {e}")
+            continue
+
+        saved_name = f"bulk_{target_scene.id}_{timestamp}.png"
+        relative_path, public_url = project_service.save_scene_image_asset(
+            project_id=project.id,
+            scene_id=target_scene.id,
+            image_bytes=clean_bytes,
+            filename=saved_name,
+            owner_id=project.owner_id,
+        )
+
+        target_scene.image_url = public_url
+        target_scene.image_path = relative_path
+        target_scene.image_status = "completed"
+        target_scene.image_error = None
+        target_scene.image_metadata = {
+            "source": "bulk_import",
+            "original_filename": filename,
+            "width": w,
+            "height": h,
+            "imported_at": datetime.now(timezone.utc).isoformat()
+        }
+        updated_scenes.append(SceneSchema.model_validate(target_scene))
+
+    project.updated_at = datetime.now(timezone.utc).isoformat()
+    project_service._save_to_disk(project)
+
+    return {
+        "matched_count": len(updated_scenes),
+        "unmatched_files": leftover,
+        "updated_scenes": updated_scenes,
+        "project": _to_project_response(project)
+    }
+
+@router.get("/{project_id}/export/captions")
+def export_project_captions(
+    project_id: str,
+    format: str = Query("timed_txt"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Exports project narration captions with exact timeline timecodes.
+    Formats:
+      - 'timed_txt': [00:00.0 - 00:06.5] Scene 1: "..."
+      - 'srt': Standard SubRip subtitle format (.srt)
+      - 'clean_txt': Raw continuous narration script text
+    """
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not project:
+        raise NotFoundException("Project", project_id)
+
+    slug = re.sub(r"[^a-zA-Z0-9_\-]+", "_", (project.name or "project").lower()).strip("_")
+
+    if format == "srt":
+        srt_lines = []
+        for i, scene in enumerate(project.scenes, start=1):
+            start_s = _format_srt_time(scene.start)
+            end_s = _format_srt_time(scene.end)
+            text = (scene.caption or "").strip()
+            srt_lines.append(f"{i}\n{start_s} --> {end_s}\n{text}\n")
+        content = "\n".join(srt_lines)
+        ext = "srt"
+    elif format == "timed_txt":
+        lines = []
+        for i, scene in enumerate(project.scenes, start=1):
+            start_s = _format_display_time(scene.start)
+            end_s = _format_display_time(scene.end)
+            dur = scene.end - scene.start
+            text = (scene.caption or "").strip()
+            lines.append(f"[{start_s} - {end_s}] ({dur:.1f}s) Scene {i}:\n\"{text}\"\n")
+        content = "\n".join(lines)
+        ext = "txt"
+    else:  # clean_txt
+        lines = [(scene.caption or "").strip() for scene in project.scenes if (scene.caption or "").strip()]
+        content = "\n\n".join(lines)
+        ext = "txt"
+
+    return {
+        "format": format,
+        "filename": f"{slug}_captions_{format}.{ext}",
+        "content": content,
+        "scene_count": len(project.scenes)
+    }
+
+@router.get("/{project_id}/export/prompts")
+def export_project_prompts(
+    project_id: str,
+    format: str = Query("midjourney"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Exports system-generated visual prompts formatted for external AI generators.
+    Formats:
+      - 'midjourney': /imagine prompt: ... --ar {aspect_ratio} --v 6.0
+      - 'comfyui': Clean line-by-line list for ComfyUI / Leonardo / Fooocus
+      - 'csv': Spreadsheet with Scene, Start, End, Narration, Prompt, AspectRatio
+    """
+    project = project_service.get_project(project_id, owner_id=current_user.uid)
+    if not project:
+        raise NotFoundException("Project", project_id)
+
+    slug = re.sub(r"[^a-zA-Z0-9_\-]+", "_", (project.name or "project").lower()).strip("_")
+    aspect_ratio = getattr(project.canvas_settings, "aspect_ratio", "16:9") or "16:9"
+
+    items = []
+    for i, scene in enumerate(project.scenes, start=1):
+        prompt = (scene.image_prompt or scene.visual_description or scene.caption or "").strip()
+        items.append({
+            "scene_num": i,
+            "start": scene.start,
+            "end": scene.end,
+            "caption": (scene.caption or "").strip(),
+            "prompt": prompt
+        })
+
+    if format == "midjourney":
+        lines = []
+        for item in items:
+            prompt_clean = item["prompt"]
+            lines.append(f"// Scene {item['scene_num']} ({item['start']:.1f}s - {item['end']:.1f}s)\n/imagine prompt: {prompt_clean} --ar {aspect_ratio} --v 6.0\n")
+        content = "\n".join(lines)
+        ext = "txt"
+    elif format == "comfyui":
+        lines = [item["prompt"] for item in items]
+        content = "\n\n".join(lines)
+        ext = "txt"
+    else:  # csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Scene", "Start Time", "End Time", "Duration (s)", "Narration Caption", "System Prompt", "Aspect Ratio"])
+        for item in items:
+            dur = round(item["end"] - item["start"], 2)
+            writer.writerow([
+                item["scene_num"],
+                _format_display_time(item["start"]),
+                _format_display_time(item["end"]),
+                dur,
+                item["caption"],
+                item["prompt"],
+                aspect_ratio
+            ])
+        content = output.getvalue()
+        ext = "csv"
+
+    return {
+        "format": format,
+        "filename": f"{slug}_prompts_{format}.{ext}",
+        "content": content,
+        "prompt_count": len(items)
+    }
+
 

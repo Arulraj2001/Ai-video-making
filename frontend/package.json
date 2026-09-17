@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test tests/auth.test.mjs tests/formatters.test.mjs"
+    "test": "node --test tests/auth.test.mjs tests/formatters.test.mjs tests/stage4-5-ui.test.mjs tests/storyboard-phase2.test.mjs tests/seo-and-positioning.test.mjs tests/ui-and-flows.test.mjs tests/bulk-import-and-exporters.test.mjs"
   },
   "dependencies": {
     "firebase": "^12.18.0",

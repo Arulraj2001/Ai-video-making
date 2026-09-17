@@ -12,6 +12,9 @@ import { SlideTemplateModal } from "./SlideTemplateModal";
 import { OverlayElementsInspector } from "./OverlayElementsInspector";
 import { ConfirmModal } from "../ConfirmModal";
 import { KeyboardShortcutsModal } from "../KeyboardShortcutsModal";
+import { ExportCaptionsModal } from "../storyboard/ExportCaptionsModal";
+import { ExportPromptsModal } from "../storyboard/ExportPromptsModal";
+import { BulkImportModal } from "../storyboard/BulkImportModal";
 import { api } from "../../services/api";
 
 interface TimelineEditorProps {
@@ -35,6 +38,9 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   const [deleteTargetSceneId, setDeleteTargetSceneId] = useState<string | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [isExportCaptionsOpen, setIsExportCaptionsOpen] = useState(false);
+  const [isExportPromptsOpen, setIsExportPromptsOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   // Non-blocking Toast Notification Banner System
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | "info" } | null>(null);
@@ -705,8 +711,74 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           </span>
         </div>
 
-        {/* Right: Undo / Redo & Zoom Controls */}
+        {/* Right: Dual Exporters, Bulk Import, Undo / Redo & Zoom Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Dedicated Dual Exporters & Bulk Import */}
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              id="timeline-export-captions-btn"
+              type="button"
+              onClick={() => setIsExportCaptionsOpen(true)}
+              title="Export spoken narration and timestamps in SRT or text"
+              className="btn-secondary"
+              style={{
+                padding: "6px 11px",
+                fontSize: "0.80rem",
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                borderRadius: "var(--radius-sm)",
+              }}
+            >
+              📄 Captions
+            </button>
+
+            <button
+              id="timeline-export-prompts-btn"
+              type="button"
+              onClick={() => setIsExportPromptsOpen(true)}
+              title="Export visual image prompts for Midjourney / ComfyUI"
+              className="btn-secondary"
+              style={{
+                padding: "6px 11px",
+                fontSize: "0.80rem",
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                borderRadius: "var(--radius-sm)",
+              }}
+            >
+              🎨 Prompts
+            </button>
+
+            <button
+              id="timeline-bulk-import-btn"
+              type="button"
+              onClick={() => setIsBulkImportOpen(true)}
+              title="Bulk import & align image files or ZIP archive (Pro)"
+              className="btn-secondary"
+              style={{
+                padding: "6px 11px",
+                fontSize: "0.80rem",
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                borderColor: "rgba(245, 158, 11, 0.4)",
+                background: "rgba(245, 158, 11, 0.08)",
+                color: "#b45309",
+                borderRadius: "var(--radius-sm)",
+              }}
+            >
+              📥 Bulk Import
+              <span style={{ fontSize: "9px", padding: "1px 5px", background: "#f59e0b", color: "#fff", borderRadius: "10px", fontWeight: 800 }}>
+                PRO
+              </span>
+            </button>
+          </div>
+
           <div style={{ display: "flex", gap: "4px" }}>
             <button
               id="timeline-undo-btn"
@@ -1284,6 +1356,31 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
       <KeyboardShortcutsModal
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
+      />
+
+      {/* Dedicated Dual Exporters & Bulk Import Modals */}
+      <ExportCaptionsModal
+        projectId={project.id}
+        projectName={project.name || "project"}
+        isOpen={isExportCaptionsOpen}
+        onClose={() => setIsExportCaptionsOpen(false)}
+      />
+
+      <ExportPromptsModal
+        projectId={project.id}
+        projectName={project.name || "project"}
+        isOpen={isExportPromptsOpen}
+        onClose={() => setIsExportPromptsOpen(false)}
+      />
+
+      <BulkImportModal
+        project={project}
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onSuccess={(updatedProject) => {
+          onProjectUpdated(updatedProject);
+          showToast(`✓ Bulk images aligned and updated!`, "success");
+        }}
       />
 
       {/* Toast Notification Banner */}

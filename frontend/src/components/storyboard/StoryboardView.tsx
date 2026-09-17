@@ -20,6 +20,9 @@ import { StoryboardLightboxModal } from "./StoryboardLightboxModal";
 import { StoryboardClusteringModal } from "./StoryboardClusteringModal";
 import { StoryboardVariationsModal } from "./StoryboardVariationsModal";
 import { StoryboardGraphicModal } from "./StoryboardGraphicModal";
+import { ExportCaptionsModal } from "./ExportCaptionsModal";
+import { ExportPromptsModal } from "./ExportPromptsModal";
+import { BulkImportModal } from "./BulkImportModal";
 
 interface StoryboardViewProps {
   project: Project;
@@ -134,6 +137,11 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
   const [variationsByScene, setVariationsByScene] = useState<Record<string, SceneVariationItem[]>>({});
   const [variationsLoading, setVariationsLoading] = useState(false);
   const [variationsError, setVariationsError] = useState<string | null>(null);
+
+  // Dual Exporters & Bulk Import Modals
+  const [exportCaptionsOpen, setExportCaptionsOpen] = useState(false);
+  const [exportPromptsOpen, setExportPromptsOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   // Graphic template modal
   const [graphicModalScene, setGraphicModalScene] = useState<Scene | null>(null);
@@ -707,6 +715,9 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         dismissRapidAlert={dismissRapidAlert}
         onDismissRapidAlert={() => setDismissRapidAlert(true)}
         onOpenClusteringModal={() => setClusteringModalOpen(true)}
+        onOpenExportCaptions={() => setExportCaptionsOpen(true)}
+        onOpenExportPrompts={() => setExportPromptsOpen(true)}
+        onOpenBulkImport={() => setBulkImportOpen(true)}
       />
 
       {/* Non-blocking Inline Error Banner */}
@@ -915,6 +926,33 @@ export const StoryboardView: React.FC<StoryboardViewProps> = ({
         onChangeAccentColor={setGraphicAccent}
         onApplyTemplate={handleApplyGraphicTemplate}
         applying={graphicApplying}
+      />
+
+      {/* Dedicated Dual Exporters & Bulk Import Modals */}
+      <ExportCaptionsModal
+        projectId={project.id}
+        projectName={project.name || "project"}
+        isOpen={exportCaptionsOpen}
+        onClose={() => setExportCaptionsOpen(false)}
+      />
+
+      <ExportPromptsModal
+        projectId={project.id}
+        projectName={project.name || "project"}
+        isOpen={exportPromptsOpen}
+        onClose={() => setExportPromptsOpen(false)}
+      />
+
+      <BulkImportModal
+        project={project}
+        isOpen={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        onSuccess={(updatedProject) => {
+          setScenes(updatedProject.scenes || []);
+          if (onProjectUpdated) {
+            onProjectUpdated(updatedProject);
+          }
+        }}
       />
     </div>
   );

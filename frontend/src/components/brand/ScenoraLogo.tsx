@@ -40,7 +40,7 @@ export const ScenoraLogo: React.FC<ScenoraLogoProps> = ({
       role="banner"
       aria-label={`${BRAND.name}${subBrandLabel ? ` ${subBrandLabel}` : ""}`}
     >
-      {/* Geometric Scenora Camera Slate Icon */}
+      {/* Geometric Scenora Video Studio Icon */}
       <svg
         width={dimensions.icon}
         height={dimensions.icon}
@@ -50,44 +50,41 @@ export const ScenoraLogo: React.FC<ScenoraLogoProps> = ({
         className="shrink-0 transition-transform duration-200 hover:scale-105"
       >
         <defs>
-          <linearGradient id="scenora-petrol-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#244855" />
-            <stop offset="100%" stopColor="#18313A" />
+          <linearGradient id="scenora-indigo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6366F1" />
+            <stop offset="100%" stopColor="#3730A3" />
           </linearGradient>
-          <linearGradient id="scenora-crimson-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#E64833" />
-            <stop offset="100%" stopColor="#C93824" />
+          <linearGradient id="scenora-flame-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF8533" />
+            <stop offset="100%" stopColor="#FF5500" />
           </linearGradient>
+          <filter id="logo-drop" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" floodColor="#1E1B4B" floodOpacity="0.25" />
+          </filter>
         </defs>
 
-        {/* Foundation Slate Base */}
-        <rect x="2" y="5" width="28" height="22" rx="6" fill="url(#scenora-petrol-grad)" />
-        {/* Subtle Slate Clapper Stripes */}
-        <path
-          d="M 6 5 L 10 5 L 8 11 L 4 11 Z"
-          fill="#90AEAD"
-          fillOpacity="0.4"
-        />
-        <path
-          d="M 13 5 L 17 5 L 15 11 L 11 11 Z"
-          fill="#90AEAD"
-          fillOpacity="0.4"
-        />
-        <path
-          d="M 20 5 L 24 5 L 22 11 L 18 11 Z"
-          fill="#90AEAD"
-          fillOpacity="0.4"
-        />
+        {/* Foundation Squircle Base */}
+        <rect x="2" y="2" width="28" height="28" rx="7.5" fill="url(#scenora-indigo-grad)" filter="url(#logo-drop)" />
+        <rect x="2" y="2" width="28" height="28" rx="7.5" stroke="#FFFFFF" strokeOpacity="0.25" strokeWidth="1" />
 
-        {/* Focus Film Aperture / Dynamic Play Prism */}
-        <circle cx="16" cy="18" r="6" fill="#FBE9D0" fillOpacity="0.12" />
-        <path
-          d="M 14.5 14.5 L 20 18 L 14.5 21.5 Z"
-          fill="url(#scenora-crimson-grad)"
-        />
+        {/* Lens Aperture Ring */}
+        <circle cx="16" cy="16" r="9" stroke="#FFFFFF" strokeOpacity="0.2" strokeWidth="1" />
 
-        {/* Accent Cornerstone Pip */}
-        <circle cx="26" cy="9" r="1.75" fill="#E64833" />
+        {/* Clapper Slashes */}
+        <line x1="11" y1="5.5" x2="14" y2="10" stroke="#FFFFFF" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="15.5" y1="5.5" x2="18.5" y2="10" stroke="#FFFFFF" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
+
+        {/* Smooth Flame Orange Play Prism */}
+        <path
+          d="M 12 10.5 C 12 9.7 12.8 9.2 13.5 9.7 L 22.2 15.2 C 22.9 15.6 22.9 16.6 22.2 17.0 L 13.5 22.5 C 12.8 23.0 12 22.5 12 21.7 Z"
+          fill="url(#scenora-flame-grad)"
+        />
+        {/* Bevel Highlight */}
+        <path d="M 13 11 L 21 16" stroke="#FFE4B5" strokeOpacity="0.75" strokeWidth="0.8" strokeLinecap="round" />
+
+        {/* Golden AI Magic Spark */}
+        <path d="M 24 5.5 L 24.8 7.2 L 26.5 8 L 24.8 8.8 L 24 10.5 L 23.2 8.8 L 21.5 8 L 23.2 7.2 Z" fill="#FFC107" />
+        <circle cx="24" cy="8" r="0.6" fill="#FFFFFF" />
       </svg>
 
       {/* Brand Typography */}
