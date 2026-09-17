@@ -189,6 +189,7 @@ export const DashboardPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={async (input) => {
           await createProject(input);
+          setActiveStage("script");
         }}
       />
 

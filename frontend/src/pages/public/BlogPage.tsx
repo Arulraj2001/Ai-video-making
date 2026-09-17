@@ -643,7 +643,7 @@ export const BlogPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="max-w-2xl mx-auto space-y-3">
+          <div className="blog-faq-list">
             {[
               {
                 q: "Are these strategies applicable to YouTube monetization?",
@@ -658,22 +658,56 @@ export const BlogPage: React.FC = () => {
                 a: "We publish new creator guides and algorithm case studies every week.",
               },
             ].map((faq, idx) => (
-              <div key={idx} className="feat-faq-item">
+              <div key={idx} className="blog-faq-item">
                 <button
                   onClick={() => toggleFaq(idx)}
-                  className="feat-faq-btn"
+                  className="blog-faq-question"
                   aria-expanded={openFaqIndex === idx}
                 >
                   <span>{faq.q}</span>
                   {openFaqIndex === idx ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </button>
                 {openFaqIndex === idx && (
-                  <div className="feat-faq-content">
+                  <div className="blog-faq-answer">
                     <p>{faq.a}</p>
                   </div>
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 7. BOTTOM CONVERSION BANNER */}
+      <section className="blog-cta-section" aria-label="Build Video CTA">
+        <div className="blog-container">
+          <div className="blog-cta-banner">
+            <h2>Ready to Put These Playbooks Into Practice?</h2>
+            <p>
+              Jump into ScenoraEdits Studio. Upload your audio, split your scenes, generate consistent characters, and export 1080p master videos in minutes.
+            </p>
+            <div className="blog-cta-actions">
+              <button
+                onClick={() => navigate("/app")}
+                className="blog-btn-primary"
+                id="blog-footer-cta"
+              >
+                <span>Launch Studio Free →</span>
+              </button>
+              <button
+                onClick={() => navigate("/how-it-works")}
+                className="blog-btn-secondary"
+              >
+                <span>Walk Through the 5 Stages</span>
+              </button>
+            </div>
+            <div className="blog-cta-subtext">
+              <span>✓ Free forever to test</span>
+              <span>•</span>
+              <span>✓ Zero token markups (BYOK)</span>
+              <span>•</span>
+              <span>✓ 100% Commercial rights</span>
+            </div>
           </div>
         </div>
       </section>

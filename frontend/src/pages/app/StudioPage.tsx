@@ -43,6 +43,18 @@ export const StudioPage: React.FC<StudioPageProps> = ({ projectId }) => {
     }
   }, [projectId, projects, activeProject, selectProject]);
 
+  // Guarantee that brand-new projects (0 scenes) always start on Stage 1 (Script & Audio)
+  useEffect(() => {
+    if (activeProject && (!activeProject.scenes || activeProject.scenes.length === 0)) {
+      const urlStage = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("stage")
+        : null;
+      if (!urlStage || urlStage === "export") {
+        setActiveStage("script");
+      }
+    }
+  }, [activeProject?.id, activeProject?.scenes?.length]);
+
   if (projectsLoading) {
     return <LoadingState message="Loading ScenoraEdits Studio..." className="py-20" />;
   }

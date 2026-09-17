@@ -3,6 +3,7 @@ import { useRouter } from "../../router/Router";
 import { useAuth } from "../../context/AuthContext";
 import { useSEO } from "../../utils/seo";
 import { api, type PlanConfigResponse } from "../../services/api";
+import { db } from "../../lib/firebase";
 import "./PricingPage.css";
 import {
   Sparkles,
@@ -22,6 +23,67 @@ import {
   Cpu,
 } from "lucide-react";
 
+const buildPlansFromConfig = (data: any): PlanConfigResponse[] => {
+  const dynamicPlans: PlanConfigResponse[] = [];
+
+  // 6-Month Plan
+  if (data?.plan_6m_enabled !== false) {
+    dynamicPlans.push({
+      plan_id: data?.plan_6m_id || "scenora-pro-6months",
+      name: data?.plan_6m_name || "ScenoraEdits Creator Pro (6 Months)",
+      price_inr: Number(data?.plan_6m_price_inr ?? 1799),
+      price_usd: Number(data?.plan_6m_price_usd ?? 29),
+      duration_days: Number(data?.plan_6m_duration_days ?? 180),
+      enabled: true,
+      description:
+        data?.plan_6m_description ||
+        "Full studio timeline access, Video Bible consistency, and BYOK integration for 6 months.",
+      upi_id: data?.payment_upi_id || "scenoraedits@upi",
+      upi_qr_url: data?.payment_upi_qr_url || "",
+      bmc_url: data?.payment_bmc_url || "https://buymeacoffee.com/scenoraedits",
+      features: [
+        "Full studio timeline access for 6 months",
+        "Bring Your Own Key (BYOK) unlimited generations",
+        "Video Bible™ character consistency engine",
+        "16:9 Landscape & 9:16 Shorts export",
+        "Speech-aware DSP audio ducking",
+        "Commercial YouTube monetization rights",
+      ],
+    });
+  }
+
+  // 1-Year Plan
+  if (data?.yearly_plan_enabled !== false) {
+    dynamicPlans.push({
+      plan_id: data?.yearly_plan_id || "scenora-pro-yearly",
+      name: data?.yearly_plan_name || "ScenoraEdits Creator Pro (Annual Pass)",
+      price_inr: Number(data?.yearly_plan_price_inr ?? 2999),
+      price_usd: Number(data?.yearly_plan_price_usd ?? 49),
+      duration_days: Number(data?.yearly_plan_duration_days ?? 365),
+      enabled: true,
+      description:
+        data?.yearly_plan_description ||
+        "Unlimited priority cloud GPU rendering, Video Bible consistency engine, multi-aspect export, and auto-ducking for 365 days.",
+      upi_id: data?.payment_upi_id || "scenoraedits@upi",
+      upi_qr_url: data?.payment_upi_qr_url || "",
+      bmc_url: data?.payment_bmc_url || "https://buymeacoffee.com/scenoraedits",
+      features: [
+        "Full studio timeline access for 1 full year",
+        "Bring Your Own Key (BYOK) unlimited generations",
+        "Unlimited priority cloud GPU rendering queue",
+        "Full Video Bible™ character & style continuity",
+        "Multi-aspect ratio exports (16:9 & 9:16 Shorts)",
+        "Speech-aware digital audio ducking (-14dB DSP)",
+        "Kinetic word-by-word highlighted captions",
+        "100% Commercial YouTube monetization license",
+        "Priority creator support SLA & all updates",
+      ],
+    });
+  }
+
+  return dynamicPlans;
+};
+
 export const PricingPage: React.FC = () => {
   const { navigate } = useRouter();
   const { isAuthenticated } = useAuth();
@@ -37,7 +99,7 @@ export const PricingPage: React.FC = () => {
   });
 
   const [currency, setCurrency] = useState<"inr" | "usd">("usd");
-  const [plans, setPlans] = useState<PlanConfigResponse[]>([]);
+  const [plans, setPlans] = useState<PlanConfigResponse[]>(() => buildPlansFromConfig({}));
   const [selectedPlanId, setSelectedPlanId] = useState<string>("scenora-pro-yearly");
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
@@ -50,75 +112,57 @@ export const PricingPage: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribeFs: (() => void) | null = null;
+
+    const applyPlans = (newPlans: PlanConfigResponse[]) => {
+      if (!mounted || newPlans.length === 0) return;
+      setPlans(newPlans);
+      setSelectedPlanId((prev) => {
+        if (newPlans.some((p) => p.plan_id === prev)) return prev;
+        const yearly = newPlans.find((p) => p.duration_days >= 300);
+        return yearly ? yearly.plan_id : newPlans[0].plan_id;
+      });
+    };
+
+    // 1. Live Firestore Listener: directly connects to Admin updates with zero delay
+    if (db) {
+      const firestore = db;
+      import("firebase/firestore").then(({ doc, onSnapshot }) => {
+        if (!mounted) return;
+        try {
+          unsubscribeFs = onSnapshot(
+            doc(firestore, "platform", "config"),
+            (snapshot) => {
+              if (snapshot.exists()) {
+                const livePlans = buildPlansFromConfig(snapshot.data());
+                applyPlans(livePlans);
+              }
+            },
+            (err) => {
+              console.warn("Pricing live Firestore listener notice:", err);
+            }
+          );
+        } catch (e) {
+          console.warn("Failed to attach live Firestore listener:", e);
+        }
+      });
+    }
+
+    // 2. Query centralized backend API
     api
       .getPlans()
       .then((data) => {
-        if (mounted && data.length > 0) {
-          setPlans(data);
-          const yearly = data.find((p) => p.duration_days >= 300);
-          if (yearly) {
-            setSelectedPlanId(yearly.plan_id);
-          } else {
-            setSelectedPlanId(data[0].plan_id);
-          }
+        if (data && data.length > 0) {
+          applyPlans(data);
         }
       })
-      .catch(() => {
-        if (mounted) {
-          const fallbackPlans: PlanConfigResponse[] = [
-            {
-              plan_id: "scenora-pro-6months",
-              name: "ScenoraEdits Creator Pro (6 Months)",
-              price_inr: 1799,
-              price_usd: 29,
-              duration_days: 180,
-              enabled: true,
-              description:
-                "Full studio timeline access, Video Bible consistency, and BYOK integration for 6 months.",
-              upi_id: "scenoraedits@upi",
-              upi_qr_url: "",
-              bmc_url: "https://buymeacoffee.com/scenoraedits",
-              features: [
-                "Full studio timeline access for 6 months",
-                "Bring Your Own Key (BYOK) unlimited generations",
-                "Video Bible™ character consistency engine",
-                "16:9 Landscape & 9:16 Shorts export",
-                "Speech-aware DSP audio ducking",
-                "Commercial YouTube monetization rights",
-              ],
-            },
-            {
-              plan_id: "scenora-pro-yearly",
-              name: "ScenoraEdits Creator Pro (Annual Pass)",
-              price_inr: 2999,
-              price_usd: 49,
-              duration_days: 365,
-              enabled: true,
-              description:
-                "Unlimited priority cloud GPU rendering, Video Bible consistency engine, multi-aspect export, and auto-ducking for 365 days.",
-              upi_id: "scenoraedits@upi",
-              upi_qr_url: "",
-              bmc_url: "https://buymeacoffee.com/scenoraedits",
-              features: [
-                "Full studio timeline access for 1 full year",
-                "Bring Your Own Key (BYOK) unlimited generations",
-                "Unlimited priority cloud GPU rendering queue",
-                "Full Video Bible™ character & style continuity",
-                "Multi-aspect ratio exports (16:9 & 9:16 Shorts)",
-                "Speech-aware digital audio ducking (-14dB DSP)",
-                "Kinetic word-by-word highlighted captions",
-                "100% Commercial YouTube monetization license",
-                "Priority creator support SLA & all updates",
-              ],
-            },
-          ];
-          setPlans(fallbackPlans);
-          setSelectedPlanId("scenora-pro-yearly");
-        }
+      .catch((err) => {
+        console.warn("Failed to load plans from backend API:", err);
       });
 
     return () => {
       mounted = false;
+      if (unsubscribeFs) unsubscribeFs();
     };
   }, []);
 

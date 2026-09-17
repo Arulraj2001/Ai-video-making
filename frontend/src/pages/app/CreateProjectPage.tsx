@@ -9,7 +9,7 @@ import { ArrowRight } from "lucide-react";
 
 export const CreateProjectPage: React.FC = () => {
   const { navigate } = useRouter();
-  const { createProject } = useApp();
+  const { createProject, setActiveStage } = useApp();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -26,7 +26,8 @@ export const CreateProjectPage: React.FC = () => {
         name: name.trim(),
         description: description.trim() || undefined,
       });
-      navigate(`/app/studio/${created.id}`);
+      setActiveStage("script");
+      navigate(`/app/studio/${created.id}?stage=script`);
     } catch (err: any) {
       alert("Failed to create project: " + (err.message || "Unknown error"));
     } finally {

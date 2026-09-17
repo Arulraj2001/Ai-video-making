@@ -59,11 +59,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     activeProject,
     loading: projectsLoading,
     error: projectsError,
-    createProject,
+    createProject: projectsHookCreateProject,
     ingestProjectMedia,
     updateScene,
     deleteProject,
-    selectProject,
+    selectProject: projectsHookSelectProject,
     applyProjectUpdate,
     patchActiveProject,
     refresh: refreshProjects,
@@ -94,9 +94,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setActiveStage = (stage: StudioStage) => {
     setActiveStageState(stage);
-    const url = new URL(window.location.href);
-    url.searchParams.set("stage", stage);
-    window.history.pushState({ stage }, "", url);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("stage", stage);
+      window.history.pushState({ stage }, "", url);
+    }
+  };
+
+  const createProject = async (input: ProjectCreateInput): Promise<Project> => {
+    const newProject = await projectsHookCreateProject(input);
+    setActiveStageState("script");
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("stage", "script");
+      window.history.replaceState({ stage: "script" }, "", url);
+    }
+    return newProject;
+  };
+
+  const selectProject = (id: string) => {
+    projectsHookSelectProject(id);
+    const target = projects.find((p) => p.id === id);
+    if (!target || !target.scenes || target.scenes.length === 0) {
+      setActiveStageState("script");
+    }
   };
 
   return (

@@ -721,8 +721,9 @@
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+.feat-faq-box,
 .feat-faq-list {
-  max-width: 800px;
+  max-width: 820px;
   margin: 40px auto 0 auto;
   display: flex;
   flex-direction: column;
@@ -735,6 +736,7 @@
   border-radius: 14px;
   overflow: hidden;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 [data-theme="dark"] .feat-faq-item {
@@ -742,6 +744,11 @@
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+.feat-faq-item:hover {
+  border-color: rgba(255, 107, 0, 0.35);
+}
+
+.feat-faq-btn,
 .feat-faq-question {
   width: 100%;
   padding: 20px 24px;
@@ -759,25 +766,41 @@
   transition: color 0.15s ease;
 }
 
+.feat-faq-btn:hover,
 .feat-faq-question:hover {
   color: #FF6B00;
 }
 
+.feat-faq-content,
 .feat-faq-answer {
   padding: 0 24px 20px 24px;
   font-size: 14px;
   line-height: 1.65;
   color: var(--text-secondary);
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .feat-faq-content,
+[data-theme="dark"] .feat-faq-answer {
+  border-top-color: rgba(255, 255, 255, 0.05);
+}
+
+.feat-faq-content p,
+.feat-faq-answer p {
+  margin: 0;
+  padding-top: 8px;
 }
 
 /* ==========================================================================
    11. BOTTOM CONVERSION BANNER
    ========================================================================== */
+.feat-bottom-cta,
 .feat-cta-section {
   padding: 96px 0;
   background: var(--surface);
 }
 
+.feat-bottom-card,
 .feat-cta-banner {
   background: linear-gradient(135deg, #181B26 0%, #0F1117 100%);
   border-radius: 24px;
@@ -789,6 +812,7 @@
   box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.35);
 }
 
+.feat-bottom-card::before,
 .feat-cta-banner::before {
   content: '';
   position: absolute;
@@ -801,6 +825,7 @@
   pointer-events: none;
 }
 
+.feat-bottom-card h2,
 .feat-cta-banner h2 {
   font-size: clamp(2.2rem, 4vw, 3.2rem);
   font-weight: 800;
@@ -811,6 +836,7 @@
   position: relative;
 }
 
+.feat-bottom-card p,
 .feat-cta-banner p {
   font-size: clamp(1.05rem, 1.5vw, 1.2rem);
   line-height: 1.6;
@@ -840,3 +866,4 @@
   gap: 16px;
   flex-wrap: wrap;
 }
+

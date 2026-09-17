@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Alert } from "../../components/ui/Feedback";
 import { LoadingState } from "../../components/ui/StateViews";
 import { api, type PlatformConfig } from "../../services/api";
+import { db } from "../../lib/firebase";
 import { Save, RefreshCw, Zap, Tag, Calendar } from "lucide-react";
 
 export const AdminPricingPage: React.FC = () => {
@@ -36,7 +37,21 @@ export const AdminPricingPage: React.FC = () => {
     try {
       if (!config) setLoading(true);
       setFeedback(null);
-      const data = await api.getAdminConfig(force);
+      let data: PlatformConfig | null = null;
+      try {
+        data = await api.getAdminConfig(force);
+      } catch (apiErr) {
+        if (db) {
+          const firestore = db;
+          const { doc, getDoc } = await import("firebase/firestore");
+          const snap = await getDoc(doc(firestore, "platform", "config"));
+          if (snap.exists()) {
+            data = snap.data() as PlatformConfig;
+          }
+        }
+        if (!data) throw apiErr;
+      }
+
       setConfig(data);
 
       // Yearly Plan
@@ -85,7 +100,7 @@ export const AdminPricingPage: React.FC = () => {
     try {
       setSaving(true);
       setFeedback(null);
-      const updated = await api.updateAdminConfig({
+      const payload = {
         yearly_plan_name: planName.trim(),
         yearly_plan_price_inr: Number(priceInr),
         yearly_plan_price_usd: Number(priceUsd),
@@ -99,7 +114,19 @@ export const AdminPricingPage: React.FC = () => {
         plan_6m_enabled: enabled6m,
         plan_6m_description: description6m.trim(),
         free_generation_limit: Number(freeLimit),
-      });
+      };
+
+      if (db) {
+        const firestore = db;
+        try {
+          const { doc, setDoc } = await import("firebase/firestore");
+          await setDoc(doc(firestore, "platform", "config"), payload, { merge: true });
+        } catch (fsErr) {
+          console.warn("Direct Firestore update notice:", fsErr);
+        }
+      }
+
+      const updated = await api.updateAdminConfig(payload);
       setConfig(updated);
       setFeedback({
         type: "success",

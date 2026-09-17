@@ -49,6 +49,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     isShortcutsModalOpen,
     setIsShortcutsModalOpen,
     createProject,
+    setActiveStage,
     refreshProjects,
   } = useApp();
 
@@ -371,7 +372,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={async (input) => {
           const created = await createProject(input);
-          navigate(`/app/studio/${created.id}`);
+          setActiveStage("script");
+          navigate(`/app/studio/${created.id}?stage=script`);
         }}
       />
 
