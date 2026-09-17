@@ -116,6 +116,23 @@ export const PublicFooter: React.FC = () => {
                 </svg>
               </a>
             </div>
+
+            {/* Product Hunt Featured Badge */}
+            <div className="saas-footer-ph-badge" style={{ marginTop: "6px" }}>
+              <a
+                href="https://www.producthunt.com/products/scenoraedits?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-scenoraedits"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  alt="ScenoraEdits - Turn scripts into consistent AI videos in 5 stages | Product Hunt"
+                  width="250"
+                  height="54"
+                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1253778&theme=light&t=1789670814783"
+                  style={{ width: "250px", height: "54px", display: "block" }}
+                />
+              </a>
+            </div>
           </div>
 
           {/* Column 2: Product & Engine */}
