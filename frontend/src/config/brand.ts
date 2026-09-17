@@ -15,6 +15,7 @@ export const BRAND = {
   copyright: "© 2026 ScenoraEdits. All rights reserved.",
   links: {
     github: "https://github.com/Arulraj2001/Ai-video-making",
+    youtube: "https://www.youtube.com/@deepgradient-tamil",
     howItWorks: "/how-it-works",
     features: "/features",
     pricing: "/pricing",
