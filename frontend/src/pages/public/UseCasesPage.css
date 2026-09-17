@@ -1,0 +1,451 @@
+/* ==========================================================================
+   SCENORAEDITS — USE CASES PAGE STYLESHEET
+   Clean, Editorial, High-Converting Vanilla CSS
+   ========================================================================== */
+
+.use-cases-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--surface);
+  color: var(--text);
+  overflow-x: hidden;
+  font-family: var(--font-saas, 'Poppins', sans-serif);
+}
+
+.uc-container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  .uc-container {
+    padding: 0 16px;
+  }
+}
+
+/* 1. HERO */
+.uc-hero-section {
+  padding: 80px 0 40px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.08) 0%, transparent 60%),
+              var(--surface);
+}
+
+[data-theme="dark"] .uc-hero-section {
+  background: radial-gradient(circle at 50% -10%, rgba(255, 107, 0, 0.12) 0%, transparent 65%),
+              #0F1117;
+}
+
+.uc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(255, 107, 0, 0.08);
+  color: #FF6B00;
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  margin-bottom: 20px;
+}
+
+.uc-hero-h1 {
+  font-size: clamp(2.4rem, 4.8vw, 3.8rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  max-width: 960px;
+  margin: 0 auto 20px;
+}
+
+.uc-gradient-text {
+  background: linear-gradient(135deg, #FF6B00 0%, #FF8F3D 50%, #E05E00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.uc-hero-lead {
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 760px;
+  margin: 0 auto 36px;
+}
+
+.uc-hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.uc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  color: #FFFFFF;
+  padding: 13px 26px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(255, 107, 0, 0.3);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.uc-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 107, 0, 0.42);
+}
+
+.uc-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--white);
+  color: var(--text);
+  padding: 13px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+[data-theme="dark"] .uc-btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #F3F4F6;
+}
+
+.uc-btn-secondary:hover {
+  background: var(--surface-alt);
+  transform: translateY(-2px);
+}
+
+/* 2. CREATOR TABS */
+.uc-tabs-section {
+  padding: 30px 0 80px;
+}
+
+.uc-tabs-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+
+.uc-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--white);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .uc-tab-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #9CA3AF;
+}
+
+.uc-tab-btn:hover {
+  color: #FF6B00;
+  border-color: rgba(255, 107, 0, 0.3);
+  background: rgba(255, 107, 0, 0.04);
+}
+
+.uc-tab-btn.active {
+  background: #FF6B00;
+  color: #FFFFFF;
+  border-color: #FF6B00;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.28);
+}
+
+/* SPOTLIGHT CARD */
+.uc-spotlight-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 44px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="dark"] .uc-spotlight-card {
+  background: #13151F;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.uc-spotlight-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+@media (max-width: 960px) {
+  .uc-spotlight-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .uc-spotlight-card {
+    padding: 28px;
+  }
+}
+
+.uc-spotlight-badge {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #FF6B00;
+  margin-bottom: 12px;
+}
+
+.uc-spotlight-title {
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.22;
+  color: var(--text);
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+
+.uc-spotlight-sub {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.uc-highlights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.uc-highlight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.uc-stat-strip {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.uc-stat-number {
+  font-size: 28px;
+  font-weight: 800;
+  color: #FF6B00;
+  letter-spacing: -0.02em;
+}
+
+.uc-stat-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* WORKFLOW STEPS IN CARD */
+.uc-spotlight-workflow {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.uc-workflow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.uc-step-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: transform 0.15s ease;
+}
+
+[data-theme="dark"] .uc-step-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.uc-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF6B00, #E65100);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.uc-step-content h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.uc-step-content p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* 3. COMPARISON SECTION */
+.uc-compare-section {
+  padding: 80px 0;
+  background: var(--surface-alt);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.uc-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 960px) {
+  .uc-compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.uc-compare-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 28px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="dark"] .uc-compare-card {
+  background: #13151F;
+}
+
+.uc-compare-card.featured {
+  border: 2px solid #FF6B00;
+  box-shadow: 0 12px 36px -8px rgba(255, 107, 0, 0.18);
+}
+
+.uc-card-badge {
+  position: absolute;
+  top: -12px;
+  left: 28px;
+  background: linear-gradient(135deg, #FF6B00, #E65100);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.uc-compare-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.uc-compare-intro {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.uc-compare-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 4. FINAL CTA */
+.uc-cta-section {
+  padding: 80px 0 100px;
+}
+
+.uc-cta-box {
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 107, 0, 0.02) 100%);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 28px;
+  padding: 56px 32px;
+  text-align: center;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+[data-theme="dark"] .uc-cta-box {
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.12) 0%, rgba(20, 22, 32, 0.8) 100%);
+}
+
+.uc-cta-h2 {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.uc-cta-p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  max-width: 580px;
+  margin: 0 auto;
+}

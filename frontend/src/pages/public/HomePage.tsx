@@ -10,17 +10,18 @@ import {
   ShieldCheck,
   Layers,
   Volume2,
-  Cpu,
   Video,
   ChevronDown,
   ChevronUp,
   Zap,
   Film,
-  FileText,
   Check,
-  X,
   Type,
-  Maximize2,
+  Sliders,
+  Key,
+  Download,
+  Headphones,
+  Palette,
 } from "lucide-react";
 
 interface SceneMockup {
@@ -107,13 +108,13 @@ export const HomePage: React.FC = () => {
   const { navigate } = useRouter();
 
   useSEO({
-    title: "ScenoraEdits — AI Video Maker for YouTube Creators | Script to Video",
+    title: "ScenoraEdits — Turn Your Audio Into a Scene-by-Scene Video, Free",
     description:
-      "Transform scripts and voiceovers into cinematic YouTube videos in minutes. Built-in Video Bible for 100% character continuity, smart audio ducking, kinetic captions, and Full HD 1080p exports.",
+      "Upload your voiceover and assign one image to each scene. Add captions, motion, and overlays — then export a finished MP4. Free scene-based video builder for YouTube creators.",
     canonical: "https://scenoraedits.web.app/",
-    ogTitle: "ScenoraEdits — AI Video Maker for YouTube Creators",
+    ogTitle: "ScenoraEdits — Scene-by-Scene Video Builder",
     ogDescription:
-      "Transform raw scripts & voiceovers into cinematic YouTube videos. Guaranteed character consistency with Video Bible, automated audio ducking, and 1080p exports.",
+      "Bring your own audio and images. One image per scene. Captions, motion, and export in MP4, 720p, WebM. Built for faceless YouTube creators.",
   });
 
   // Interactive Mockup State
@@ -143,18 +144,19 @@ export const HomePage: React.FC = () => {
           <div className="mkt-hero-content">
             <div className="mkt-badge" role="status">
               <Sparkles size={14} className="animate-pulse" />
-              <span>Next-Gen AI Video Generator for YouTube &amp; Shorts Creators</span>
+              <span>SCENE-BASED VIDEO COMPOSER</span>
             </div>
 
             <h1 className="mkt-hero-h1">
-              Turn Raw Scripts &amp; Voiceovers into{" "}
-              <span className="mkt-text-gradient">Cinematic YouTube Videos</span> in Minutes
+              Bring your audio. <br />
+              <span className="mkt-text-gradient">Assign your images.</span> <br />
+              Export your video.
             </h1>
 
             <p className="mkt-hero-lead">
-              Stop hunting stock footage and fighting mismatched AI shots. ScenoraEdits coordinates
-              scene-by-scene visuals, locks 100% character continuity with Video Bible™, auto-ducks
-              background audio, and delivers ready-to-publish Full HD 1080p videos.
+              ScenoraEdits splits your voiceover into scenes. Drop one image onto each scene — or
+              generate one with AI using your own API key. Add captions, motion, and overlays.
+              Export as MP4, ready for YouTube. The definitive <strong>scene by scene video maker</strong> for creators who already have the story.
             </p>
 
             <div className="mkt-hero-cta-group">
@@ -163,14 +165,18 @@ export const HomePage: React.FC = () => {
                 className="mkt-btn-primary"
                 id="hero-primary-cta"
               >
-                <span>Start Creating Free</span>
+                <span>Build my video free</span>
                 <ArrowRight size={18} />
               </button>
 
-              <a href="#showcase" className="mkt-btn-secondary" id="hero-secondary-cta">
+              <button
+                onClick={() => navigate("/how-it-works")}
+                className="mkt-btn-secondary"
+                id="hero-secondary-cta"
+              >
                 <Play size={16} />
-                <span>Explore Interactive Demo</span>
-              </a>
+                <span>See how it works</span>
+              </button>
             </div>
 
             <div className="mkt-hero-guarantees">
@@ -180,11 +186,11 @@ export const HomePage: React.FC = () => {
               </span>
               <span className="mkt-guarantee-item">
                 <CheckCircle2 size={16} className="mkt-guarantee-icon" />
-                <span>Local RTX GPU &amp; Cloud burst</span>
+                <span>Your images or BYOK AI keys</span>
               </span>
               <span className="mkt-guarantee-item">
                 <CheckCircle2 size={16} className="mkt-guarantee-icon" />
-                <span>100% Commercial YouTube rights</span>
+                <span>Zero watermark on 1080p export</span>
               </span>
             </div>
           </div>
@@ -200,7 +206,7 @@ export const HomePage: React.FC = () => {
 
               <div className="mkt-mockup-title">
                 <Film size={14} className="text-[#FF6B00]" />
-                <span>Project: Echoes_Of_Orion_Episode_01 • 1080p Master Timeline</span>
+                <span>Project: Echoes_Of_Orion • Master Timeline Studio</span>
               </div>
 
               <div className="mkt-mockup-controls">
@@ -226,7 +232,7 @@ export const HomePage: React.FC = () => {
               <div className="mkt-studio-sidebar">
                 <div>
                   <div className="mkt-sidebar-block-title">
-                    <span>Story Beats &amp; Prompts</span>
+                    <span>Scene Image Slots</span>
                     <span className="text-xs text-[#FF6B00]">3 Scenes</span>
                   </div>
 
@@ -250,7 +256,7 @@ export const HomePage: React.FC = () => {
                 {/* Video Bible Character Anchor Card */}
                 <div>
                   <div className="mkt-sidebar-block-title">
-                    <span>Video Bible™ Anchor</span>
+                    <span>Video Bible™ Consistency</span>
                     <span className="text-[10px] text-emerald-500 font-bold">LOCKED</span>
                   </div>
                   <div className="mkt-bible-anchor">
@@ -298,7 +304,7 @@ export const HomePage: React.FC = () => {
                     </span>
                     <span className="mkt-track-ducking-badge">
                       <Zap size={10} />
-                      <span>-14dB Auto-Duck Under Speech</span>
+                      <span>Auto-Duck Under Voice</span>
                     </span>
                   </div>
 
@@ -326,139 +332,109 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          2. CREATOR PROOF & TRUST METRICS BAR
+          2. HOW IT WORKS (5 STEPS ALIGNED TO THE 5 STAGES)
           ==================================================================== */}
-      <section className="mkt-metrics-section" aria-label="Creator Metrics">
+      <section className="mkt-how-it-works-section py-20 bg-[var(--bg-surface-subtle)]" id="how-it-works" aria-label="How It Works">
         <div className="mkt-container">
-          <div className="mkt-metrics-grid">
-            <div>
-              <div className="mkt-metric-stat">
-                <span>250K</span>+
-              </div>
-              <div className="mkt-metric-label">YouTube &amp; Shorts Videos Rendered</div>
-            </div>
-            <div>
-              <div className="mkt-metric-stat">
-                <span>99.4</span>%
-              </div>
-              <div className="mkt-metric-label">Character Visual Consistency Match</div>
-            </div>
-            <div>
-              <div className="mkt-metric-stat">
-                <span>10</span>x
-              </div>
-              <div className="mkt-metric-label">Faster Turnaround vs. Manual Video Editing</div>
-            </div>
-            <div>
-              <div className="mkt-metric-stat">
-                <span>4.9</span> / 5
-              </div>
-              <div className="mkt-metric-label">Rated by Full-Time YouTube Creators</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================================
-          3. THE PARADIGM SHIFT (OLD EDITING VS. SCENORA WAY)
-          ==================================================================== */}
-      <section className="mkt-contrast-section" aria-label="Comparison">
-        <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge mkt-badge-purple">The AI Video Evolution</div>
-            <h2 className="mkt-section-title">Why Traditional Video Editing Holds Creators Back</h2>
-            <p className="mkt-section-subtitle">
-              Sourcing random B-roll or fighting black-box AI tools wastes hours. ScenoraEdits delivers
-              a complete, controlled production pipeline engineered specifically for high-retention content.
+          <div className="mkt-section-header text-center max-w-3xl mx-auto mb-16">
+            <div className="mkt-badge mkt-badge-purple mb-4">Production Workflow</div>
+            <h2 className="mkt-section-title text-3xl sm:text-4xl font-extrabold tracking-tight">
+              From audio file to finished video in 5 steps
+            </h2>
+            <p className="mkt-section-subtitle text-base sm:text-lg text-[var(--text-muted)] mt-4">
+              A structured creative workflow designed specifically for creators who already have narration.
+              You keep full creative control at every single scene.
             </p>
           </div>
 
-          <div className="mkt-contrast-grid">
-            {/* The Old Way */}
-            <div className="mkt-contrast-card old-way">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            {/* Step 1 */}
+            <div className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[#6366f1] transition-all flex flex-col justify-between">
               <div>
-                <div className="mkt-contrast-badge bad">
-                  <X size={14} />
-                  <span>The Fragmented Old Way</span>
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-lg mb-4 border border-indigo-500/20">
+                  1
                 </div>
-                <h3 className="mkt-contrast-title">8+ Hours of Tedious Manual Video Assembly</h3>
-                <ul className="mkt-contrast-list">
-                  <li className="mkt-contrast-item">
-                    <X size={16} className="mkt-item-icon-bad" />
-                    <span>
-                      <strong>Inconsistent Characters:</strong> Protagonists change hair, age, and faces
-                      between every single AI generated cut.
-                    </span>
-                  </li>
-                  <li className="mkt-contrast-item">
-                    <X size={16} className="mkt-item-icon-bad" />
-                    <span>
-                      <strong>Generic Stock Clutter:</strong> Spending hundreds of dollars on stock footage
-                      libraries that viewers have already seen a thousand times.
-                    </span>
-                  </li>
-                  <li className="mkt-contrast-item">
-                    <X size={16} className="mkt-item-icon-bad" />
-                    <span>
-                      <strong>Manual Audio Keyframing:</strong> Drawing endless volume curves by hand to keep
-                      music from drowning out your voiceover.
-                    </span>
-                  </li>
-                  <li className="mkt-contrast-item">
-                    <X size={16} className="mkt-item-icon-bad" />
-                    <span>
-                      <strong>Black-Box Frustration:</strong> Traditional AI video tools output one single video
-                      file with zero timeline control or frame editing.
-                    </span>
-                  </li>
-                </ul>
+                <h3 className="font-bold text-base text-[var(--text-primary)] mb-2">
+                  Upload Audio or Generate Voiceover
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  Upload your master .mp3, .wav, or .m4a voiceover — or generate clean neural voiceover using Edge-TTS. Sentence timecodes are calculated automatically.
+                </p>
               </div>
-              <div className="mkt-contrast-footer text-red-500">
-                Result: Creator burnout, slow uploads, and inconsistent channel branding.
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] text-[11px] font-mono text-indigo-400">
+                Stage 1 • Master Timeline
               </div>
             </div>
 
-            {/* The Scenora Way */}
-            <div className="mkt-contrast-card scenora-way">
+            {/* Step 2 */}
+            <div className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[#a855f7] transition-all flex flex-col justify-between">
               <div>
-                <div className="mkt-contrast-badge good">
-                  <Check size={14} />
-                  <span>The ScenoraEdits Production System</span>
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-lg mb-4 border border-purple-500/20">
+                  2
                 </div>
-                <h3 className="mkt-contrast-title">Under 30 Minutes from Script to 1080p Export</h3>
-                <ul className="mkt-contrast-list">
-                  <li className="mkt-contrast-item">
-                    <Check size={16} className="mkt-item-icon-good" />
-                    <span>
-                      <strong>Video Bible™ Character Lock:</strong> Define your character once. Keep exact faces,
-                      costumes, and artistic styling consistent across all scenes.
-                    </span>
-                  </li>
-                  <li className="mkt-contrast-item">
-                    <Check size={16} className="mkt-item-icon-good" />
-                    <span>
-                      <strong>AI Storyboard Intelligence:</strong> Automatically parses spoken narration into
-                      timed scenes and generates cinematic, bespoke visual shots.
-                    </span>
-                  </li>
-                  <li className="mkt-contrast-item">
-                    <Check size={16} className="mkt-item-icon-good" />
-                    <span>
-                      <strong>Autonomous Audio Ducking:</strong> Intelligent audio DSP automatically lowers
-                      background soundtracks whenever narration is active.
-                    </span>
-                  </li>
-                  <li className="mkt-contrast-item">
-                    <Check size={16} className="mkt-item-icon-good" />
-                    <span>
-                      <strong>Non-Destructive Studio Timeline:</strong> Swap single shots, adjust durations,
-                      customize zoom speed, and regenerate without starting over.
-                    </span>
-                  </li>
-                </ul>
+                <h3 className="font-bold text-base text-[var(--text-primary)] mb-2">
+                  Set Visual Style &amp; Characters
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  The Video Bible™ locks character faces, costumes, and color palettes so your visuals stay 100% consistent across every single cut.
+                </p>
               </div>
-              <div className="mkt-contrast-footer text-emerald-500">
-                Result: Predictable 10x production speed, cinematic aesthetics, and rapid channel growth.
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] text-[11px] font-mono text-purple-400">
+                Stage 2 • Video Bible
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[#ec4899] transition-all flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center font-bold text-lg mb-4 border border-pink-500/20">
+                  3
+                </div>
+                <h3 className="font-bold text-base text-[var(--text-primary)] mb-2">
+                  Assign One Image Per Scene
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  Every scene gets its own image slot. Drag images from your computer, or generate bespoke frames with AI using free cloud models or your own API key.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] text-[11px] font-mono text-pink-400">
+                Stage 3 • Storyboard
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[#f59e0b] transition-all flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-lg mb-4 border border-amber-500/20">
+                  4
+                </div>
+                <h3 className="font-bold text-base text-[var(--text-primary)] mb-2">
+                  Add Motion, Captions &amp; Overlays
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  Inject cinematic energy with Ken Burns pan/zoom, scene transitions, animated captions (TikTok Bold, Classic), and auto-ducked background music.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] text-[11px] font-mono text-amber-400">
+                Stage 4 • Timeline Studio
+              </div>
+            </div>
+
+            {/* Step 5 */}
+            <div className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[#10b981] transition-all flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg mb-4 border border-emerald-500/20">
+                  5
+                </div>
+                <h3 className="font-bold text-base text-[var(--text-primary)] mb-2">
+                  Export Your Finished Video
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  Render broadcast-grade Full HD MP4 with zero timing drift. Download on demand in 1080p, 720p, WebM, audio-only MP3, and animated 6s GIF loop.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] text-[11px] font-mono text-emerald-400">
+                Stage 5 • Export &amp; Deliver
               </div>
             </div>
           </div>
@@ -466,65 +442,84 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          4. 4-STAGE PRODUCTION PIPELINE (HOW IT WORKS)
+          3. FEATURE HIGHLIGHTS (6 CORE PILLARS IN A 2-COLUMN GRID)
           ==================================================================== */}
-      <section className="mkt-pipeline-section" id="how-it-works" aria-label="Pipeline">
+      <section className="mkt-features-section py-20" id="features" aria-label="Feature Highlights">
         <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge mkt-badge-blue">The 4-Stage Engine</div>
-            <h2 className="mkt-section-title">How You Create YouTube Videos with ScenoraEdits</h2>
-            <p className="mkt-section-subtitle">
-              A frictionless workflow designed to take you from a raw voice memo or text script to a
-              polished Full HD video ready for immediate upload.
+          <div className="mkt-section-header text-center max-w-3xl mx-auto mb-16">
+            <div className="mkt-badge mkt-badge-blue mb-4">Core Capabilities</div>
+            <h2 className="mkt-section-title text-3xl sm:text-4xl font-extrabold tracking-tight">
+              Engineered for Complete Scene-by-Scene Control
+            </h2>
+            <p className="mkt-section-subtitle text-base sm:text-lg text-[var(--text-muted)] mt-4">
+              Unlike black-box AI tools that output random stock footage, ScenoraEdits gives you granular control over every visual cut and sound layer.
             </p>
           </div>
 
-          <div className="mkt-pipeline-grid">
-            <div className="mkt-stage-card">
-              <span className="mkt-stage-number">STAGE 01</span>
-              <div className="mkt-stage-icon-wrap">
-                <FileText size={24} />
-              </div>
-              <h4>Script &amp; Voiceover Ingestion</h4>
-              <p>
-                Paste your video script or upload existing narration audio. Our Whisper-driven acoustic
-                pipeline segments your audio into natural narrative beats with word-level timestamps.
-              </p>
-            </div>
-
-            <div className="mkt-stage-card">
-              <span className="mkt-stage-number">STAGE 02</span>
-              <div className="mkt-stage-icon-wrap">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-indigo-500/40 transition-all flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
                 <Layers size={24} />
               </div>
-              <h4>Video Bible™ Consistency</h4>
-              <p>
-                Lock your protagonist faces, costumes, lighting palettes, and camera lenses. Every subsequent
-                scene references this unified source of truth to eliminate visual hallucinations.
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Scene-Level Image Control</h3>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                Every scene has its own dedicated image slot. Upload from your computer, drag an image directly from your desktop, or generate one with AI. Replace any scene anytime without touching the rest of your timeline.
               </p>
             </div>
 
-            <div className="mkt-stage-card">
-              <span className="mkt-stage-number">STAGE 03</span>
-              <div className="mkt-stage-icon-wrap">
-                <Volume2 size={24} />
+            {/* Feature 2 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-purple-500/40 transition-all flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                <Key size={24} />
               </div>
-              <h4>Multi-Track Audio Ducking</h4>
-              <p>
-                Layer background music and ambient Foley. The audio engine automatically calculates volume
-                envelopes, dropping music -14dB beneath spoken lines for broadcast clarity.
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Bring Your Own API Key (BYOK)</h3>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                Use your own OpenAI (DALL-E 3), Cloudflare, or Flux API keys to generate images per scene at direct developer cost. Free cloud providers (Flux &amp; Pollinations) are also available with zero configuration.
               </p>
             </div>
 
-            <div className="mkt-stage-card">
-              <span className="mkt-stage-number">STAGE 04</span>
-              <div className="mkt-stage-icon-wrap">
-                <Video size={24} />
+            {/* Feature 3 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-pink-500/40 transition-all flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center">
+                <ShieldCheck size={24} />
               </div>
-              <h4>Timeline Polish &amp; 1080p Export</h4>
-              <p>
-                Review shots in the multi-track studio timeline. Fine-tune camera motion, tweak captions,
-                and export crisp 1080p 60fps MP4 masters ready for YouTube or Shorts.
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Video Bible™ Consistency</h3>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                Define your visual style, recurring characters, and key locations once. Every scene generation prompt is automatically prefixed with your visual anchor rules — maintaining consistent faces, costumes, and lighting.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-amber-500/40 transition-all flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                <Type size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Caption Styles &amp; Animation</h3>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                Render broadcast-grade burned-in ASS subtitles with customizable font family, colors, shadows, and positioning. Choose between high-retention TikTok Bold, Classic Subtitles, or Minimal Lower Third layouts.
+              </p>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-emerald-500/40 transition-all flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <Sliders size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Motion &amp; Transitions</h3>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                Breathe life into still imagery with Ken Burns dynamic zoom-in, pan-left, and pan-right motions. Connect scenes with crossfades, slides, and fade-to-black transitions previewable in real time.
+              </p>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-cyan-500/40 transition-all flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+                <Download size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Multi-Format &amp; Zero-Drift</h3>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                A single render produces MP4 1080p, 720p HD, WebM, MP3 audio, and a 6-second animated loop GIF. Our multi-pass FFmpeg pipeline guarantees audio-visual synchronization to within &lt;0.05 seconds.
               </p>
             </div>
           </div>
@@ -532,214 +527,72 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          5. FLAGSHIP BENTO GRID FEATURES
+          4. WHO IT'S FOR (3 CREATOR ARCHETYPES)
           ==================================================================== */}
-      <section className="mkt-features-section" id="features" aria-label="Key Features">
+      <section className="mkt-who-section py-20 bg-[var(--bg-surface-subtle)]" id="who-its-for" aria-label="Target Audience">
         <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge">Production Capabilities</div>
-            <h2 className="mkt-section-title">Engineered Specifically for Modern Video Creators</h2>
-            <p className="mkt-section-subtitle">
-              Every feature inside ScenoraEdits exists to remove friction from long-form YouTube and viral
-              short-form content creation.
+          <div className="mkt-section-header text-center max-w-3xl mx-auto mb-16">
+            <div className="mkt-badge mkt-badge-purple mb-4">Creator Focus</div>
+            <h2 className="mkt-section-title text-3xl sm:text-4xl font-extrabold tracking-tight">
+              Built for creators who already have the story
+            </h2>
+            <p className="mkt-section-subtitle text-base sm:text-lg text-[var(--text-muted)] mt-4">
+              You record narration, not video. ScenoraEdits turns that audio into a complete visual YouTube video without a camera or complex editing software.
             </p>
           </div>
 
-          <div className="mkt-bento-grid">
-            {/* Bento Card 1: Video Bible (Span 8) */}
-            <div className="mkt-bento-card mkt-col-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Audience 1 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex flex-col justify-between">
               <div>
-                <div className="mkt-bento-icon orange">
-                  <ShieldCheck size={26} />
+                <div className="w-12 h-12 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center mb-6">
+                  <Video size={24} />
                 </div>
-                <h3>Video Bible™ Character Consistency Engine</h3>
-                <p>
-                  No more morphing faces or changing outfits between scenes. Lock your main characters,
-                  art direction, lighting setups, and camera angles into a project-level registry. Every AI
-                  generation strictly inherits your character anchors.
+                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">Faceless YouTube Creators</h3>
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-6">
+                  You produce documentary, history, mystery, or finance videos without showing your face. ScenoraEdits automatically aligns your voiceover with matching scene visuals, kinetic captions, and cinematic motion.
                 </p>
               </div>
-              <div className="mkt-bento-visual">
-                <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono mb-2">
-                  <span>Character_ID: #VANCE_01</span>
-                  <span className="text-emerald-500 font-bold">Face Match: 99.4%</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <img
-                    src="/assets/hero_astronaut_main.jpg"
-                    alt="Character Reference 1"
-                    className="rounded-lg h-24 w-full object-cover border border-[var(--border)]"
-                  />
-                  <img
-                    src="/assets/scene_2_profile.jpg"
-                    alt="Character Reference 2"
-                    className="rounded-lg h-24 w-full object-cover border border-[var(--border)]"
-                  />
-                  <img
-                    src="/assets/scene_3_landscape.jpg"
-                    alt="Character Reference 3"
-                    className="rounded-lg h-24 w-full object-cover border border-[var(--border)]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Bento Card 2: Dual Rendering (Span 4) */}
-            <div className="mkt-bento-card mkt-col-4">
-              <div>
-                <div className="mkt-bento-icon purple">
-                  <Cpu size={26} />
-                </div>
-                <h3>Dual-Engine Compute</h3>
-                <p>
-                  Generate locally on your NVIDIA RTX GPU for 100% free, unlimited private renders, or burst
-                  instantly to high-speed cloud clusters when working from laptops.
-                </p>
-              </div>
-              <div className="mkt-bento-visual">
-                <div className="flex flex-col gap-2 text-xs">
-                  <div className="flex items-center justify-between p-2 rounded bg-[var(--surface)] border border-[var(--border)]">
-                    <span className="font-semibold">Local NVIDIA RTX</span>
-                    <span className="text-emerald-500 font-bold">Free / 0ms Ping</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded bg-[var(--surface)] border border-[var(--border)]">
-                    <span className="font-semibold">Cloud GPU Cluster</span>
-                    <span className="text-purple-500 font-bold">Ultra Fast 1080p</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bento Card 3: Kinetic Captions (Span 4) */}
-            <div className="mkt-bento-card mkt-col-4">
-              <div>
-                <div className="mkt-bento-icon blue">
-                  <Type size={26} />
-                </div>
-                <h3>Kinetic Word-by-Word Captions</h3>
-                <p>
-                  Generate viral YouTube Shorts &amp; TikTok style dynamic subtitles with word-by-word
-                  highlight animations, custom color grading, and emoji insertion.
-                </p>
-              </div>
-              <div className="mkt-bento-visual text-center py-4">
-                <span className="text-base font-bold tracking-wide uppercase bg-black text-white px-3 py-1.5 rounded">
-                  THIS WILL <span className="text-[#FFC107] underline">CHANGE</span> EVERYTHING
-                </span>
-              </div>
-            </div>
-
-            {/* Bento Card 4: Audio Ducking (Span 4) */}
-            <div className="mkt-bento-card mkt-col-4">
-              <div>
-                <div className="mkt-bento-icon green">
-                  <Volume2 size={26} />
-                </div>
-                <h3>Intelligent Auto-Ducking</h3>
-                <p>
-                  Speech-aware digital signal processing attenuates musical tracks when narration speaks and
-                  smoothly restores background volume during dramatic pauses.
-                </p>
-              </div>
-              <div className="mkt-bento-visual text-xs flex items-center justify-between font-mono">
-                <span>Music Attenuation:</span>
-                <span className="text-emerald-500 font-bold">-14.2 dB Smooth</span>
-              </div>
-            </div>
-
-            {/* Bento Card 5: 1-Click Multi-Aspect (Span 4) */}
-            <div className="mkt-bento-card mkt-col-4">
-              <div>
-                <div className="mkt-bento-icon orange">
-                  <Maximize2 size={26} />
-                </div>
-                <h3>1-Click 16:9 &amp; 9:16 Switching</h3>
-                <p>
-                  Convert wide landscape YouTube documentaries into vertical Shorts with smart focal-point
-                  re-centering that keeps characters centered in every frame.
-                </p>
-              </div>
-              <div className="mkt-bento-visual text-xs flex justify-around">
-                <span className="px-3 py-1 rounded bg-[var(--surface)] border border-[var(--border)] font-semibold">
-                  16:9 Landscape
-                </span>
-                <span className="px-3 py-1 rounded bg-[#FF6B00] text-white font-semibold">
-                  9:16 Vertical
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================================
-          6. TARGET CREATOR NICHES
-          ==================================================================== */}
-      <section className="mkt-niches-section" id="niches" aria-label="Use Cases">
-        <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge mkt-badge-purple">Tailored Creator Workflows</div>
-            <h2 className="mkt-section-title">Built for Your Specific Channel Format</h2>
-            <p className="mkt-section-subtitle">
-              Whether you run a deep-dive documentary channel or a high-velocity faceless shorts studio,
-              ScenoraEdits optimizes for your exact publishing cadence.
-            </p>
-          </div>
-
-          <div className="mkt-niches-grid">
-            <div className="mkt-niche-card" id="niche-documentary">
-              <span className="mkt-niche-pill">Long-Form Videos</span>
-              <h4>YouTube Documentaries &amp; Lore</h4>
-              <p>
-                Atmospheric historical narratives, sci-fi worldbuilding, and investigative mysteries with
-                continuous characters and mood lighting.
-              </p>
-              <ul className="mkt-niche-perks">
-                <li><Check size={14} className="text-emerald-500" /> Continuous character faces</li>
-                <li><Check size={14} className="text-emerald-500" /> Cinematic 35mm lighting</li>
-                <li><Check size={14} className="text-emerald-500" /> 20+ minute chapter workflows</li>
+              <ul className="space-y-2.5 text-xs text-[var(--text-secondary)] pt-4 border-t border-[var(--border-subtle)]">
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Continuous character faces</li>
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Automatic sentence timecodes</li>
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> 16:9 Full HD broadcast export</li>
               </ul>
             </div>
 
-            <div className="mkt-niche-card" id="niche-faceless">
-              <span className="mkt-niche-pill">Automation</span>
-              <h4>Faceless YouTube Channels</h4>
-              <p>
-                Produce consistent weekly videos across finance, mythology, technology, and philosophy
-                without ever needing to step in front of a camera.
-              </p>
-              <ul className="mkt-niche-perks">
-                <li><Check size={14} className="text-emerald-500" /> Script-to-timeline automation</li>
-                <li><Check size={14} className="text-emerald-500" /> Bespoke imagery (no stock)</li>
-                <li><Check size={14} className="text-emerald-500" /> High creator retention rates</li>
+            {/* Audience 2 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-6">
+                  <Headphones size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">Podcast-to-Video Creators</h3>
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-6">
+                  Your audio episodes already tell great stories. Tap into YouTube's massive discovery algorithm by adding topic-specific visual imagery per segment without manually re-cutting raw audio in an NLE.
+                </p>
+              </div>
+              <ul className="space-y-2.5 text-xs text-[var(--text-secondary)] pt-4 border-t border-[var(--border-subtle)]">
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Drag-and-drop slide graphics</li>
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Accessible burned-in subtitles</li>
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Audio-only MP3 export included</li>
               </ul>
             </div>
 
-            <div className="mkt-niche-card" id="niche-shorts">
-              <span className="mkt-niche-pill">High Retention</span>
-              <h4>Viral Shorts &amp; TikTok Creators</h4>
-              <p>
-                Snappy 60-second vertical reels with kinetic subtitles, aggressive narrative hooks, and
-                perfect pacing for the YouTube Shorts algorithm.
-              </p>
-              <ul className="mkt-niche-perks">
-                <li><Check size={14} className="text-emerald-500" /> Word-by-word dynamic text</li>
-                <li><Check size={14} className="text-emerald-500" /> Vertical 9:16 native render</li>
-                <li><Check size={14} className="text-emerald-500" /> Punchy sound design ducking</li>
-              </ul>
-            </div>
-
-            <div className="mkt-niche-card" id="niche-educational">
-              <span className="mkt-niche-pill">Pedagogical</span>
-              <h4>Explainer &amp; Education Channels</h4>
-              <p>
-                Transform complex technical tutorials, science phenomena, and case studies into clear,
-                visually captivating step-by-step visual lessons.
-              </p>
-              <ul className="mkt-niche-perks">
-                <li><Check size={14} className="text-emerald-500" /> Clear concept illustrations</li>
-                <li><Check size={14} className="text-emerald-500" /> Synchronized voice timestamps</li>
-                <li><Check size={14} className="text-emerald-500" /> Non-destructive scene edits</li>
+            {/* Audience 3 */}
+            <div className="p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-6">
+                  <Palette size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">AI Image Artists</h3>
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-6">
+                  You already generate stunning imagery with Midjourney, Flux, or Stable Diffusion. ScenoraEdits is where those individual stills become an assembled, narrated, motion-rich video project.
+                </p>
+              </div>
+              <ul className="space-y-2.5 text-xs text-[var(--text-secondary)] pt-4 border-t border-[var(--border-subtle)]">
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Direct image slot dropzone</li>
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Ken Burns cinematic motion</li>
+                <li className="flex items-center gap-2"><Check size={14} className="text-emerald-400" /> Multi-format 9:16 and 16:9</li>
               </ul>
             </div>
           </div>
@@ -747,16 +600,18 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          7. INTERACTIVE STORYBOARD SHOWCASE WIDGET
+          5. INTERACTIVE GENRE SHOWCASE WIDGET
           ==================================================================== */}
-      <section className="mkt-showcase-section" id="showcase" aria-label="Interactive Showcase">
+      <section className="mkt-showcase-section py-20" id="showcase" aria-label="Interactive Showcase">
         <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge mkt-badge-blue">Live Studio Showcase</div>
-            <h2 className="mkt-section-title">See ScenoraEdits in Action Across Genres</h2>
-            <p className="mkt-section-subtitle">
+          <div className="mkt-section-header text-center max-w-3xl mx-auto mb-16">
+            <div className="mkt-badge mkt-badge-blue mb-4">Live Studio Showcase</div>
+            <h2 className="mkt-section-title text-3xl sm:text-4xl font-extrabold tracking-tight">
+              See ScenoraEdits in Action Across Formats
+            </h2>
+            <p className="mkt-section-subtitle text-base sm:text-lg text-[var(--text-muted)] mt-4">
               Select a genre below to inspect the actual script lines, prompt parameters, and visual outputs
-              generated by the ScenoraEdits engine.
+              assembled by the ScenoraEdits engine.
             </p>
           </div>
 
@@ -810,351 +665,97 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          8. COMPETITIVE MATRIX TABLE
+          6. FAQ ACCORDION
           ==================================================================== */}
-      <section className="mkt-compare-section" aria-label="Comparison Table">
+      <section className="mkt-faq-section py-20 bg-[var(--bg-surface-subtle)]" id="faq" aria-label="Frequently Asked Questions">
         <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge">The Clear Advantage</div>
-            <h2 className="mkt-section-title">How ScenoraEdits Compares</h2>
-            <p className="mkt-section-subtitle">
-              See why high-volume YouTube creators choose ScenoraEdits over generic AI generators and
-              traditional editing software.
+          <div className="mkt-section-header text-center max-w-3xl mx-auto mb-16">
+            <div className="mkt-badge mkt-badge-purple mb-4">FAQ</div>
+            <h2 className="mkt-section-title text-3xl sm:text-4xl font-extrabold tracking-tight">
+              Frequently Asked Questions
+            </h2>
+            <p className="mkt-section-subtitle text-base sm:text-lg text-[var(--text-muted)] mt-4">
+              Everything you need to know about scene-by-scene video composition with ScenoraEdits.
             </p>
           </div>
 
-          <div className="mkt-table-wrap">
-            <table className="mkt-compare-table">
-              <thead>
-                <tr>
-                  <th>Capability / Feature</th>
-                  <th className="highlight">ScenoraEdits AI Studio</th>
-                  <th>Generic AI Video Tools</th>
-                  <th>Traditional Editors (Premiere/DaVinci)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <strong>Character Continuity across 20+ Scenes</strong>
-                  </td>
-                  <td className="highlight text-emerald-500 font-bold">
-                    ✓ Video Bible™ 100% Consistency
-                  </td>
-                  <td className="text-red-500">✗ Random face changes</td>
-                  <td>Manual actor filming only</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Voiceover &amp; Caption Beat Alignment</strong>
-                  </td>
-                  <td className="highlight text-emerald-500 font-bold">
-                    ✓ Automatic Whisper Sync
-                  </td>
-                  <td>Limited / Inflexible</td>
-                  <td>Manual manual slicing (hours)</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Automated Music Ducking</strong>
-                  </td>
-                  <td className="highlight text-emerald-500 font-bold">
-                    ✓ Built-in DSP Auto-Duck
-                  </td>
-                  <td className="text-red-500">✗ None / Overbearing music</td>
-                  <td>Manual keyframing curves</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Local RTX GPU Generation (Zero Cost)</strong>
-                  </td>
-                  <td className="highlight text-emerald-500 font-bold">
-                    ✓ Unlimited Free Local GPU
-                  </td>
-                  <td className="text-red-500">✗ Expensive credit burn</td>
-                  <td>N/A (No AI generation)</td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Non-Destructive Scene Timeline Control</strong>
-                  </td>
-                  <td className="highlight text-emerald-500 font-bold">
-                    ✓ Replace any frame or duration
-                  </td>
-                  <td className="text-red-500">✗ Black-box (regenerate all)</td>
-                  <td>Full timeline (no AI workflow)</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================================
-          9. CREATOR TESTIMONIALS
-          ==================================================================== */}
-      <section className="mkt-testimonials-section" aria-label="Testimonials">
-        <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge mkt-badge-purple">Creator Validation</div>
-            <h2 className="mkt-section-title">Loved by High-Velocity YouTube Creators</h2>
-            <p className="mkt-section-subtitle">
-              Hear from producers and channel owners who turned their script ideas into profitable, automated
-              video channels.
-            </p>
-          </div>
-
-          <div className="mkt-testimonials-grid">
-            <div className="mkt-testimonial-card">
-              <p className="mkt-quote-text">
-                "The Video Bible feature changed everything for my history channel. In other AI tools, my
-                protagonist looked like a completely different person in every scene. In ScenoraEdits,
-                the armor, face, and aesthetic stayed 100% consistent across 40 scenes."
-              </p>
-              <div className="mkt-author-row">
-                <div className="mkt-author-avatar">AT</div>
-                <div>
-                  <div className="mkt-author-name">Alex Thorne</div>
-                  <div className="mkt-author-role">Chronicles of Rome (185K Subs)</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mkt-testimonial-card">
-              <p className="mkt-quote-text">
-                "I cut my production time from 14 hours down to 45 minutes per documentary. The automatic
-                audio ducking and subtitle synchronization saves me endless hours in Premiere Pro. This is the
-                single most practical tool for faceless creators."
-              </p>
-              <div className="mkt-author-row">
-                <div className="mkt-author-avatar">DK</div>
-                <div>
-                  <div className="mkt-author-name">Devin K.</div>
-                  <div className="mkt-author-role">Mythos Explained (310K Subs)</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mkt-testimonial-card">
-              <p className="mkt-quote-text">
-                "Being able to run scene generations locally on my RTX 4080 means I have zero monthly credit
-                anxiety. When I need to render away from my desk, I burst to the cloud. Best of both worlds."
-              </p>
-              <div className="mkt-author-row">
-                <div className="mkt-author-avatar">SM</div>
-                <div>
-                  <div className="mkt-author-name">Sarah Miller</div>
-                  <div className="mkt-author-role">Tech Horizons Studio</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================================
-          10. PRICING TEASER
-          ==================================================================== */}
-      <section className="mkt-pricing-teaser-section" id="pricing" aria-label="Pricing Overview">
-        <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge mkt-badge-blue">Transparent Plans</div>
-            <h2 className="mkt-section-title">Start Free, Scale as Your Channel Grows</h2>
-            <p className="mkt-section-subtitle">
-              Zero surprises. Unlimited local GPU generation forever, or unlock priority cloud horsepower
-              and advanced Video Bible capabilities.
-            </p>
-          </div>
-
-          <div className="mkt-pricing-teaser-grid">
-            {/* Free Starter Tier */}
-            <div className="mkt-price-card">
-              <div className="mkt-plan-name">Creator Starter</div>
-              <div className="mkt-plan-desc">
-                Ideal for trying out the timeline and running unlimited generations on your local GPU.
-              </div>
-              <div className="mkt-price-amount">
-                $0 <span className="mkt-price-sub">/ free forever</span>
-              </div>
-              <ul className="mkt-plan-features">
-                <li>
-                  <Check size={16} />
-                  <span>Unlimited local RTX GPU generations</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>5 monthly cloud fast generations</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>Full HD 1080p video exports</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>Basic Video Bible character lock</span>
-                </li>
-              </ul>
-              <button
-                onClick={() => navigate("/app")}
-                className="mkt-btn-secondary w-full justify-center"
-              >
-                Start Free
-              </button>
-            </div>
-
-            {/* Creator Pro Tier */}
-            <div className="mkt-price-card featured">
-              <span className="mkt-price-badge">Most Popular</span>
-              <div className="mkt-plan-name">Creator Pro (Yearly)</div>
-              <div className="mkt-plan-desc">
-                For serious creators and channels needing cloud rendering speed and continuous production.
-              </div>
-              <div className="mkt-price-amount">
-                $49 <span className="mkt-price-sub">/ full year ($4.08/mo)</span>
-              </div>
-              <ul className="mkt-plan-features">
-                <li>
-                  <Check size={16} />
-                  <span>Unlimited priority cloud GPU generation</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>Full Video Bible character persistence suite</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>Advanced speech auto-ducking &amp; sound effects</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>Multi-aspect ratio 16:9 and 9:16 export</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>Full commercial rights for YouTube monetization</span>
-                </li>
-              </ul>
-              <button
-                onClick={() => navigate("/pricing")}
-                className="mkt-btn-primary w-full justify-center"
-              >
-                <span>Upgrade to Creator Pro</span>
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================================
-          11. SEO FAQ ACCORDION SECTION
-          ==================================================================== */}
-      <section className="mkt-faq-section" id="faq" aria-label="Frequently Asked Questions">
-        <div className="mkt-container">
-          <div className="mkt-section-header">
-            <div className="mkt-badge">Got Questions?</div>
-            <h2 className="mkt-section-title">Frequently Asked Questions</h2>
-            <p className="mkt-section-subtitle">
-              Everything you need to know about ScenoraEdits, character consistency, monetization, and
-              hardware requirements.
-            </p>
-          </div>
-
-          <div className="mkt-faq-list">
+          <div className="max-w-3xl mx-auto space-y-4">
             {[
               {
-                q: "Can I monetize YouTube videos made with ScenoraEdits?",
-                a: "Yes, 100%. All videos exported from ScenoraEdits carry full commercial rights. You own the complete copyright to your produced videos and can monetize them across YouTube Ads, brand sponsorships, TikTok Creator Rewards, and Facebook Reels.",
+                q: "What makes ScenoraEdits different from tools like Fliki or Pictory?",
+                a: "Tools like Fliki and Pictory take control away by auto-selecting stock footage or generic clips. ScenoraEdits is a scene-based video composer that gives you 100% control: every scene has its own dedicated image slot where you can upload your own image, drag from desktop, or generate using AI with your own API key.",
               },
               {
-                q: "How does the Video Bible ensure characters look identical across scenes?",
-                a: "The Video Bible engine locks reference image seeds, physical descriptions, costume anchors, and lighting styles into a persistent project database. When generating each new scene, ScenoraEdits injects these exact anchor parameters into the diffusion model to ensure facial likeness and character details remain uniform.",
+                q: "Do I need an API key to generate images?",
+                a: "No! ScenoraEdits includes free cloud image providers (Flux and Pollinations) that work right out of the box with zero setup. If you want premium models like OpenAI DALL-E 3 or Gemini Imagen 3, you can add your own API key (BYOK) and generate at direct provider cost.",
               },
               {
-                q: "Can I use my own voiceover recordings or generate AI voiceovers?",
-                a: "You can do both. You can upload pre-recorded MP3/WAV narration files from professional voice actors or record directly into the studio. Alternatively, you can use built-in AI voice models to generate voiceovers directly from your text script.",
+                q: "Can I upload my own voiceover audio?",
+                a: "Yes. You can upload any voiceover file (.mp3, .wav, .m4a, .aac up to 50MB) recorded on your own microphone or generated via ElevenLabs. Alternatively, you can generate speech directly in the app using Microsoft Edge-TTS neural voices.",
               },
               {
-                q: "Do I need an expensive graphics card to run ScenoraEdits?",
-                a: "Not at all. ScenoraEdits features a hybrid compute architecture. If you have an NVIDIA RTX GPU, you can connect your local machine to render for free. If you are on a Mac, Chromebook, or ultrabook without a dedicated GPU, our cloud GPU clusters will render all scenes and timeline videos in the cloud seamlessly.",
+                q: "Is there any watermark on the exported video?",
+                a: "No. All exported videos (Full HD 1080p, 720p, WebM, MP3, GIF) are 100% clean and free of watermarks, ready for YouTube monetization and commercial publishing.",
               },
               {
-                q: "What video resolutions and aspect ratios can I export?",
-                a: "ScenoraEdits exports Full HD 1080p (1920x1080) at 30fps and 60fps in standard MP4 (H.264 / AAC) format. You can also export vertical 9:16 (1080x1920) for YouTube Shorts, Instagram Reels, and TikTok with a single click.",
+                q: "What video formats can I export?",
+                a: "A single render job creates five production formats simultaneously: MP4 1080p (Full HD master), 720p HD (mobile/social), WebM VP9 (web video), MP3 (extracted audio-only mix), and a 6-second animated loop GIF.",
               },
-              {
-                q: "Can I edit individual scenes without regenerating the whole video?",
-                a: "Yes! Unlike primitive text-to-video black-box tools, ScenoraEdits provides a full multi-track studio timeline. You can adjust scene start/end times, swap visual prompts, re-roll single frames with custom seeds, change audio tracks, and preview edits in real time before exporting.",
-              },
-            ].map((faq, index) => {
-              const isOpen = openFaqIndex === index;
-              return (
-                <div key={index} className="mkt-faq-item">
-                  <button
-                    onClick={() => toggleFaq(index)}
-                    className="mkt-faq-question"
-                    aria-expanded={isOpen}
-                  >
-                    <span>{faq.q}</span>
-                    {isOpen ? (
-                      <ChevronUp size={18} className="text-[#FF6B00] shrink-0" />
-                    ) : (
-                      <ChevronDown size={18} className="text-[var(--text-muted)] shrink-0" />
-                    )}
-                  </button>
-                  {isOpen && (
-                    <div className="mkt-faq-answer">
-                      <p>{faq.a}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            ].map((faq, idx) => (
+              <div
+                key={idx}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] overflow-hidden transition-all"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleFaq(idx)}
+                  className="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-[var(--text-primary)] hover:text-[#6366f1] transition-colors"
+                >
+                  <span>{faq.q}</span>
+                  {openFaqIndex === idx ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+                {openFaqIndex === idx && (
+                  <div className="px-6 pb-5 text-sm text-[var(--text-muted)] leading-relaxed border-t border-[var(--border-subtle)] pt-4">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ====================================================================
-          12. HIGH-CONVERTING BOTTOM CTA BANNER
+          7. FINAL HIGH-CONVERTING CTA
           ==================================================================== */}
-      <section className="mkt-cta-banner-section" aria-label="Get Started">
-        <div className="mkt-container">
-          <div className="mkt-cta-banner">
-            <h2>Turn Your Video Ideas into Polished YouTube Content Today</h2>
-            <p>
-              Join thousands of creators, faceless channel owners, and media studios automating their
-              video production workflow with ScenoraEdits.
-            </p>
-
-            <div className="mkt-cta-actions">
-              <button
-                onClick={() => navigate("/app")}
-                className="mkt-btn-primary"
-                id="bottom-primary-cta"
-              >
-                <span>Create Your First Video Free</span>
-                <ArrowRight size={18} />
-              </button>
-
-              <button
-                onClick={() => navigate("/pricing")}
-                className="mkt-btn-secondary"
-                id="bottom-pricing-cta"
-              >
-                <span>View All Plans</span>
-              </button>
-            </div>
-
-            <div className="mkt-cta-subtext">
-              <span>✓ Instant browser studio access</span>
-              <span>✓ No credit card required</span>
-              <span>✓ 100% Commercial YouTube rights</span>
-            </div>
+      <section className="mkt-cta-section py-24 text-center relative overflow-hidden" aria-label="Get Started">
+        <div className="mkt-container max-w-4xl mx-auto px-6 relative z-10">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto mb-6 border border-indigo-500/20">
+            <Sparkles size={28} />
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-6">
+            Start building your video — free
+          </h2>
+          <p className="text-base sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            No credit card. No camera. No video editing skills required. Upload your audio and assign your scene images today.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={() => navigate("/app")}
+              className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-base shadow-lg shadow-indigo-500/25 transition-all flex items-center gap-2"
+            >
+              <span>Try ScenoraEdits free</span>
+              <ArrowRight size={18} />
+            </button>
+            <button
+              onClick={() => navigate("/how-it-works")}
+              className="px-8 py-4 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold text-base border border-zinc-700 transition-all"
+            >
+              See interactive guide
+            </button>
           </div>
         </div>
       </section>
     </div>
   );
 };
-
-export default HomePage;

@@ -1,17 +1,24 @@
-# robots.txt — ScenoraEdits
+# robots.txt - ScenoraEdits
 # https://scenoraedits.web.app/
 
 User-agent: *
 
-# Allow all public marketing pages
+# Allow all public marketing and educational pages
 Allow: /
 Allow: /features
 Allow: /how-it-works
+Allow: /use-cases
 Allow: /pricing
 Allow: /blog
 Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /commercial-rights
+Allow: /security
+Allow: /cookies
+Allow: /status
 
-# Disallow private authenticated application areas
+# Disallow private authenticated application and administration areas
 Disallow: /app/
 Disallow: /admin/
 Disallow: /api/

@@ -7,17 +7,18 @@ import { Button } from "../../components/ui/Button";
 import { Alert } from "../../components/ui/Feedback";
 import { ForgotPasswordModal } from "../../components/auth/ForgotPasswordModal";
 import { useAuth } from "../../context/AuthContext";
-import { ArrowRight, Mail, Lock } from "lucide-react";
+import { ArrowRight, Mail, Lock, Sparkles } from "lucide-react";
 
 export const SignInPage: React.FC = () => {
   const { navigate, searchParams } = useRouter();
   useSEO(PAGE_SEO.signIn);
-  const { signInWithEmail, signInWithGoogle, isAuthenticated, isConfigured, error: authError, clearError } = useAuth();
+  const { signInWithEmail, signInWithGoogle, signInAnonymouslyUser, isAuthenticated, isConfigured, error: authError, clearError } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
 
@@ -65,6 +66,20 @@ export const SignInPage: React.FC = () => {
       setLocalError(err?.message || "Google sign in was cancelled or failed.");
     } finally {
       setIsGoogleSubmitting(false);
+    }
+  };
+
+  const handleGuestSignIn = async () => {
+    setLocalError(null);
+    clearError();
+    setIsGuestSubmitting(true);
+    try {
+      await signInAnonymouslyUser();
+      navigate(returnUrl);
+    } catch (err: any) {
+      setLocalError(err?.message || "Guest session initialization failed.");
+    } finally {
+      setIsGuestSubmitting(false);
     }
   };
 
@@ -182,6 +197,23 @@ export const SignInPage: React.FC = () => {
           >
             Google
           </Button>
+
+          <div className="mt-3">
+            <Button
+              type="button"
+              variant="neu-ghost"
+              size="md"
+              className="w-full font-semibold py-2.5 border border-dashed border-[#FF6B00]/40 text-[#FF6B00] hover:bg-[#FF6B00]/10"
+              isLoading={isGuestSubmitting}
+              onClick={handleGuestSignIn}
+              leftIcon={<Sparkles size={14} className="text-[#FF6B00]" />}
+            >
+              Try Without an Account (Guest Trial) →
+            </Button>
+            <p className="text-[10px] text-center text-[var(--neu-text-muted)] mt-1.5">
+              Instant access • No email required • Create up to 1 project
+            </p>
+          </div>
 
           <div className="mt-6 pt-5 border-t border-[var(--neu-border-subtle)] text-center text-xs text-[var(--neu-text-secondary)] font-sans">
             Don't have an account?{" "}

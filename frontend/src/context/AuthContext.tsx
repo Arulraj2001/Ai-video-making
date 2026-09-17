@@ -3,6 +3,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInAnonymously,
   signOut as fbSignOut,
   sendPasswordResetEmail,
   updateProfile,
@@ -24,6 +25,7 @@ export interface AuthContextType {
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, displayName?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInAnonymouslyUser: () => Promise<void>;
   signOutUser: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   clearError: () => void;
@@ -118,6 +120,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInAnonymouslyUser = async (): Promise<void> => {
+    clearError();
+    if (!auth) {
+      const msg = "Firebase is not configured. Add VITE_FIREBASE_* keys to your frontend/.env.";
+      setError(msg);
+      throw new Error(msg);
+    }
+    try {
+      await signInAnonymously(auth);
+    } catch (err: unknown) {
+      const friendly = formatAuthError(err);
+      setError(friendly);
+      throw new Error(friendly);
+    }
+  };
+
   const signOutUser = async (): Promise<void> => {
     clearError();
     if (!auth) {
@@ -166,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
+        signInAnonymouslyUser,
         signOutUser,
         sendPasswordReset,
         clearError,

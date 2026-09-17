@@ -156,24 +156,24 @@ export const PublicFooter: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 3: Creator Niches */}
+          {/* Column 3: Creator Niches & Use Cases */}
           <div className="saas-footer-col">
-            <h5>Creator Niches</h5>
+            <h5>Use Cases</h5>
             <ul className="saas-footer-links">
               <li>
-                <Link to="/#niche-documentary">YouTube Documentaries</Link>
+                <Link to="/use-cases">Faceless YouTube</Link>
               </li>
               <li>
-                <Link to="/#niche-faceless">Faceless Niche Channels</Link>
+                <Link to="/use-cases">Podcast to Video</Link>
               </li>
               <li>
-                <Link to="/#niche-shorts">Viral Shorts &amp; TikTok</Link>
+                <Link to="/use-cases">AI Image Artists</Link>
               </li>
               <li>
-                <Link to="/#niche-educational">Educational &amp; Lore</Link>
+                <Link to="/use-cases">Explainers &amp; Courses</Link>
               </li>
               <li>
-                <Link to="/features#compute">Local RTX GPU Setup</Link>
+                <Link to="/use-cases">View All Use Cases →</Link>
               </li>
             </ul>
           </div>

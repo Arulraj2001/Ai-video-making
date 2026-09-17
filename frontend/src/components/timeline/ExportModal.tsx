@@ -865,19 +865,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
                 gap: "10px",
                 fontSize: "0.8rem",
               }}
             >
               {[
-                { name: "Preparing...", min: 0 },
-                { name: "Generating timeline...", min: 15 },
-                { name: "Rendering...", min: 55 },
-                { name: "Finalizing...", min: 85 },
+                { name: "Preparing assets", min: 0 },
+                { name: "Rendering scene clips", min: 20 },
+                { name: "Burning captions & motion", min: 50 },
+                { name: "Mixing audio & ducking", min: 75 },
+                { name: "Finalizing export", min: 90 },
               ].map((stg) => {
-                const isCurrent = activeJob.stage === stg.name;
-                const isPassed = activeJob.progress > stg.min;
+                const isPassed = activeJob.progress > stg.min + 15 || activeJob.progress === 100;
+                const isCurrent = !isPassed && activeJob.progress >= stg.min;
                 return (
                   <div
                     key={stg.name}
@@ -886,9 +887,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                       borderRadius: "8px",
                       background: isCurrent
                         ? "rgba(99, 102, 241, 0.15)"
+                        : isPassed
+                        ? "rgba(16, 185, 129, 0.08)"
                         : "rgba(255, 255, 255, 0.02)",
                       border: isCurrent
                         ? "1px solid rgba(99, 102, 241, 0.4)"
+                        : isPassed
+                        ? "1px solid rgba(16, 185, 129, 0.3)"
                         : "1px solid rgba(255, 255, 255, 0.05)",
                       display: "flex",
                       alignItems: "center",
@@ -896,27 +901,45 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                       color: isCurrent
                         ? "#a5b4fc"
                         : isPassed
-                        ? "var(--text-secondary)"
+                        ? "#34d399"
                         : "var(--text-muted)",
-                      fontWeight: isCurrent ? 700 : 500,
+                      fontWeight: isCurrent || isPassed ? 700 : 500,
                     }}
                   >
                     {isCurrent ? (
-                      <RefreshCw size={12} className="animate-spin text-indigo-400" />
+                      <RefreshCw size={12} className="animate-spin text-indigo-400 shrink-0" />
                     ) : isPassed ? (
-                      <CheckCircle2 size={12} className="text-emerald-400" />
+                      <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
                     ) : (
-                      <Clock size={12} />
+                      <Clock size={12} className="shrink-0" />
                     )}
-                    <span>{stg.name}</span>
+                    <span style={{ fontSize: "0.76rem" }}>{stg.name}</span>
                   </div>
                 );
               })}
             </div>
 
-            <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              Running asynchronously on the backend. This render will continue safely even if you navigate away.
-            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 14px",
+                borderRadius: "10px",
+                background: "rgba(16, 185, 129, 0.08)",
+                border: "1px solid rgba(16, 185, 129, 0.2)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <CheckCircle2 size={14} className="text-emerald-400" />
+                <span style={{ fontSize: "0.78rem", color: "#e2e8f0", fontWeight: 500 }}>
+                  You can safely close this window — rendering continues in the background.
+                </span>
+              </div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace" }}>
+                Est: ~1–3 mins
+              </span>
+            </div>
           </div>
         )}
 

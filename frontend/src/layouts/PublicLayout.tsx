@@ -26,6 +26,7 @@ export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children
   const navLinks = [
     { label: "Features", to: "/features" },
     { label: "How It Works", to: "/how-it-works" },
+    { label: "Use Cases", to: "/use-cases" },
     { label: "Pricing", to: "/pricing" },
     { label: "Guides", to: "/blog" },
     { label: "Contact", to: "/contact" },

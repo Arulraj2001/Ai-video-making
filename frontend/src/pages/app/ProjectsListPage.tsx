@@ -6,7 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { Button, IconButton } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
-import { Search, Plus, Trash2, Calendar, Sliders } from "lucide-react";
+import { Search, Plus, Trash2, Calendar, Sliders, ArrowRight, Film } from "lucide-react";
 
 export const ProjectsListPage: React.FC = () => {
   const { navigate } = useRouter();
@@ -83,9 +83,33 @@ export const ProjectsListPage: React.FC = () => {
           </button>
         </Card>
       ) : filteredProjects.length === 0 ? (
-        <Card variant="default" className="p-12 text-center text-xs text-[var(--color-text-muted)]">
-          {searchTerm ? "No projects match your search query." : "No projects created yet."}
-        </Card>
+        searchTerm ? (
+          <Card variant="default" className="p-12 text-center text-xs text-[var(--color-text-muted)]">
+            No projects match your search query.
+          </Card>
+        ) : (
+          <Card variant="default" className="p-12 sm:p-16 text-center border-dashed border-2 border-[var(--border)] bg-[var(--surface-alt)]/50 rounded-2xl">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF6B00]/20 to-[#FF6B00]/5 border border-[#FF6B00]/30 flex items-center justify-center mx-auto mb-5 text-[#FF6B00]">
+              <Film size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-[var(--text)] mb-2">
+              You haven't created a video yet
+            </h3>
+            <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto mb-6 leading-relaxed">
+              Upload a voiceover or generate narration to start your first scene-based video.
+            </p>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus size={15} />}
+              rightIcon={<ArrowRight size={15} />}
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-6 py-3 font-semibold shadow-lg"
+            >
+              Create Your First Video →
+            </Button>
+          </Card>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {filteredProjects.map((project) => {

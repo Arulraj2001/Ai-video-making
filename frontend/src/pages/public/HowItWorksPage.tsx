@@ -26,13 +26,13 @@ export const HowItWorksPage: React.FC = () => {
   const { navigate } = useRouter();
 
   useSEO({
-    title: "How It Works — ScenoraEdits 5-Stage AI Video Production Pipeline",
+    title: "How It Works — Turn Audio Into a Scene-by-Scene Video in 5 Steps",
     description:
-      "From raw script or voiceover audio to finished 1080p YouTube video in under 30 minutes. Learn how ScenoraEdits automates speech transcription, character continuity, storyboarding, audio ducking, and timeline mastering.",
+      "From raw voiceover to finished 1080p video in 5 controlled steps. Upload audio, lock characters in Video Bible, assign images per scene, add motion and subtitles, and export.",
     canonical: "https://scenoraedits.web.app/how-it-works",
-    ogTitle: "How ScenoraEdits Works — 5-Stage AI Video Pipeline",
+    ogTitle: "How ScenoraEdits Works — 5-Step Scene-Based Video Builder",
     ogDescription:
-      "Step-by-step production tour: voiceover parsing, Video Bible character locking, AI storyboarding, multi-track audio ducking, and 1080p export.",
+      "Upload voiceover audio, lock character consistency, assign images scene-by-scene, add kinetic captions, and export full 1080p video for YouTube.",
   });
 
   // Active Stage Navigation
@@ -60,32 +60,30 @@ export const HowItWorksPage: React.FC = () => {
         <div className="hiw-container">
           <div className="hiw-badge">
             <Sparkles size={14} className="text-[#FF6B00]" />
-            <span>The End-to-End Production Pipeline</span>
+            <span>The 5-Stage Audio-to-Video Pipeline</span>
           </div>
 
           <h1 className="hiw-hero-h1">
-            From Raw Script to Polished YouTube Video in{" "}
+            Turn Audio Into a Finished Video in{" "}
             <span className="hiw-gradient-text">5 Controlled Steps</span>
           </h1>
 
           <p className="hiw-hero-lead">
-            Experience complete transparency into modern AI video creation. Learn how voiceover parsing,
-            Video Bible™ character persistence, automated storyboarding, and timeline mastering combine
-            to ship broadcast-ready YouTube videos in under 30 minutes.
+            No camera. No confusing multi-layer video software. ScenoraEdits automatically segments your voiceover into scenes, lets you assign one image to each beat, adds smooth camera motion and subtitles, and exports an MP4 ready for YouTube.
           </p>
 
           <div className="hiw-velocity-strip">
             <span className="hiw-velocity-pill">
               <Clock size={16} className="text-[#FF6B00]" />
-              <span>Avg Production Time: 25–35 Mins</span>
+              <span>Total Time: ~25–45 Mins</span>
             </span>
             <span className="hiw-velocity-pill">
               <ShieldCheck size={16} className="text-emerald-500" />
-              <span>Character Continuity: 100% Locked</span>
+              <span>Video Bible™ Consistency Locked</span>
             </span>
             <span className="hiw-velocity-pill">
               <Zap size={16} className="text-purple-500" />
-              <span>Free Local RTX or Fast Cloud</span>
+              <span>BYOK Zero Token Markup</span>
             </span>
           </div>
 
@@ -95,13 +93,13 @@ export const HowItWorksPage: React.FC = () => {
               className="hiw-btn-primary"
               id="hiw-hero-primary-cta"
             >
-              <span>Start Your First Project Free</span>
+              <span>Build My Video Free →</span>
               <ArrowRight size={17} />
             </button>
 
             <a href="#stage-1" className="hiw-btn-secondary" id="hiw-hero-secondary-cta">
               <Play size={15} />
-              <span>Explore Stage 1 (Ingestion)</span>
+              <span>Walk Through Stage 1</span>
             </a>
           </div>
         </div>
@@ -114,11 +112,11 @@ export const HowItWorksPage: React.FC = () => {
         <div className="hiw-container">
           <div className="hiw-stepper-list">
             {[
-              { num: 1, id: "stage-1", label: "01. Ingestion" },
-              { num: 2, id: "stage-2", label: "02. Video Bible™ Lock" },
-              { num: 3, id: "stage-3", label: "03. Storyboard Synthesis" },
-              { num: 4, id: "stage-4", label: "04. Audio DSP & Ducking" },
-              { num: 5, id: "stage-5", label: "05. Studio Timeline Polish" },
+              { num: 1, id: "stage-1", label: "01. Script & Audio (~2m)" },
+              { num: 2, id: "stage-2", label: "02. Video Bible™ (~5m)" },
+              { num: 3, id: "stage-3", label: "03. Assign Images (~15m)" },
+              { num: 4, id: "stage-4", label: "04. Motion & Captions (~10m)" },
+              { num: 5, id: "stage-5", label: "05. Export Masters (~3m)" },
               { num: 6, id: "audit", label: "Time Audit" },
               { num: 7, id: "faq", label: "Pipeline FAQ" },
             ].map((stage) => (
@@ -136,45 +134,49 @@ export const HowItWorksPage: React.FC = () => {
       </nav>
 
       {/* ====================================================================
-          3. STAGE 01: SCRIPT & VOICEOVER INGESTION
+          3. STAGE 01: SCRIPT & VOICEOVER INGESTION (~2 MIN)
           ==================================================================== */}
-      <section className="hiw-stage-section alt-bg" id="stage-1" aria-label="Stage 1 Ingestion">
+      <section className="hiw-stage-section alt-bg" id="stage-1" aria-label="Stage 1 Audio Ingestion">
         <div className="hiw-container">
           <div className="hiw-stage-grid">
             <div className="hiw-stage-content">
               <div className="hiw-stage-tag">
                 <FileText size={15} />
-                <span>Stage 01 • Acoustic Ingestion</span>
+                <span>Stage 01 • Script &amp; Audio Ingestion • Est. Time: ~2 Mins</span>
               </div>
-              <h2 className="hiw-stage-title">Acoustic Speech Transcription &amp; Natural Pause Detection</h2>
+              <h2 className="hiw-stage-title">Upload Your Voiceover Audio or Generate Narration</h2>
               <p className="hiw-stage-desc">
-                Every video begins with your story. Whether you upload a recorded voiceover file or paste a
-                written script, our Whisper acoustic pipeline parses phonetics to identify natural narrative
-                pauses and automatically cuts your video into timed visual scenes.
+                Every video begins with speech. Upload an MP3/WAV file from ElevenLabs or your microphone — or type your script and let our built-in neural TTS voice generator create crystal-clear narration. Whisper automatically detects natural breath pauses to slice your story into timed scene slots.
               </p>
               <ul className="hiw-stage-points">
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Word-Level Phonetic Alignment:</strong> Scene markers lock to exact word endings
-                    so camera cuts feel organic rather than jarring.
+                    <strong>Automatic Scene Segmentation:</strong> Natural cadence pauses split your narration into discrete 4–8 second visual beats.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Adjustable Pause Threshold:</strong> Fine-tune rhythm sensitivity from fast-paced
-                    Shorts (0.4s pause) to cinematic documentary pacing (1.2s pause).
+                    <strong>Word-Level Phonetic Alignment:</strong> Scene boundary timestamps match exact spoken syllables with zero guesswork.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Built-In Narration Engine:</strong> Don't have a voiceover yet? Generate natural,
-                    nuanced AI narration in multiple languages and tones directly from text.
+                    <strong>Multi-Language Neural Voiceover:</strong> Generate lifelike voices across 40+ accents and tones directly from text.
                   </span>
                 </li>
               </ul>
+
+              <div className="pt-3">
+                <button
+                  onClick={() => navigate("/app")}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#FF6B00] hover:underline"
+                >
+                  <span>Try Stage 1 Now in Studio →</span>
+                </button>
+              </div>
             </div>
 
             <div className="hiw-interactive-card">
@@ -200,26 +202,25 @@ export const HowItWorksPage: React.FC = () => {
                   <div className="flex items-center justify-between text-xs font-mono text-[#FF6B00] mb-3">
                     <span className="flex items-center gap-1.5">
                       <UploadCloud size={14} />
-                      <span>narration_master_v2.wav (14.2 MB)</span>
+                      <span>narration_master.mp3 (12.4 MB)</span>
                     </span>
-                    <span className="text-emerald-500 font-bold">Processed in 12s</span>
+                    <span className="text-emerald-500 font-bold">Sliced in 8s</span>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] leading-relaxed bg-[var(--surface-alt)] p-3 rounded-lg border border-[var(--border)] font-mono">
-                    [00:00.00] &quot;Deep within the Orion Nebula...&quot; <br />
-                    [00:05.40] &lt;pause 0.8s&gt; <span className="text-[#FF6B00]">--&gt; Split into Scene 01</span><br />
-                    [00:06.20] &quot;Captain Vance locked coordinates onto the anomaly...&quot;<br />
-                    [00:13.90] &lt;pause 0.6s&gt; <span className="text-[#FF6B00]">--&gt; Split into Scene 02</span>
+                    [00:00.00] &quot;Deep beneath the Antarctic ice sheet...&quot; <br />
+                    [00:05.20] &lt;pause 0.6s&gt; <span className="text-[#FF6B00]">--&gt; Scene 01 (5.2s)</span><br />
+                    [00:05.80] &quot;A research outpost detected an unmapped seismic pulse...&quot;<br />
+                    [00:12.40] &lt;pause 0.7s&gt; <span className="text-[#FF6B00]">--&gt; Scene 02 (6.6s)</span>
                   </p>
                 </div>
               ) : (
                 <div className="hiw-sim-panel">
                   <div className="flex items-center justify-between text-xs font-mono text-purple-500 mb-3">
-                    <span>AI Voiceover Synthesis: Narrator Male (Deep Doc)</span>
-                    <span className="text-emerald-500 font-bold">248 Words</span>
+                    <span>Neural Narration: Deep Documentary Male</span>
+                    <span className="text-emerald-500 font-bold">285 Words</span>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] leading-relaxed bg-[var(--surface-alt)] p-3 rounded-lg border border-[var(--border)]">
-                    &quot;The year was 9 AD. Deep within the damp Germanic forests, three Roman legions marched
-                    toward a destiny that would reshape imperial borders forever...&quot;
+                    &quot;The year was 1911. Roald Amundsen stood at the edge of the Ross Ice Shelf, preparing for a journey that would forever redefine human endurance...&quot;
                   </p>
                 </div>
               )}
@@ -229,7 +230,7 @@ export const HowItWorksPage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          4. STAGE 02: VIDEO BIBLE™ SETUP
+          4. STAGE 02: VIDEO BIBLE™ VISUAL IDENTITY (~5 MIN)
           ==================================================================== */}
       <section className="hiw-stage-section" id="stage-2" aria-label="Stage 2 Video Bible">
         <div className="hiw-container">
@@ -237,37 +238,41 @@ export const HowItWorksPage: React.FC = () => {
             <div className="hiw-stage-content">
               <div className="hiw-stage-tag">
                 <ShieldCheck size={15} />
-                <span>Stage 02 • Visual Identity</span>
+                <span>Stage 02 • Visual Identity &amp; Characters • Est. Time: ~5 Mins</span>
               </div>
-              <h2 className="hiw-stage-title">Lock Characters, World Aesthetics &amp; Lighting Rules</h2>
+              <h2 className="hiw-stage-title">Set Your Visual Style &amp; Lock Character Consistency</h2>
               <p className="hiw-stage-desc">
-                Before generating a single scene, ScenoraEdits establishes your project's Video Bible™.
-                By locking character seeds, wardrobe rules, and camera lighting templates, every subsequent
-                cut respects your established world without random hallucinations.
+                Before assigning images, Stage 2 establishes your project's Video Bible™. You pick an art style preset (Cinematic Film, Dark Fantasy, Cyberpunk Anime, 3D Render) and define recurring characters. By locking facial seeds and wardrobe anchors, your visuals stay consistent across 50+ scenes.
               </p>
               <ul className="hiw-stage-points">
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Protagonist Seed Pinning:</strong> Lock facial bone structure, hairstyle, and age
-                    so Captain Vance looks like Captain Vance in Scene 1 and Scene 45.
+                    <strong>Character Identity Pinning:</strong> Lock facial bone structure, hair, and age so your protagonist looks identical across all shots.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Wardrobe &amp; Armor Permanence:</strong> Retain identical spacesuits, historical
-                    armor, or modern attire across every cut.
+                    <strong>Wardrobe &amp; Prop Permanence:</strong> Uniforms, spacesuits, or medieval armor remain fixed throughout the narrative.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Camera &amp; Color Temperature:</strong> Enforce 35mm anamorphic lenses, warm
-                    golden hour glows, or moody film noir lighting across all frames.
+                    <strong>Lighting &amp; Lens Presets:</strong> Enforce 35mm anamorphic glass, volumetric fog, or golden hour warmth across every scene.
                   </span>
                 </li>
               </ul>
+
+              <div className="pt-3">
+                <button
+                  onClick={() => navigate("/app")}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#FF6B00] hover:underline"
+                >
+                  <span>Configure Video Bible in Studio →</span>
+                </button>
+              </div>
             </div>
 
             <div className="hiw-interactive-card">
@@ -305,7 +310,7 @@ export const HowItWorksPage: React.FC = () => {
                 <div className="hiw-styles-row">
                   <span className="hiw-style-tag">Cinema 35mm</span>
                   <span className="hiw-style-tag">Volumetric Mist</span>
-                  <span className="hiw-style-tag">Amber Cockpit Glow</span>
+                  <span className="hiw-style-tag">Amber Glow</span>
                 </div>
               </div>
             </div>
@@ -314,45 +319,49 @@ export const HowItWorksPage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          5. STAGE 03: AUTOMATED AI STORYBOARD GENERATION
+          5. STAGE 03: ASSIGN ONE IMAGE TO EACH SCENE (~10–30 MIN)
           ==================================================================== */}
-      <section className="hiw-stage-section alt-bg" id="stage-3" aria-label="Stage 3 Storyboard">
+      <section className="hiw-stage-section alt-bg" id="stage-3" aria-label="Stage 3 Assign Images">
         <div className="hiw-container">
           <div className="hiw-stage-grid">
             <div className="hiw-stage-content">
               <div className="hiw-stage-tag">
                 <Film size={15} />
-                <span>Stage 03 • Shot Synthesis</span>
+                <span>Stage 03 • Storyboard &amp; Images • Est. Time: ~10–30 Mins</span>
               </div>
-              <h2 className="hiw-stage-title">Automated AI Storyboard Generation Shot by Shot</h2>
+              <h2 className="hiw-stage-title">Assign One Image to Each Scene (Upload or AI)</h2>
               <p className="hiw-stage-desc">
-                With your script parsed and characters anchored, the storyboard generator transforms each
-                spoken segment into a high-resolution cinematic shot. The system automatically alternates
-                camera angles to maintain high visual pacing.
+                In Stage 3, each scene has its own dedicated card. You choose what shows up: upload your own custom artwork, generate a tailored image with AI using your own API key (or free built-in models), or pick from your project library. You can re-generate or replace any single scene in 1 click.
               </p>
               <ul className="hiw-stage-points">
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Intelligent Camera Variation:</strong> Automatically sequences establishing
-                    wide shots, medium profiles, and intense close-ups to prevent visual fatigue.
+                    <strong>Drop Custom Images:</strong> Upload Midjourney renders, photography, infographics, or slide decks directly onto each scene slot.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>1-Click Single-Shot Re-Roll:</strong> Don't like a specific shot? Re-generate
-                    just that frame with customized camera parameters in seconds.
+                    <strong>In-Studio AI Generation:</strong> Synthesize visuals tailored to that exact line of dialogue with Video Bible consistency.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Negative Prompt Filtering:</strong> Built-in filters eliminate unwanted artifacts,
-                    blurry textures, and disfigured anatomy.
+                    <strong>1-Click Single Scene Replace:</strong> Change any image anytime without re-rendering neighboring scenes.
                   </span>
                 </li>
               </ul>
+
+              <div className="pt-3">
+                <button
+                  onClick={() => navigate("/app")}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#FF6B00] hover:underline"
+                >
+                  <span>Open Storyboard in Studio →</span>
+                </button>
+              </div>
             </div>
 
             <div className="hiw-interactive-card">
@@ -361,28 +370,28 @@ export const HowItWorksPage: React.FC = () => {
                   <img src="/assets/hero_astronaut_main.jpg" alt="Scene 1" />
                   <div className="hiw-storyboard-meta">
                     <span>Scene 01 • Close Up</span>
-                    <span className="text-[#FF6B00]">00:00 - 05.4s</span>
+                    <span className="text-[#FF6B00]">00:00 - 05.2s</span>
                   </div>
                 </div>
                 <div className="hiw-storyboard-shot">
                   <img src="/assets/scene_2_profile.jpg" alt="Scene 2" />
                   <div className="hiw-storyboard-meta">
-                    <span>Scene 02 • Profile Cockpit</span>
-                    <span className="text-[#FF6B00]">05.4s - 13.9s</span>
+                    <span>Scene 02 • Profile View</span>
+                    <span className="text-[#FF6B00]">05.2s - 12.4s</span>
                   </div>
                 </div>
                 <div className="hiw-storyboard-shot">
                   <img src="/assets/scene_3_landscape.jpg" alt="Scene 3" />
                   <div className="hiw-storyboard-meta">
-                    <span>Scene 03 • Planet Wide</span>
-                    <span className="text-[#FF6B00]">13.9s - 21.2s</span>
+                    <span>Scene 03 • Vista Landscape</span>
+                    <span className="text-[#FF6B00]">12.4s - 19.8s</span>
                   </div>
                 </div>
                 <div className="hiw-storyboard-shot">
                   <img src="/assets/scene_1_wide.jpg" alt="Scene 4" />
                   <div className="hiw-storyboard-meta">
-                    <span>Scene 04 • Monolith March</span>
-                    <span className="text-[#FF6B00]">21.2s - 28.5s</span>
+                    <span>Scene 04 • Discovery</span>
+                    <span className="text-[#FF6B00]">19.8s - 26.5s</span>
                   </div>
                 </div>
               </div>
@@ -392,45 +401,49 @@ export const HowItWorksPage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          6. STAGE 04: MULTI-TRACK AUDIO DSP & DYNAMIC CAPTIONS
+          6. STAGE 04: MOTION, CAPTIONS, OVERLAYS & DUCKING (~10–20 MIN)
           ==================================================================== */}
-      <section className="hiw-stage-section" id="stage-4" aria-label="Stage 4 Audio DSP">
+      <section className="hiw-stage-section" id="stage-4" aria-label="Stage 4 Motion and Captions">
         <div className="hiw-container">
           <div className="hiw-stage-grid reverse">
             <div className="hiw-stage-content">
               <div className="hiw-stage-tag">
                 <Volume2 size={15} />
-                <span>Stage 04 • Sound &amp; Subtitles</span>
+                <span>Stage 04 • Motion, Captions &amp; Audio • Est. Time: ~10–20 Mins</span>
               </div>
-              <h2 className="hiw-stage-title">Speech-Aware Music Ducking &amp; Animated Kinetic Captions</h2>
+              <h2 className="hiw-stage-title">Add Ken Burns Motion, Subtitles &amp; Audio Ducking</h2>
               <p className="hiw-stage-desc">
-                Amateur videos have background music that drowns out spoken dialogue. ScenoraEdits applies
-                digital signal processing (DSP) to lower background soundtracks -14dB beneath voiceover
-                narration, alongside word-by-word highlighted subtitle animations.
+                Transform static visuals into a dynamic film. Apply Ken Burns camera zooms and pan directions per scene, enable kinetic subtitles (TikTok Bold with yellow word highlighting or Netflix clean style), and balance background music with automated speech-aware ducking.
               </p>
               <ul className="hiw-stage-points">
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Autonomous Volume Ducking:</strong> 50ms smooth attack and 250ms release curves
-                    ensure music fades down seamlessly when words begin, with zero manual keyframing.
+                    <strong>Ken Burns Camera Motion:</strong> Gentle zoom in, zoom out, or slow horizontal pans give still images life.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Shorts &amp; TikTok Viral Presets:</strong> Animated word-by-word highlights,
-                    custom fonts, and colors that significantly increase viewer completion rates.
+                    <strong>Kinetic Subtitle Presets:</strong> Animated word-by-word highlights boost viewer watch time by up to 40%.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>Multi-Stem Mixing:</strong> Separate audio tracks for voiceover, music score,
-                    and sound effects for full post-production balance.
+                    <strong>Automatic Music Ducking:</strong> Soundtrack lowers -14dB automatically when speech begins, with zero manual keyframes.
                   </span>
                 </li>
               </ul>
+
+              <div className="pt-3">
+                <button
+                  onClick={() => navigate("/app")}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#FF6B00] hover:underline"
+                >
+                  <span>Launch Timeline Studio →</span>
+                </button>
+              </div>
             </div>
 
             <div className="hiw-interactive-card">
@@ -442,8 +455,8 @@ export const HowItWorksPage: React.FC = () => {
                   THE DRILLS UNCOVERED <span>SOMETHING ANCIENT</span>
                 </div>
                 <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 font-mono">
-                  <span>Voice Track: Speaking (0dB)</span>
-                  <span className="text-emerald-400">Score Track: Ducked (-14.2dB)</span>
+                  <span>Voiceover: Active (0dB)</span>
+                  <span className="text-emerald-400">Music: Ducked (-14.2dB)</span>
                 </div>
               </div>
             </div>
@@ -452,45 +465,49 @@ export const HowItWorksPage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          7. STAGE 05: MULTI-TRACK TIMELINE POLISH & 1080P EXPORT
+          7. STAGE 05: MULTI-FORMAT MASTER EXPORT (~1–5 MIN RENDER)
           ==================================================================== */}
-      <section className="hiw-stage-section alt-bg" id="stage-5" aria-label="Stage 5 Timeline and Export">
+      <section className="hiw-stage-section alt-bg" id="stage-5" aria-label="Stage 5 Master Export">
         <div className="hiw-container">
           <div className="hiw-stage-grid">
             <div className="hiw-stage-content">
               <div className="hiw-stage-tag">
                 <Layers size={15} />
-                <span>Stage 05 • Master Export</span>
+                <span>Stage 05 • Master Export • Est. Time: ~1–5 Mins</span>
               </div>
-              <h2 className="hiw-stage-title">Full Timeline Editorial Control &amp; Master 1080p Export</h2>
+              <h2 className="hiw-stage-title">Export Multi-Format Video Ready for YouTube</h2>
               <p className="hiw-stage-desc">
-                Review your complete video in the multi-track timeline editor. Adjust pan-and-zoom speed
-                (Ken Burns effect), fine-tune audio balance, switch between 16:9 Landscape and 9:16 Shorts,
-                and render crisp 1080p 60fps MP4 masters ready for YouTube.
+                Preview your full composition, then click Export. Our deterministic FFmpeg pipeline renders Full HD 1080p MP4, fast 720p draft, WebM, and standalone MP3 audio with verified zero audio-video drift. Downloads include 100% commercial ownership rights and zero watermarks.
               </p>
               <ul className="hiw-stage-points">
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>1-Click Multi-Aspect Toggle:</strong> Instant switch between widescreen YouTube
-                    documentary framing and vertical Shorts reels with smart character centering.
+                    <strong>1-Click Multi-Aspect Switch:</strong> Render in 16:9 Landscape for YouTube or 9:16 Vertical for Shorts and TikTok.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>1080p 60fps Broadcast Masters:</strong> Industry-standard MP4 (H.264 / AAC)
-                    renders optimized for YouTube and social feeds.
+                    <strong>Multi-Deliverable Package:</strong> Get MP4 1080p, WebM, 320kbps MP3 audio cut, and 6s teaser GIF in one pass.
                   </span>
                 </li>
                 <li className="hiw-point-item">
                   <CheckCircle2 size={16} className="hiw-point-icon" />
                   <span>
-                    <strong>100% Commercial Ownership:</strong> Zero watermarks. Full copyright granted for
-                    YouTube monetization and sponsored brand partnerships.
+                    <strong>100% Commercial Monetization:</strong> Zero watermarks. Full copyright ownership granted to creator.
                   </span>
                 </li>
               </ul>
+
+              <div className="pt-3">
+                <button
+                  onClick={() => navigate("/app")}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#FF6B00] hover:underline"
+                >
+                  <span>Export Your First Video Free →</span>
+                </button>
+              </div>
             </div>
 
             <div className="hiw-interactive-card text-center">
@@ -533,7 +550,7 @@ export const HowItWorksPage: React.FC = () => {
 
               <div className="mt-4 pt-3 border-t border-[var(--border)] text-xs font-mono text-[var(--text-muted)] flex justify-around">
                 <span>Resolution: 1920x1080</span>
-                <span>Framerate: 60 FPS</span>
+                <span>Zero Audio Drift: &lt;0.05s</span>
                 <span className="text-emerald-500 font-bold">100% Commercial Rights</span>
               </div>
             </div>
@@ -553,7 +570,7 @@ export const HowItWorksPage: React.FC = () => {
             </div>
             <h2 className="hiw-stage-title">Where Does Your Production Time Go?</h2>
             <p className="hiw-stage-desc">
-              Compare the hours required by traditional video editing workflows against ScenoraEdits.
+              Compare the hours required by traditional fragmented workflows against ScenoraEdits.
             </p>
           </div>
 
@@ -599,27 +616,27 @@ export const HowItWorksPage: React.FC = () => {
                   <span>The ScenoraEdits Pipeline</span>
                 </span>
                 <h3>Under 35 Minutes per Video</h3>
-                <div className="hiw-audit-time scenora">~28 Minutes Total</div>
+                <div className="hiw-audit-time scenora">~30 Minutes Total</div>
                 <ul className="hiw-audit-list">
                   <li>
                     <Check size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                    <span>Automatic acoustic transcription and pause detection (2 mins)</span>
+                    <span>Stage 1: Automatic speech parsing &amp; scene slicing (~2 mins)</span>
                   </li>
                   <li>
                     <Check size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                    <span>Video Bible™ character lock and style registry (3 mins)</span>
+                    <span>Stage 2: Video Bible™ character &amp; style locking (~5 mins)</span>
                   </li>
                   <li>
                     <Check size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                    <span>Automated AI storyboard scene generation (12 mins)</span>
+                    <span>Stage 3: Assign images per scene via upload or BYOK AI (~15 mins)</span>
                   </li>
                   <li>
                     <Check size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                    <span>Automatic audio ducking and timeline fine-tuning (8 mins)</span>
+                    <span>Stage 4: Ken Burns motion, subtitles &amp; audio ducking (~5 mins)</span>
                   </li>
                   <li>
                     <Check size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                    <span>1-click 1080p 60fps Full HD master export (3 mins)</span>
+                    <span>Stage 5: 1-click multi-format 1080p export (~3 mins render)</span>
                   </li>
                 </ul>
               </div>
@@ -632,162 +649,86 @@ export const HowItWorksPage: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          9. CREATOR PRO STRATEGIES FOR YOUTUBE RETENTION
-          ==================================================================== */}
-      <section className="hiw-tips-section" aria-label="Retention Strategies">
-        <div className="hiw-container">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="hiw-badge">
-              <Zap size={14} />
-              <span>YouTube Growth Strategies</span>
-            </div>
-            <h2 className="hiw-stage-title">4 Pro Strategies for Maximum Viewer Retention</h2>
-            <p className="hiw-stage-desc">
-              How full-time YouTube creators use the ScenoraEdits toolchain to maximize watch time.
-            </p>
-          </div>
-
-          <div className="hiw-tips-grid">
-            <div className="hiw-tip-card">
-              <span className="hiw-tip-number">TIP 01</span>
-              <h4>The 3-Second Visual Hook</h4>
-              <p>
-                Use close-up or extreme macro camera angles in Scene 1 to stop the scroll and immediately
-                engage viewers before they swipe away.
-              </p>
-            </div>
-
-            <div className="hiw-tip-card">
-              <span className="hiw-tip-number">TIP 02</span>
-              <h4>Word-by-Word Kinetic Text</h4>
-              <p>
-                On vertical Shorts and mobile screens, dynamic highlighted subtitles keep viewer eyes
-                locked onto the center of the frame throughout narration.
-              </p>
-            </div>
-
-            <div className="hiw-tip-card">
-              <span className="hiw-tip-number">TIP 03</span>
-              <h4>Balanced Audio Ducking</h4>
-              <p>
-                Keep background music audible at -14dB beneath speech to maintain emotional energy without
-                forcing viewers to strain to understand dialogue.
-              </p>
-            </div>
-
-            <div className="hiw-tip-card">
-              <span className="hiw-tip-number">TIP 04</span>
-              <h4>Serial Character Consistency</h4>
-              <p>
-                Build recognizable brand equity by persisting the same protagonist across an entire
-                multi-episode YouTube series using the Video Bible.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================================
-          10. HOW IT WORKS FAQ SECTION
+          9. FREQUENTLY ASKED QUESTIONS
           ==================================================================== */}
       <section className="hiw-faq-section" id="faq" aria-label="Pipeline FAQ">
         <div className="hiw-container">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="hiw-badge">
-              <Sparkles size={14} />
-              <span>Common Questions</span>
+              <Zap size={14} />
+              <span>Production FAQ</span>
             </div>
             <h2 className="hiw-stage-title">Frequently Asked Questions</h2>
             <p className="hiw-stage-desc">
-              Everything you need to know about the 5-stage production pipeline and technical controls.
+              Common questions about the 5-stage production pipeline and video rendering.
             </p>
           </div>
 
-          <div className="hiw-faq-list">
+          <div className="hiw-faq-box">
             {[
               {
-                q: "Can I edit individual scenes after the entire video is generated?",
-                a: "Yes! ScenoraEdits is built around a non-destructive timeline. You can adjust the start/end duration of any scene, re-roll a specific frame with a new prompt or seed, or swap music tracks without re-rendering the rest of your video.",
+                q: "What audio formats can I upload in Stage 1?",
+                a: "You can upload MP3, WAV, M4A, FLAC, and OGG files up to 200MB. If you don't have recorded audio, you can type or paste a script in Stage 1 and generate neural narration with built-in TTS.",
               },
               {
-                q: "How long does generation take on local NVIDIA RTX vs cloud?",
-                a: "On a local NVIDIA RTX 4070 or 4080 GPU, each scene renders in approximately 1 to 2 seconds. In our priority cloud clusters, full 30-scene storyboards typically render in under 4 minutes.",
+                q: "How many scenes will my voiceover be split into?",
+                a: "Whisper detects natural speech pauses. Typically, a 10-minute voiceover generates 25 to 45 scenes (averaging 5–8 seconds per scene). You can split, merge, or adjust scene boundaries anytime in the storyboard.",
               },
               {
-                q: "Can I use my own voice recordings from a USB microphone?",
-                a: "Absolutely. You can drop in any WAV, MP3, or M4A audio file recorded on any microphone. The Whisper acoustic model will automatically transcribe your speech and align timestamps.",
+                q: "Can I use images I've already created outside ScenoraEdits?",
+                a: "Absolutely. You can drag and drop your own PNG, JPG, or WebP files onto any scene slot in Stage 3. ScenoraEdits will automatically scale and fit them to 16:9 or 9:16.",
               },
               {
-                q: "Can I generate both 16:9 landscape and 9:16 vertical versions from one project?",
-                a: "Yes. With our 1-click aspect ratio toggle, you can switch between 16:9 YouTube Widescreen and 9:16 Shorts with smart subject re-centering that keeps the main character framed properly.",
+                q: "Can I edit captions or change the subtitle font?",
+                a: "Yes. In Stage 4, you can edit transcription text directly, pick from subtitle style presets (TikTok Bold, Netflix Subtitles, Minimal Lower Thirds), and customize colors and sizing.",
               },
               {
-                q: "Do I need previous video editing experience with Premiere Pro or DaVinci?",
-                a: "None at all. ScenoraEdits is engineered to provide professional-grade video editing controls with an intuitive, clutter-free web interface that anyone can master in 5 minutes.",
+                q: "How long does the final 1080p export take in Stage 5?",
+                a: "Thanks to our deterministic FFmpeg engine, a 5-minute video typically renders in 1 to 2 minutes. Renders proceed in the cloud or via hardware acceleration without blocking your browser.",
               },
-            ].map((faq, index) => {
-              const isOpen = openFaqIndex === index;
-              return (
-                <div key={index} className="hiw-faq-item">
-                  <button
-                    onClick={() => toggleFaq(index)}
-                    className="hiw-faq-question"
-                    aria-expanded={isOpen}
-                  >
-                    <span>{faq.q}</span>
-                    {isOpen ? (
-                      <ChevronUp size={18} className="text-[#FF6B00] shrink-0" />
-                    ) : (
-                      <ChevronDown size={18} className="text-[var(--text-muted)] shrink-0" />
-                    )}
-                  </button>
-                  {isOpen && (
-                    <div className="hiw-faq-answer">
-                      <p>{faq.a}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            ].map((faq, idx) => (
+              <div key={idx} className="hiw-faq-item">
+                <button
+                  onClick={() => toggleFaq(idx)}
+                  className="hiw-faq-btn"
+                  aria-expanded={openFaqIndex === idx}
+                >
+                  <span>{faq.q}</span>
+                  {openFaqIndex === idx ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+                {openFaqIndex === idx && (
+                  <div className="hiw-faq-content">
+                    <p>{faq.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ====================================================================
-          11. HIGH-CONVERTING BOTTOM CALL TO ACTION
-          ==================================================================== */}
-      <section className="hiw-cta-section" aria-label="Get Started">
+      {/* FINAL HIGH-CONVERTING CTA */}
+      <section className="hiw-bottom-cta">
         <div className="hiw-container">
-          <div className="hiw-cta-banner">
-            <h2>Ready to Build Your First Video in 5 Steps?</h2>
+          <div className="hiw-bottom-card">
+            <h2>Ready to Build Your Video in 5 Steps?</h2>
             <p>
-              Experience character continuity, acoustic ducking, and timeline precision free.
-              Start creating YouTube videos with ScenoraEdits today.
+              Upload your voiceover or paste a script to experience scene-by-scene composition today. Free to start, zero watermarks.
             </p>
-
-            <div className="hiw-cta-actions">
+            <div className="hiw-hero-actions" style={{ marginBottom: 0 }}>
               <button
                 onClick={() => navigate("/app")}
                 className="hiw-btn-primary"
                 id="hiw-bottom-primary-cta"
               >
-                <span>Launch Studio Free</span>
-                <ArrowRight size={17} />
+                <span>Build My Video Free →</span>
               </button>
-
               <button
-                onClick={() => navigate("/pricing")}
+                onClick={() => navigate("/features")}
                 className="hiw-btn-secondary"
-                id="hiw-bottom-pricing-cta"
               >
-                <span>View Pricing Plans</span>
+                <span>View Full Feature Set</span>
               </button>
-            </div>
-
-            <div className="hiw-cta-subtext">
-              <span>✓ Instant browser studio access</span>
-              <span>✓ No credit card required</span>
-              <span>✓ 100% Commercial YouTube rights</span>
             </div>
           </div>
         </div>
@@ -795,5 +736,3 @@ export const HowItWorksPage: React.FC = () => {
     </div>
   );
 };
-
-export default HowItWorksPage;

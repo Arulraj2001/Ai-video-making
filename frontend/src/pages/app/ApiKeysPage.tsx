@@ -20,9 +20,19 @@ import {
   Cpu,
   Layers,
   Server,
+  ExternalLink,
 } from "lucide-react";
 import { api } from "../../services/api";
 import type { ApiKeyMetadata, TestApiKeyResponse } from "../../types";
+
+const providerUrlMap: Record<string, { label: string; url: string }> = {
+  openai: { label: "OpenAI Platform", url: "https://platform.openai.com/api-keys" },
+  gemini: { label: "Google AI Studio", url: "https://aistudio.google.com/app/apikey" },
+  fal: { label: "Fal.ai Dashboard", url: "https://fal.ai/dashboard/keys" },
+  cloudflare: { label: "Cloudflare Dashboard", url: "https://dash.cloudflare.com/profile/api-tokens" },
+  anthropic: { label: "Anthropic Console", url: "https://console.anthropic.com/settings/keys" },
+  elevenlabs: { label: "ElevenLabs Console", url: "https://elevenlabs.io/app/speech-synthesis" },
+};
 
 export const ApiKeysPage: React.FC = () => {
   const [providers, setProviders] = useState<ApiKeyMetadata[]>([]);
@@ -215,6 +225,25 @@ export const ApiKeysPage: React.FC = () => {
         }
       />
 
+      {/* Explainer Hero & Security Reassurance */}
+      <div className="p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--surface-alt)] mb-6 shadow-sm">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="max-w-2xl">
+            <h3 className="text-sm font-bold text-[var(--color-text)] flex items-center gap-2 mb-1.5">
+              <Sparkles size={16} className="text-[#FF6B00]" />
+              <span>API Keys Are 100% Optional</span>
+            </h3>
+            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed m-0">
+              Free image generators (Flux &amp; Pollinations) work with zero configuration. Add your own key to unlock OpenAI DALL-E 3 or Gemini Imagen 3 at raw developer cost.
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-semibold shrink-0">
+            <ShieldCheck size={14} />
+            <span>Encrypted with AES-256 in client-isolated Firebase vault</span>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <Card variant="default" className="p-4 border border-[var(--color-border)] bg-[var(--color-surface-elevated)]">
           <div className="flex items-center justify-between">
@@ -386,9 +415,23 @@ export const ApiKeysPage: React.FC = () => {
                   </div>
 
                   {/* Description */}
-                  <p className="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                  <p className="text-xs text-[var(--color-text-secondary)] mb-2 leading-relaxed">
                     {p.description}
                   </p>
+
+                  {providerUrlMap[p.provider] && (
+                    <div className="mb-3">
+                      <a
+                        href={providerUrlMap[p.provider].url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-semibold text-[#FF6B00] hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>Get your {providerUrlMap[p.provider].label} API key →</span>
+                        <ExternalLink size={10} />
+                      </a>
+                    </div>
+                  )}
 
                   {/* Key Hint / Status */}
                   <div className="p-3 mb-4 rounded-[var(--radius-md)] bg-[var(--color-surface-elevated)] border border-[var(--color-border)] flex flex-col gap-1.5">

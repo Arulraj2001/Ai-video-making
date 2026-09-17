@@ -25,6 +25,7 @@ const AdminLayout = lazy(() => import("./layouts/AdminLayout").then(({ AdminLayo
 
 const FeaturesPage = lazy(() => import("./pages/public/FeaturesPage").then(({ FeaturesPage }) => ({ default: FeaturesPage })));
 const HowItWorksPage = lazy(() => import("./pages/public/HowItWorksPage").then(({ HowItWorksPage }) => ({ default: HowItWorksPage })));
+const UseCasesPage = lazy(() => import("./pages/public/UseCasesPage").then(({ UseCasesPage }) => ({ default: UseCasesPage })));
 const PricingPage = lazy(() => import("./pages/public/PricingPage").then(({ PricingPage }) => ({ default: PricingPage })));
 const BlogPage = lazy(() => import("./pages/public/BlogPage").then(({ BlogPage }) => ({ default: BlogPage })));
 const ContactPage = lazy(() => import("./pages/public/ContactPage").then(({ ContactPage }) => ({ default: ContactPage })));
@@ -169,6 +170,7 @@ function AppContent() {
   let publicContent = <HomePage />;
   if (path === "/features") publicContent = <FeaturesPage />;
   else if (path === "/how-it-works") publicContent = <HowItWorksPage />;
+  else if (path === "/use-cases") publicContent = <UseCasesPage />;
   else if (path === "/pricing") publicContent = <PricingPage />;
   else if (path === "/blog") publicContent = <BlogPage />;
   else if (path === "/contact") publicContent = <ContactPage />;

@@ -3830,6 +3830,16 @@ button .text-white,
   box-shadow: 0 0 0 3px var(--color-primary-subtle);
 }
 
+.sb-stage-step.is-completed {
+  color: var(--color-text);
+}
+
+.sb-stage-step.is-completed .sb-stage-num {
+  background: #10B981;
+  color: #fff;
+  border-color: #10B981;
+}
+
 .sb-stage-step::after {
   content: "";
   position: absolute;

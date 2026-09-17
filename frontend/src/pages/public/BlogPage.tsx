@@ -15,7 +15,7 @@ import {
 
 interface GuideArticle {
   id: string;
-  category: "automation" | "videobible" | "prompting" | "audio" | "hardware";
+  category: "automation" | "videobible" | "prompting" | "audio";
   categoryLabel: string;
   readTime: string;
   title: string;
@@ -25,6 +25,7 @@ interface GuideArticle {
   content: {
     summary: string;
     takeaways: string[];
+    sections?: { heading: string; text: string }[];
     steps: { title: string; desc: string }[];
     promptRecipe?: string;
   };
@@ -32,230 +33,248 @@ interface GuideArticle {
 
 const allArticles: GuideArticle[] = [
   {
-    id: "featured-automation",
+    id: "faceless-youtube-guide-2026",
     category: "automation",
-    categoryLabel: "YouTube Automation",
-    readTime: "8 min read",
-    title: "The Complete YouTube Automation Playbook: Scaling Faceless Channels with 100% Character Consistency",
-    excerpt: "How full-time YouTube creators use ScenoraEdits to structure high-retention scripts, lock recurring protagonists with Video Bible™, and reduce video production from 14 hours to 30 minutes.",
+    categoryLabel: "Faceless Channels",
+    readTime: "10 min read",
+    title: "How to Make a Faceless YouTube Video Using AI Images in 2026 (Free)",
+    excerpt:
+      "A complete step-by-step tutorial on scripting, voiceover generation, timeline splitting, prompt consistency, and exporting a 1080p video ready for YouTube monetization without a camera.",
     author: "Alex Vance • Lead Pipeline Engineer",
     image: "/assets/hero_astronaut_main.jpg",
     content: {
-      summary: "Faceless channels often struggle with two bottlenecks: mismatched characters that break viewer immersion, and exhausting hours spent hunting stock video clips. This guide breaks down the full automation stack that allows modern creators to publish 3 to 5 cinematic videos every week.",
+      summary:
+        "Faceless YouTube channels represent one of the fastest-growing media formats today. Channels in history, science, true crime, and finance produce 10–20 minute narratives that pull millions of views without ever showing a creator's face. The bottleneck has always been production: finding stock footage or generating hundreds of disjointed AI images. This guide walks through the modern scene-based workflow that cuts production time to under 35 minutes.",
       takeaways: [
-        "Consistent characters generate 34% higher average viewer retention across serial video content.",
-        "Acoustic Whisper pause detection cuts script transcription time from hours to under 15 seconds.",
-        "Automated audio ducking eliminates manual volume curve drawing in traditional NLEs.",
+        "Acoustic breath-pause detection splits voiceovers into natural 4–8 second scene boundaries automatically.",
+        "Video Bible seed-locking eliminates character face morphing and costume degradation across multi-scene scripts.",
+        "Ken Burns camera zooms (1.15x push) and kinetic subtitles keep viewer retention above 65% on long-form uploads.",
+        "Exporting in 1080p 60fps MP4 gives you 100% commercial ownership with zero watermarks for instant YouTube AdSense monetization.",
+      ],
+      sections: [
+        {
+          heading: "The Anatomy of a High-Retention Faceless Video",
+          text: "Successful faceless videos rely on three pillars: the 3-second hook (an immediate punchy statement), continuous visual rhythm (changing the visual every 4–8 seconds), and auditory clarity (voiceover at 0dB with music ducked to -14dB). When viewers see a new relevant visual synchronized with every spoken idea, watch time surges.",
+        },
+        {
+          heading: "Monetization Compliance: Avoiding YouTube's Repetitive Content Policy",
+          text: "YouTube actively demonetizes automated channels that stitch together generic slideshows or low-effort AI loops. To stay fully monetized, your video must present an original narrative, synchronized scene-specific artwork, and custom editorial direction. ScenoraEdits produces unique timeline compositions where every frame corresponds to a specific spoken sentence.",
+        },
       ],
       steps: [
         {
-          title: "Step 1: The Acoustic Hook Structure",
-          desc: "Write your first 3 sentences with aggressive visual verbs. When uploaded to ScenoraEdits, natural breath pauses trigger high-motion scene splits immediately.",
+          title: "Step 1: Ingest Voiceover Audio or Script",
+          desc: "Upload an MP3/WAV from ElevenLabs or your microphone — or paste text to generate natural neural speech via built-in Edge-TTS. Whisper slices the recording into scenes based on speech pauses.",
         },
         {
-          title: "Step 2: Video Bible Character Lock",
-          desc: "Define your protagonist once using exact seed anchors and costume tags. Every subsequent generated frame strictly inherits this visual identity.",
+          title: "Step 2: Lock Visual Consistency in Video Bible™",
+          desc: "Define your main character's physical appearance, wardrobe anchors, and lighting style. Choose a cinematic preset (e.g., 35mm Film or Dark Fantasy) to ensure artistic continuity.",
         },
         {
-          title: "Step 3: Timeline Polish & 60fps Export",
-          desc: "Review your multi-track timeline, adjust pan-and-zoom pacing, and export directly in 1080p 60fps ready for YouTube.",
+          title: "Step 3: Assign One Image to Each Scene Beat",
+          desc: "For each scene card, drop your own artwork or generate a scene-specific image using AI. Re-roll or swap any individual shot in 1 click without affecting neighboring scenes.",
+        },
+        {
+          title: "Step 4: Apply Motion, Captions & Ducking",
+          desc: "Add Ken Burns slow zooms, select TikTok Bold or Netflix subtitle typography, and let automatic audio ducking balance your soundtrack.",
+        },
+        {
+          title: "Step 5: Export 1080p 60fps Master",
+          desc: "Render a broadcast-ready MP4 file with zero watermarks and full commercial copyright ownership.",
         },
       ],
-      promptRecipe: "cinematic medium shot, Commander Vance in weathered lunar armor, amber cockpit telemetry glow, 35mm anamorphic lens, ARRI Alexa LF --seed 8492041 --style cinematic",
+      promptRecipe:
+        "cinematic medium shot, Commander Vance in weathered lunar armor, amber cockpit telemetry glow, 35mm anamorphic lens, ARRI Alexa LF --seed 8492041 --style cinematic",
     },
   },
   {
-    id: "videobible-masterclass",
-    category: "videobible",
-    categoryLabel: "Video Bible & Characters",
-    readTime: "6 min read",
-    title: "Video Bible™ Masterclass: Eliminating Facial Drift Across Multi-Scene YouTube Stories",
-    excerpt: "Learn how seed pinning, camera lighting consistency, and wardrobe retention rules prevent your characters from morphing between shots.",
-    author: "Elena Rostova • AI Art Director",
-    image: "/assets/scene_2_profile.jpg",
-    content: {
-      summary: "Traditional AI generation produces isolated images with zero awareness of previous cuts. Video Bible™ injects persistent character descriptors and mathematical seeds into diffusion models to ensure true narrative continuity.",
-      takeaways: [
-        "Face geometry, eye color, and bone structure remain identical across 50+ scenes.",
-        "Wardrobe anchors prevent armor and clothing from randomly changing between cuts.",
-        "Unified lighting temperature creates the optical illusion of a single physical camera shoot.",
-      ],
-      steps: [
-        {
-          title: "1. Lock the Anchor Seed",
-          desc: "Generate your primary close-up anchor and lock the generated seed into the Video Bible registry.",
-        },
-        {
-          title: "2. Define Fixed Wardrobe Tags",
-          desc: "Specify exact materials and colors (e.g. 'Lorica Segmentata Roman iron armor, crimson tunic') that remain constant in every scene prompt.",
-        },
-        {
-          title: "3. Enforce World Lighting Rules",
-          desc: "Set project-level lighting (e.g. 'golden hour volumetric sunlight, 35mm Kodak 500T grain') so scene colors blend seamlessly.",
-        },
-      ],
-      promptRecipe: "profile shot, Marcus Aurelius in imperial Roman armor, battlefield mist, golden hour backlight, 85mm portrait lens --seed 119280",
-    },
-  },
-  {
-    id: "local-rtx-setup",
-    category: "hardware",
-    categoryLabel: "Hardware & Local GPU",
-    readTime: "7 min read",
-    title: "Local NVIDIA RTX Acceleration: Unlimited Free Diffusion Generations on Your Own Hardware",
-    excerpt: "Step-by-step tutorial on connecting your RTX 3060, 4070, 4080, or 4090 GPU to ScenoraEdits for zero-cost, private, unlimited scene generation.",
-    author: "David Chen • Systems Architect",
-    image: "/assets/scene_3_landscape.jpg",
-    content: {
-      summary: "Why burn cloud credits when your desktop has a powerful NVIDIA GPU? Learn how our lightweight local daemon connects to the web studio to provide unlimited free rendering.",
-      takeaways: [
-        "Generate 100% free with zero cloud credit consumption or subscription limitations.",
-        "Your raw scripts, voice recordings, and image masters remain 100% private on local storage.",
-        "Sub-2-second generation latency on NVIDIA RTX 40-series cards.",
-      ],
-      steps: [
-        {
-          title: "1. Install NVIDIA CUDA Toolkit",
-          desc: "Ensure your Windows or Linux workstation has CUDA 12+ and latest NVIDIA Game Ready / Studio drivers installed.",
-        },
-        {
-          title: "2. Launch Scenora Local Daemon",
-          desc: "Run our lightweight background daemon which connects securely over localhost WebSocket (port 8000).",
-        },
-        {
-          title: "3. Toggle Local Engine in Studio",
-          desc: "In Scenora Studio, select 'Compute: Local RTX GPU'. All scene generation requests will execute directly on your hardware.",
-        },
-      ],
-    },
-  },
-  {
-    id: "audio-ducking-science",
+    id: "podcast-to-youtube-video-guide",
     category: "audio",
-    categoryLabel: "Audio & Ducking",
-    readTime: "5 min read",
-    title: "The Science of Audio Ducking: Why Background Music Destroys Viewer Retention",
-    excerpt: "How automatic speech-aware digital signal processing attenuates musical tracks -14dB beneath spoken lines for broadcast clarity.",
-    author: "Sarah Jenkins • Sound Engineer",
+    categoryLabel: "Podcasting",
+    readTime: "8 min read",
+    title: "How to Turn a Podcast Episode into a YouTube Video (Free)",
+    excerpt:
+      "Transform raw audio conversations and podcast episodes into chaptered visual YouTube videos and viral vertical clips without expensive editing software.",
+    author: "Sarah Jenkins • Audio Engineer",
     image: "/assets/scene_1_wide.jpg",
     content: {
-      summary: "Poor audio balance is the #1 reason viewers abandon YouTube videos within the first 30 seconds. Learn how automated speech-aware ducking creates professional broadcast clarity without tedious manual keyframing.",
+      summary:
+        "Over 50% of podcast listeners now consume episodes primarily on YouTube. Releasing audio-only files with a static cover image results in disastrous click-away rates within 60 seconds. This guide details how to take full podcast recordings or highlight clips, segment them into topic chapters, assign relevant visual slides or imagery, and publish engaging 16:9 YouTube videos alongside vertical Shorts.",
       takeaways: [
-        "Background music should automatically duck between -12dB and -16dB whenever dialogue is active.",
-        "A 50ms attack curve prevents abrupt volume jarring when speech begins.",
-        "A 250ms release curve smoothly restores music energy during dramatic pauses.",
+        "Visual variety boosts podcast watch-time on YouTube by more than 300% compared to a static thumbnail.",
+        "Segmenting by topic allows viewers to scrub directly to interesting discussion points.",
+        "Automatic audio ducking ensures background ambiance never masks host or guest voices.",
+        "Exporting vertical 9:16 Shorts from the same timeline drives viral discovery on TikTok and YouTube feeds.",
+      ],
+      sections: [
+        {
+          heading: "Why Static Thumbnail Podcasts Fail on YouTube",
+          text: "YouTube's recommendation algorithm optimizes for Average Percentage Viewed (APV). When viewers see a frozen image for 45 minutes, their engagement drops, signal-boosting drops, and the video stops receiving browse impressions. By introducing scene-based visuals — quotes, speaker portraits, data charts — viewer retention remains elevated throughout the episode.",
+        },
+        {
+          heading: "Captions for the Muted Majority",
+          text: "Over 70% of mobile video feeds are initially viewed with the sound muted. Adding dynamic word-level subtitles ensures your podcast hook stops scrollers instantly, converting casual browsers into committed listeners.",
+        },
       ],
       steps: [
         {
-          title: "1. The -14dB Golden Rule",
-          desc: "Set your voiceover track to 0dB reference, and configure background music ducking to -14dB attenuation.",
+          title: "Step 1: Import Full Episode Audio",
+          desc: "Upload your podcast MP3 or WAV. Whisper transcribes speech and detects conversational pauses to create natural topic scenes.",
         },
         {
-          title: "2. Attack & Release Curves",
-          desc: "Use a gentle 50ms fade-in when speech starts so the volume dip feels musical rather than mechanical.",
+          title: "Step 2: Brand the Episode Workspace",
+          desc: "Set your show font, color accents, and host/guest lower-third nameplates in Stage 2.",
         },
         {
-          title: "3. Dynamic Subtitle Sync",
-          desc: "Pair ducked audio with word-level highlighted subtitles to maximize viewer comprehension on mobile devices.",
+          title: "Step 3: Map Segment Visuals & Infographics",
+          desc: "Assign speaker headshots, relevant news photos, quotes, or topic illustrations to each spoken chapter.",
+        },
+        {
+          title: "Step 4: Enable Kinetic Subtitles & Motion",
+          desc: "Add animated word-by-word captions so mobile scrollers can read along even with audio muted.",
+        },
+        {
+          title: "Step 5: Export Full Episode + 9:16 Shorts",
+          desc: "Download full 1080p landscape video for your channel, plus lightweight vertical clips for social teasers.",
         },
       ],
     },
   },
   {
-    id: "whisper-storyboarding",
+    id: "best-tools-combine-images-audio-video",
     category: "automation",
-    categoryLabel: "YouTube Automation",
-    readTime: "5 min read",
-    title: "Acoustic Storyboarding: How Whisper AI Replaces Hours of Manual Timeline Slicing",
-    excerpt: "Discover how word-level phonetic alignment and breath pause detection automatically segment scripts into timed visual beats.",
-    author: "Alex Vance • Lead Pipeline Engineer",
-    image: "/assets/hero_astronaut_main.jpg",
-    content: {
-      summary: "Traditional video editing requires listening to a voiceover file and manually cutting razor slices at every pause. ScenoraEdits uses OpenAI Whisper phonetic alignment to slice narrative beats automatically.",
-      takeaways: [
-        "Acoustic timing guarantees scene transitions land on natural breath pauses.",
-        "Eliminates hours of manual razor tool editing in Premiere Pro or DaVinci.",
-        "Automatically adjusts scene durations based on speaking speed and dramatic cadence.",
-      ],
-      steps: [
-        {
-          title: "1. Upload Spoken Audio",
-          desc: "Drop in your WAV or MP3 narration file recorded on any standard USB microphone.",
-        },
-        {
-          title: "2. Whisper Phonetic Segmentation",
-          desc: "The acoustic engine generates a word-level timestamp grid and identifies narrative pauses longer than 0.6 seconds.",
-        },
-        {
-          title: "3. Automated Visual Storyboarding",
-          desc: "Each audio segment is immediately converted into an AI storyboard keyframe matching the spoken narrative.",
-        },
-      ],
-    },
-  },
-  {
-    id: "viral-shorts-blueprint",
-    category: "automation",
-    categoryLabel: "YouTube Automation",
-    readTime: "6 min read",
-    title: "Viral Shorts & Reels Blueprint: Kinetic Subtitles, High-Energy Hooks, and 9:16 Centering",
-    excerpt: "How to maximize algorithmic watch time with word-by-word highlighted text, 3-second visual hooks, and vertical focal centering.",
+    categoryLabel: "Tool Comparisons",
+    readTime: "9 min read",
+    title: "Best Free Tools to Combine Images and Audio Into a Video in 2026",
+    excerpt:
+      "A rigorous 5-way breakdown comparing ScenoraEdits, Canva, CapCut, Fliki, and traditional desktop NLEs for audio-first creators.",
     author: "Marcus Brody • YouTube Growth Strategist",
     image: "/assets/scene_2_profile.jpg",
     content: {
-      summary: "YouTube Shorts and TikTok algorithms prioritize 100%+ average percentage viewed (APV). Learn the visual techniques that keep viewers watching past the 60-second mark.",
+      summary:
+        "Creators frequently need to combine spoken voiceovers with still images to make videos. But the existing tools fall into two extremes: complex desktop NLEs (Premiere, DaVinci) that take hours of manual timeline alignment, or generic AI tools that generate random 5-second video loops with no scene-by-scene control. Here is an honest, technical comparison of the 5 leading solutions in 2026.",
       takeaways: [
-        "Kinetic word-by-word highlighted subtitles increase completion rate by up to 42%.",
-        "The first 3 seconds must feature an aggressive visual hook and punchy spoken question.",
-        "Smart focal-point centering prevents characters from getting awkwardly cut off on vertical mobile screens.",
+        "ScenoraEdits is purpose-built for audio-first workflows: audio slicing, discrete scene image assignment, and BYOK AI keys.",
+        "Canva is excellent for static slides but lacks acoustic transcription and automatic pause-based scene alignment.",
+        "CapCut offers great mobile filters, but managing character consistency across 40+ cuts requires tedious manual work.",
+        "Fliki and InVideo mark up AI generations by 300–500% with restrictive token systems and watermarked free exports.",
+      ],
+      sections: [
+        {
+          heading: "The Core Difference: Scene-Level Control vs Generic Loops",
+          text: "Generic AI video generators produce short, unpredictable video loops. If second 14 has a bizarre visual artifact, you have to regenerate the entire video. ScenoraEdits treats video as a discrete composition: every scene has its own image slot that you can swap, edit, or regenerate independently in 1 click.",
+        },
+        {
+          heading: "Cost Comparison: Subscriptions vs BYOK (Bring Your Own Key)",
+          text: "Traditional platforms charge $30–$80/month for image generation credits that expire at month's end. ScenoraEdits lets you connect your own OpenAI or Flux API key, paying raw developer pricing (~$0.003 to $0.04 per image), or generate completely free using built-in engines.",
+        },
       ],
       steps: [
         {
-          title: "1. High-Motion Opening Cut",
-          desc: "Start with an extreme close-up or action shot to stop the scroll in under 1 second.",
+          title: "1. Evaluate Your Publishing Cadence",
+          desc: "If you publish 1–2 videos per month, traditional editors might suffice. If you publish 2–5 videos weekly, automated scene composition is essential.",
         },
         {
-          title: "2. Kinetic Yellow Text Overlay",
-          desc: "Enable animated word-by-word subtitles with high-contrast text shadows.",
+          title: "2. Check Licensing & Watermark Policies",
+          desc: "Ensure your tool grants 100% commercial YouTube rights and leaves zero watermarks on exported files.",
         },
         {
-          title: "3. 60fps Vertical Export",
-          desc: "Export at 1080x1920 60fps for silky smooth algorithmic playback.",
+          title: "3. Verify Sync Drift on Long Renders",
+          desc: "Test whether 15+ minute renders stay in sync. ScenoraEdits guarantees <0.05s variance via backend FFmpeg demuxing.",
         },
       ],
     },
   },
   {
-    id: "cinematic-prompt-engineering",
+    id: "byok-ai-image-generation-guide",
     category: "prompting",
-    categoryLabel: "Prompt Engineering",
-    readTime: "8 min read",
-    title: "Cinematic Prompt Engineering: Translating Script Lines into ARRI Alexa 35mm Keyframes",
-    excerpt: "Master lens selection (anamorphic vs telephoto), volumetric lighting tags, and negative prompt formulas for photorealistic YouTube storytelling.",
-    author: "Elena Rostova • AI Art Director",
+    categoryLabel: "Creator Economics",
+    readTime: "7 min read",
+    title: "How to Use Your Own API Key to Generate AI Images for Video (BYOK Guide)",
+    excerpt:
+      "Stop paying 400% SaaS markups on AI credits. Learn how to connect OpenAI DALL-E 3, Gemini Imagen 3, and Flux keys to generate visuals at raw cost.",
+    author: "David Chen • Systems Architect",
     image: "/assets/scene_3_landscape.jpg",
     content: {
-      summary: "Vague prompts yield cartoonish AI results. By adopting the vocabulary of real Hollywood cinematographers, you can guide diffusion models to produce cinematic, filmic masterpieces.",
+      summary:
+        "The SaaS AI video industry is built on massive credit markups: charging $1.00 for an image generation that costs $0.03 via API. Bring Your Own Key (BYOK) flips the economics back to the creator. By connecting your own developer API keys, you generate unlimited visuals inside ScenoraEdits Studio at raw provider cost.",
       takeaways: [
-        "Specify real focal lengths: 35mm for environmental context, 85mm for emotional intimacy.",
-        "Use volumetric lighting tags: 'dramatic blue rim light, amber tungsten cockpit glow, heavy atmospheric mist'.",
-        "Negative prompts eliminate cartoon textures, plastic skin, and disfigured anatomy.",
+        "OpenAI DALL-E 3 costs ~$0.04 per image directly on your OpenAI billing dashboard.",
+        "Flux Schnell via Fal.ai costs ~$0.003 per image — 300 images cost less than $1.00.",
+        "Built-in Pollinations engine allows 100% free AI generation with zero keys required.",
+        "API keys are encrypted with AES-256 in client-isolated vaults and never shared or logged.",
+      ],
+      sections: [
+        {
+          heading: "Where to Get Your Provider Keys",
+          text: "Obtaining keys takes under 2 minutes: visit platform.openai.com for DALL-E 3, fal.ai for Flux, or aistudio.google.com for Gemini Imagen 3. Add $5 of credit, generate a secret key, and paste it into ScenoraEdits Studio settings.",
+        },
+        {
+          heading: "Zero Markup Architecture",
+          text: "ScenoraEdits does not act as a credit middleman. Requests go directly from your studio session to the model provider using your credentials, with zero token tax or artificial rate limits.",
+        },
       ],
       steps: [
         {
-          title: "1. Camera & Lens Framing",
-          desc: "Always begin your prompt with camera angle: 'cinematic medium shot, 35mm anamorphic lens, ARRI Alexa LF'.",
+          title: "Step 1: Open Studio API Keys Vault",
+          desc: "Navigate to /app/api-keys in ScenoraEdits Studio. The vault is encrypted client-side with AES-256.",
         },
         {
-          title: "2. Lighting Direction & Temperature",
-          desc: "Specify primary key and rim light colors (e.g. 'dual sunset horizon, deep shadows, cinematic contrast').",
+          title: "Step 2: Paste Your Provider Secret Key",
+          desc: "Enter your OpenAI (sk-...), Fal.ai (fal-key-...), or Google Gemini key. Click Save.",
         },
         {
-          title: "3. Film Texture Tags",
-          desc: "Add 'Kodak Vision3 500T 35mm, subtle film grain, photorealistic texture' to eliminate plastic AI looks.",
+          title: "Step 3: Generate Visuals per Scene",
+          desc: "In Stage 3 Storyboard, select your preferred provider from the dropdown. Images generate in 2–4 seconds.",
         },
       ],
-      promptRecipe: "cinematic extreme wide shot, Commander Vance standing before an ancient obsidian monolith on red desert planet, dual sunset horizon, volumetric dust storm, 35mm anamorphic lens, 8k photorealistic --seed 8492041",
+    },
+  },
+  {
+    id: "video-bible-ai-consistency-guide",
+    category: "videobible",
+    categoryLabel: "AI Consistency",
+    readTime: "8 min read",
+    title: "What is a Video Bible and Why It Matters for AI Video Consistency",
+    excerpt:
+      "Why generic AI video tools fail at long stories, and how a persistent Video Bible eliminates facial morphing and art style drift across 50+ scenes.",
+    author: "Elena Rostova • AI Art Director",
+    image: "/assets/hero_astronaut_main.jpg",
+    content: {
+      summary:
+        "The number one complaint about AI-generated video is inconsistency. In Scene 1, your hero is a 30-year-old astronaut with short dark hair. By Scene 4, she has morphed into a blonde teenager wearing a different helmet. Video Bible™ solves this structural flaw by establishing permanent visual anchors before generating any scene.",
+      takeaways: [
+        "Mathematical seed pinning preserves underlying facial bone structure and proportions.",
+        "Wardrobe descriptor tags ensure costumes, uniforms, and props remain persistent.",
+        "Global lighting and lens rules create the optical illusion of a single physical camera shoot.",
+        "Negative prompt rules filter out plastic skin, extra limbs, and stylistic degradation.",
+      ],
+      sections: [
+        {
+          heading: "How Diffusion Drift Happens",
+          text: "Diffusion models generate images by denoising random latent noise. Without explicit anchor conditioning, each prompt execution starts from an arbitrary noise field, causing dramatic shifts in anatomy, clothing, and color palette between consecutive shots.",
+        },
+        {
+          heading: "The 3 Layers of Video Bible Conditioning",
+          text: "1. Character DNA (facial seed, eye color, age, bone structure). 2. Material anchors (wardrobe fabrics, insignia, helmet design). 3. Camera atmosphere (35mm lens, volumetric rim lighting, film grain texture).",
+        },
+      ],
+      steps: [
+        {
+          title: "1. Establish Character Sheet in Stage 2",
+          desc: "Name your protagonist and specify non-negotiable physical descriptors and costume tags.",
+        },
+        {
+          title: "2. Lock the Primary Anchor Seed",
+          desc: "Generate your initial close-up portrait and pin the seed number into the project's Video Bible registry.",
+        },
+        {
+          title: "3. Inherit Visual DNA Across All Scenes",
+          desc: "Every scene prompt automatically injects your Video Bible rules, ensuring seamless narrative continuity.",
+        },
+      ],
+      promptRecipe:
+        "profile shot, Elena Croft in Mk IV lunar EVA suit, amber cockpit telemetry glow, 35mm anamorphic lens, ARRI Alexa LF --seed 8492041 --style cinematic",
     },
   },
 ];
@@ -266,25 +285,18 @@ export const BlogPage: React.FC = () => {
   useSEO({
     title: "Creator Guides & Engineering Blog — ScenoraEdits",
     description:
-      "Actionable tutorials and playbooks for high-velocity YouTube creators. Master Video Bible character consistency, local RTX GPU diffusion, and automated timeline editing.",
+      "Actionable tutorials and playbooks for high-velocity YouTube creators. Master faceless video creation, podcast video conversion, BYOK keys, and Video Bible consistency.",
     canonical: "https://scenoraedits.web.app/blog",
     ogTitle: "Creator Guides & Engineering Blog — ScenoraEdits",
     ogDescription:
-      "In-depth guides on AI video automation, character continuity, sound design ducking, and local GPU setups for full-time YouTube creators.",
+      "Step-by-step playbooks for faceless YouTube creators: audio scene parsing, character consistency, BYOK image keys, and 1080p export.",
   });
 
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-
-  // Reader Modal State
   const [activeArticle, setActiveArticle] = useState<GuideArticle | null>(null);
-
-  // Newsletter State
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
-
-  // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const toggleFaq = (index: number) => {
@@ -299,17 +311,17 @@ export const BlogPage: React.FC = () => {
     }
   };
 
-  // Filtered Articles Calculation
   const filteredArticles = useMemo(() => {
     return allArticles.filter((article) => {
-      const matchesCategory =
-        selectedCategory === "all" || article.category === selectedCategory;
       const matchesSearch =
-        searchQuery.trim() === "" ||
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.categoryLabel.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+        article.author.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === "all" || article.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
     });
   }, [searchQuery, selectedCategory]);
 
@@ -317,56 +329,56 @@ export const BlogPage: React.FC = () => {
 
   return (
     <div className="blog-page">
-      {/* ====================================================================
-          1. HERO SECTION & SEARCH/FILTER BAR
-          ==================================================================== */}
-      <section className="blog-hero-section" aria-label="Creator Academy">
+      {/* 1. HERO SECTION */}
+      <section className="blog-hero-section" aria-label="Blog Header">
         <div className="blog-container">
           <div className="blog-badge">
             <Sparkles size={14} className="text-[#FF6B00]" />
-            <span>Creator Playbook &amp; Production Guides</span>
+            <span>The Creator Playbook</span>
           </div>
 
           <h1 className="blog-hero-h1">
-            Actionable Playbooks for{" "}
-            <span className="blog-gradient-text">High-Velocity YouTube Creators</span>
+            Master the Craft of{" "}
+            <span className="blog-gradient-text">Scene-Based Video Production</span>
           </h1>
 
           <p className="blog-hero-lead">
-            In-depth tutorials, prompt formulas, character consistency breakdowns, and local GPU setups
-            written by video automation engineers and full-time creators.
+            In-depth guides, technical breakdowns, and playbooks for faceless YouTube channels, podcasters, and visual storytellers.
           </p>
 
-          <div className="blog-controls-box">
-            {/* Live Search Input */}
-            <div className="blog-search-wrap">
-              <Search size={18} className="blog-search-icon" />
+          <div className="blog-search-wrap">
+            <div className="blog-search-bar">
+              <Search size={18} className="text-[var(--text-muted)]" />
               <input
                 type="text"
-                placeholder="Search tutorials, prompt recipes, GPU guides, or audio mixing..."
+                placeholder="Search guides (e.g. faceless, podcast, BYOK, Video Bible)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="blog-search-input"
-                aria-label="Search guides"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-[var(--text-muted)] hover:text-[var(--text)]"
+                  aria-label="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
-            {/* Category Filter Pills */}
-            <div className="blog-filter-group">
+            <div className="blog-categories-pill-row">
               {[
                 { id: "all", label: "All Guides" },
-                { id: "automation", label: "YouTube Automation" },
-                { id: "videobible", label: "Video Bible™" },
-                { id: "prompting", label: "Prompt Engineering" },
-                { id: "audio", label: "Audio & Ducking" },
-                { id: "hardware", label: "Hardware & Local GPU" },
+                { id: "automation", label: "Faceless & Automation" },
+                { id: "audio", label: "Audio & Podcasts" },
+                { id: "videobible", label: "Video Bible & Consistency" },
+                { id: "prompting", label: "BYOK & Economics" },
               ].map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`blog-filter-btn ${
-                    selectedCategory === cat.id ? "active" : ""
-                  }`}
+                  className={`blog-cat-pill ${selectedCategory === cat.id ? "active" : ""}`}
                 >
                   {cat.label}
                 </button>
@@ -376,10 +388,8 @@ export const BlogPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ====================================================================
-          2. FEATURED COVER STORY (HERO EDITORIAL CARD)
-          ==================================================================== */}
-      {selectedCategory === "all" && searchQuery === "" && (
+      {/* 2. FEATURED HERO ARTICLE */}
+      {selectedCategory === "all" && !searchQuery && featuredArticle && (
         <section className="blog-featured-section" aria-label="Featured Guide">
           <div className="blog-container">
             <div
@@ -396,7 +406,7 @@ export const BlogPage: React.FC = () => {
 
               <div className="blog-featured-content">
                 <div>
-                  <div className="blog-featured-meta">
+                  <div className="blog-featured-badge">
                     <span>{featuredArticle.categoryLabel}</span>
                     <span>•</span>
                     <span>{featuredArticle.readTime}</span>
@@ -419,9 +429,7 @@ export const BlogPage: React.FC = () => {
         </section>
       )}
 
-      {/* ====================================================================
-          3. CURATED ARTICLES GRID
-          ==================================================================== */}
+      {/* 3. ARTICLES DIRECTORY */}
       <section className="blog-articles-section" aria-label="Guides Directory">
         <div className="blog-container">
           {filteredArticles.length === 0 ? (
@@ -482,9 +490,7 @@ export const BlogPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ====================================================================
-          4. INTERACTIVE ARTICLE READER MODAL
-          ==================================================================== */}
+      {/* 4. ARTICLE READER MODAL */}
       {activeArticle && (
         <div
           className="blog-modal-backdrop"
@@ -537,8 +543,15 @@ export const BlogPage: React.FC = () => {
                 </ul>
               </div>
 
+              {activeArticle.content.sections && activeArticle.content.sections.map((sec, idx) => (
+                <div key={idx} className="blog-modal-section">
+                  <h4>{sec.heading}</h4>
+                  <p>{sec.text}</p>
+                </div>
+              ))}
+
               <div className="blog-modal-section">
-                <h4>Implementation Walkthrough</h4>
+                <h4>Step-by-Step Implementation</h4>
                 <div className="space-y-4 mt-3">
                   {activeArticle.content.steps.map((step, idx) => (
                     <div
@@ -548,7 +561,7 @@ export const BlogPage: React.FC = () => {
                       <h5 className="text-sm font-bold text-[var(--text)] mb-1">
                         {step.title}
                       </h5>
-                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                      <p className="text-xs text-[var(--text-secondary)] m-0 leading-relaxed">
                         {step.desc}
                       </p>
                     </div>
@@ -558,30 +571,28 @@ export const BlogPage: React.FC = () => {
 
               {activeArticle.content.promptRecipe && (
                 <div className="blog-modal-section">
-                  <h4>Copy-Pasteable Prompt Blueprint</h4>
-                  <div className="blog-prompt-snippet">
+                  <h4>Example Video Bible Prompt Formula</h4>
+                  <div className="p-3 bg-black/90 rounded-lg text-emerald-400 font-mono text-xs overflow-x-auto">
                     {activeArticle.content.promptRecipe}
                   </div>
                 </div>
               )}
 
-              <div className="pt-6 mt-6 border-t border-[var(--border)] flex items-center justify-between flex-wrap gap-4">
+              <div className="pt-6 mt-6 border-t border-[var(--border)] flex items-center justify-between flex-wrap gap-3">
                 <button
                   onClick={() => {
                     setActiveArticle(null);
                     navigate("/app");
                   }}
-                  className="hiw-btn-primary"
+                  className="px-6 py-3 rounded-xl bg-[#FF6B00] text-white text-sm font-bold shadow-lg flex items-center gap-2"
                 >
-                  <span>Open Studio &amp; Try This Guide</span>
-                  <ArrowRight size={16} />
+                  <span>Build This Video in Studio Free →</span>
                 </button>
-
                 <button
                   onClick={() => setActiveArticle(null)}
-                  className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
+                  className="text-xs text-[var(--text-secondary)] hover:underline"
                 >
-                  Close Reader
+                  Close Guide
                 </button>
               </div>
             </div>
@@ -589,36 +600,32 @@ export const BlogPage: React.FC = () => {
         </div>
       )}
 
-      {/* ====================================================================
-          5. PROMPT RECIPE NEWSLETTER CARD
-          ==================================================================== */}
-      <section className="blog-nl-section" aria-label="Prompt Newsletter">
+      {/* 5. NEWSLETTER SUBSCRIPTION */}
+      <section className="blog-nl-section" aria-label="Newsletter">
         <div className="blog-container">
           <div className="blog-nl-card">
-            <h3>Get the Top 25 Video Bible™ Prompt Formulas</h3>
+            <h3>Get Weekly Prompt Blueprints &amp; Strategy Packs</h3>
             <p>
-              Download our battle-tested prompt blueprints for historical documentaries, sci-fi lore, and
-              viral faceless YouTube automation channels. Delivered directly to your inbox.
+              Join 15,000+ creators receiving weekly Video Bible prompts, retention tactics, and video production playbooks.
             </p>
 
             {subscribed ? (
-              <div className="inline-flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm font-semibold border border-emerald-500/20">
+              <div className="flex items-center justify-center gap-2 text-sm text-emerald-500 font-semibold py-2">
                 <CheckCircle2 size={18} />
-                <span>Success! The 25 Prompt Formulas pack is on its way to your inbox.</span>
+                <span>You're subscribed! Check your inbox for the prompt pack.</span>
               </div>
             ) : (
-              <form onSubmit={handleNewsletterSubmit} className="blog-nl-form-row">
+              <form onSubmit={handleNewsletterSubmit} className="blog-nl-form">
                 <input
                   type="email"
-                  placeholder="Enter your creator email address..."
+                  placeholder="Enter your creator email..."
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
                   className="blog-nl-input"
                   required
                 />
-                <button type="submit" className="hiw-btn-primary">
-                  <span>Download Prompt Pack</span>
-                  <ArrowRight size={16} />
+                <button type="submit" className="blog-nl-btn">
+                  <span>Subscribe</span>
                 </button>
               </form>
             )}
@@ -626,109 +633,50 @@ export const BlogPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ====================================================================
-          6. FAQ ACCORDION SECTION
-          ==================================================================== */}
-      <section className="blog-faq-section" aria-label="Guides FAQ">
+      {/* 6. FAQ */}
+      <section className="blog-faq-section" aria-label="Blog FAQ">
         <div className="blog-container">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="blog-badge">
-              <Sparkles size={14} />
-              <span>Learning FAQ</span>
-            </div>
-            <h2 className="hiw-stage-title">Frequently Asked Questions</h2>
-            <p className="hiw-stage-desc">
-              Common questions on applying these tutorials to your YouTube channel production.
+            <h2 className="text-2xl font-bold text-[var(--text)]">Guides &amp; Production FAQ</h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-2">
+              Common questions about our tutorials and video creation workflows.
             </p>
           </div>
 
-          <div className="blog-faq-list">
+          <div className="max-w-2xl mx-auto space-y-3">
             {[
               {
-                q: "Are these guides suitable for creators with zero video editing experience?",
-                a: "Yes, 100%. Every guide is written with step-by-step clarity. Because ScenoraEdits automates transcription, character consistency, and audio ducking, you don't need complex NLE experience with Premiere Pro or DaVinci Resolve.",
+                q: "Are these strategies applicable to YouTube monetization?",
+                a: "Yes. All guides focus on high-effort, original storytelling that complies 100% with YouTube's channel monetization policies.",
               },
               {
-                q: "Can I use the prompt recipes with my own custom art styles?",
-                a: "Absolutely. The prompt formulas are designed as modular templates. You can easily swap style tags (e.g. from 'ARRI Alexa 35mm' to 'Anime Cel Shaded' or 'Oil Painting') while preserving character seed locks.",
+                q: "Can I follow these guides using only the free features?",
+                a: "Yes. Every tutorial can be executed completely free using ScenoraEdits built-in voice synthesis, Pollinations image generation, and 1080p export.",
               },
               {
-                q: "Do I need to pay for any external plugins to follow these tutorials?",
-                a: "No external plugins are required. Everything documented in our guides runs natively inside the ScenoraEdits web studio and local daemon.",
+                q: "How often are new guides published?",
+                a: "We publish new creator guides and algorithm case studies every week.",
               },
-              {
-                q: "How frequently are new tutorials and engineering deep-dives published?",
-                a: "We publish new engineering deep-dives and creator playbooks bi-weekly, covering model updates, retention experiments, and YouTube algorithm shifts.",
-              },
-            ].map((faq, index) => {
-              const isOpen = openFaqIndex === index;
-              return (
-                <div key={index} className="blog-faq-item">
-                  <button
-                    onClick={() => toggleFaq(index)}
-                    className="blog-faq-question"
-                    aria-expanded={isOpen}
-                  >
-                    <span>{faq.q}</span>
-                    {isOpen ? (
-                      <ChevronUp size={18} className="text-[#FF6B00] shrink-0" />
-                    ) : (
-                      <ChevronDown size={18} className="text-[var(--text-muted)] shrink-0" />
-                    )}
-                  </button>
-                  {isOpen && (
-                    <div className="blog-faq-answer">
-                      <p>{faq.a}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================================
-          7. HIGH-CONVERTING BOTTOM CALL TO ACTION
-          ==================================================================== */}
-      <section className="blog-cta-section" aria-label="Get Started">
-        <div className="blog-container">
-          <div className="blog-cta-banner">
-            <h2>Ready to Put These Guides into Practice?</h2>
-            <p>
-              Launch ScenoraEdits Studio and experience character continuity, automated audio ducking,
-              and 1080p rendering on your own videos today.
-            </p>
-
-            <div className="blog-cta-actions">
-              <button
-                onClick={() => navigate("/app")}
-                className="hiw-btn-primary"
-                id="blog-bottom-primary-cta"
-              >
-                <span>Launch Studio Free</span>
-                <ArrowRight size={17} />
-              </button>
-
-              <button
-                onClick={() => navigate("/features")}
-                className="hiw-btn-secondary"
-                id="blog-bottom-features-cta"
-              >
-                <span>Explore All Features</span>
-              </button>
-            </div>
-
-            <div className="blog-cta-subtext">
-              <span>✓ Instant browser studio access</span>
-              <span>✓ No credit card required</span>
-              <span>✓ 100% Commercial YouTube rights</span>
-            </div>
+            ].map((faq, idx) => (
+              <div key={idx} className="feat-faq-item">
+                <button
+                  onClick={() => toggleFaq(idx)}
+                  className="feat-faq-btn"
+                  aria-expanded={openFaqIndex === idx}
+                >
+                  <span>{faq.q}</span>
+                  {openFaqIndex === idx ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+                {openFaqIndex === idx && (
+                  <div className="feat-faq-content">
+                    <p>{faq.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
     </div>
   );
 };
-
-export default BlogPage;
