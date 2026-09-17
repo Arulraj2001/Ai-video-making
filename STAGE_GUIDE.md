@@ -8,8 +8,8 @@
 1. **Stage 1: Script & Audio / Master Timeline** — Audio ingestion, Edge-TTS synthesis, sentence timecodes, and contiguous timeline locking. *(Completed & Audited)*
 2. **Stage 2: Video Bible Consistency Engine** — Visual continuity for characters, locations, key props, artistic style, and prompt rules. *(Completed & Audited)*
 3. **Stage 3: Visual Storyboard & AI Generation** — Scene-by-scene AI prompt synthesis, multi-provider image rendering (Flux, Cloudflare, OpenAI, Local GPU, Mock), A/B variations, and graphic cards. *(Completed & Audited)*
-4. **Stage 4: Timeline Studio & Motion Engine** — Animation dynamics, camera pans/zooms, transitions, and audio-visual syncing. *(Next)*
-5. **Stage 5: Export & Deliver** — High-definition MP4 rendering, captions burning, audio mixing, and delivery.
+4. **Stage 4: Timeline Studio & Motion Engine** — Animation dynamics, camera pans/zooms, transitions, slide studio, multi-track audio mixing, and audio-visual syncing. *(Completed & Audited)*
+5. **Stage 5: Export & Deliver** — High-definition MP4 rendering, captions burning, audio mixing, and multi-format delivery. *(Next)*
 
 ---
 
@@ -378,17 +378,202 @@ Stage 3 transforms the Master Timeline sentences and Video Bible continuity data
 
 ---
 
+## Stage 4: Timeline Studio & Motion Engine
+
+### 1. Overview & Purpose
+The **Timeline Studio & Motion Engine** transforms static visual scenes and slide graphics into a dynamic, broadcast-ready motion picture. In professional video editing, visuals cannot remain rigid; they require camera dynamics (Ken Burns zooms and pans), smooth transition blends (crossfades, slides, black fades), layered graphics and text overlays, and balanced multi-track audio mixing with automated ducking.
+
+The studio operates on the **Master Timeline Rule**: sentence-level caption timestamps remain authoritative clocks, and all visual tracks automatically conform to prevent synchronization drift between voice narration and screen visuals.
+
+---
+
+### 2. Complete Inventory of Fields & Controls
+
+#### A. Top Action & Status Toolbar
+- **Master Timeline Rule Banner** (`status indicator`): Confirms that the authoritative caption timecodes dictate global playback timing.
+- **Contiguity Status Pill**:
+  - `✓ Contiguous Timeline` (Green): Indicates all scene cuts occur back-to-back with 0.0s silence gaps or audio overlaps.
+  - `⚠️ Timing Issues` (Amber): Highlights any detected silence gaps or overlapping scene boundaries.
+- **"Auto-Align Timestamps" Button (`Wand2`)**: 1-click healing action that automatically repairs any timing drift, edge gaps, or boundary overlaps across all scenes.
+- **Undo / Redo Buttons** (`⤺ Undo` / `⤻ Redo`): Multi-level snapshot history with keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`) for timeline modifications.
+- **Timeline Zoom Controls** (`-` / `+` with px readout): Scales the horizontal pixel density (`30px` to `150px` per second) for fine scrubbing precision.
+- **"+ Add Slide" Button (`Plus`)**: Launches the Slide Studio template modal to insert blank or presentation-grade graphic slides.
+- **"Export Video" Button (`Film`)**: Opens the high-definition MP4 rendering modal (Stage 5 bridge).
+
+#### B. Cinema Preview Stage (`CinemaPreview.tsx`)
+- **Aspect-Ratio Viewport**: Real-time canvas rendering 16:9 widescreen or 9:16 vertical video with aspect preservation.
+- **Scrubbing Playhead**: Draggable interactive time cursor synchronized with an active HTML5 audio element.
+- **On-Canvas Direct Manipulation**:
+  - Drag, reposition, scale, and delete text overlays, badges, shapes, and emojis directly on top of the live video frame.
+  - Quick action toolbar for selected elements (Duplicate, Delete, Layer order).
+- **Direct Canvas Image Replacement**: Drag-and-drop any image file directly onto the active video canvas to immediately replace the scene artwork.
+- **Cinema Controls Bar**:
+  - Play / Pause toggle (`Spacebar`).
+  - Current timestamp / total duration readout (`00:04.2 / 01:15.0`).
+  - Volume slider and Mute/Unmute toggle.
+  - Fullscreen expansion toggle.
+
+#### C. 3-Track Interactive Timeline (`TimelineTracks.tsx`)
+- **Interactive Ruler Track**: Click or drag anywhere along the time ruler to scrub the playhead instantaneously.
+- **Visual Scene Blocks Track**:
+  - Visual clip thumbnails showing rendered AI art, slide backgrounds, or placeholder cards.
+  - **Edge Trimming Handles**: Drag left or right clip boundary handles to adjust start and end cut points.
+  - **Clip Selection**: Click any block to select it, seek playhead to its start, and open its Scene Inspector.
+  - **Clip Drag & Drop Image Dropzone**: Drag image files directly onto any timeline clip block to replace its visual on the fly.
+  - **Live Scene Boundaries**: Displays duration badges and start/end time markers on each block.
+- **Captions Track**:
+  - Synchronized subtitle segments aligned with speech sentences.
+  - Read-only visual markers ensuring visuals and captions match frame-for-frame.
+- **Audio Tracks**:
+  - Voiceover master audio waveform representation.
+  - Background music (BGM) secondary track with track presence indicator.
+- **Quick Shortcuts Toolbar**:
+  - Shortcuts reference modal button (`?`).
+  - Bottom zoom controls and bottom quick undo/redo.
+
+#### D. Tabbed Inspector & Project Settings
+1. **Scene Inspector (`SceneInspector.tsx`)**:
+   - **Timing Tab**:
+     - `Start Time (s)` & `End Time (s)` numerical inputs with 0.1s step controls.
+     - `Ripple Downstream` checkbox: Toggles whether adjusting this clip ripples subsequent scenes forward/backward.
+     - `Split Scene at Playhead` button (`Scissors`): Slices current clip at the current playhead position.
+     - `Duplicate Scene` button (`Copy`): Clones scene with identical visual and prompt settings.
+     - `Move Earlier` / `Move Later` buttons: Swaps scene sequence order in the master timeline.
+     - `Delete Scene` button (`Trash2`): Prompts confirmation and removes scene with automatic ripple healing.
+   - **Visual Art & Prompt Tab**:
+     - Thumbnail preview with drag-and-drop replacement zone.
+     - `Regenerate Artwork` button with inline prompt override textarea.
+     - `Upload Replacement File` file selector.
+   - **Camera Motion Tab**:
+     - Motion presets: `None (Static)`, `Slow Zoom In`, `Slow Zoom Out`, `Pan Left`, `Pan Right`, `Pan Up`, `Pan Down`.
+   - **Transitions Tab**:
+     - Transition type: `None (Cut)`, `Fade (Black)`, `Crossfade`, `Slide Left`.
+     - `Transition Duration` slider: 0.1s to 2.0s duration curve.
+   - **Image Framing Tab**:
+     - `Fit Mode`: Cover (fill entire canvas), Contain (letterbox/pillarbox), Fill (stretch).
+     - `Framing Position`: Center, Top, Bottom, Left, Right.
+     - `Zoom Level`: 1.0x to 2.5x magnification slider.
+     - `Crop Presets`: 16:9 widescreen, 9:16 vertical, 1:1 square.
+   - **Color Grading & Filters Tab**:
+     - `Brightness` slider (-1.0 to 1.0).
+     - `Contrast` slider (0.0 to 2.0).
+     - `Saturation` slider (0.0 to 2.0).
+     - `Color Filter Presets`: Natural, Cinematic (Teal & Orange), Golden Hour (Warm Sunset), Cyberpunk (Neon Pink & Deep Blue).
+     - `Reset Visuals` button: Restores default natural lighting and 1.0 grading values.
+2. **Overlays Tab (`OverlayElementsInspector.tsx`)**:
+   - Add new element buttons: Text Box, Emoji, Badge Pill, Geometric Shape.
+   - Per-element properties: Content text, font size, color picker, background fill, opacity slider, layer z-index.
+3. **Captions Settings Tab (`CaptionsSettingsPanel.tsx`)**:
+   - Style presets: Classic Subtitles, TikTok Bold, Minimal Lower Third.
+   - Font family picker, font size, bold/italic, text color, outline stroke, background pill box.
+   - Animation effect: Pop-in, typewriter, fade-in.
+   - Vertical alignment: Bottom (standard), Middle, Top.
+4. **Audio Mixing Tab (`AudioSettingsPanel.tsx`)**:
+   - **Voiceover Track**: File info readout, upload/replace voiceover audio, delete voiceover.
+   - **Background Music (BGM)**: File info readout, upload/replace BGM track, delete music.
+   - **Audio Ducking**: Toggle automated background music volume reduction during narration.
+   - **Volume Sliders**: Master Narration Volume (0% - 200%), Background Music Volume (0% - 100%).
+   - **BGM Envelopes**: Fade-In duration (s) and Fade-Out duration (s).
+5. **Canvas Settings Tab (`CanvasSettingsPanel.tsx`)**:
+   - Project Aspect Ratio: 16:9 Landscape (YouTube) vs 9:16 Portrait (TikTok/Shorts).
+   - Background canvas color and padding.
+
+#### E. Slide Studio & Template Modal (`SlideTemplateModal.tsx`)
+- **Slide Layouts**:
+  - `Title Intro`: High-impact header with subtitle and brand badge.
+  - `Quote Slide`: Prominent quotation marks with emphasized typography.
+  - `Key Takeaway`: Bullet point card with focal takeaway pill.
+  - `Split Screen`: Visual media on left, explanatory copy on right.
+  - `Outro CTA`: Call-to-action slide with subscribe/action buttons.
+- **Background Styling**:
+  - Preset gradients (Midnight Navy, Deep Violet, Sunset Amber, Emerald Forest).
+  - Custom 2-stop linear gradient designer with 90°/180° orientation switch.
+  - Solid background color picker.
+- **Slide Duration & Caption**: Custom duration (seconds) and slide headline/caption.
+- **Action Buttons**:
+  - `Apply to Current Scene`: Overwrites active scene's template and background.
+  - `Add as New Slide`: Inserts a brand new presentation slide block into the timeline.
+
+#### F. Keyboard Shortcuts Reference (`KeyboardShortcutsModal.tsx`)
+- `Space`: Play / Pause preview playback.
+- `Ctrl+Z` / `Cmd+Z`: Undo last timeline edit.
+- `Ctrl+Y` / `Ctrl+Shift+Z`: Redo last timeline edit.
+- `ArrowLeft` / `ArrowRight`: Step playhead back / forward by 1s (Hold `Shift` for 5s).
+- `S` or `C`: Split active scene at current playhead position.
+- `Ctrl+D` / `Cmd+D`: Duplicate selected scene.
+- `Delete` / `Backspace`: Delete selected scene (with ripple confirmation).
+- `?`: Toggle keyboard shortcuts reference modal.
+
+---
+
+### 3. Step-by-Step Operator Manual / Workflow
+
+```mermaid
+graph TD
+    A["Stage 3: Generated Storyboard"] --> B["Stage 4: Open Timeline Studio"]
+    B --> C["Step 1: Play & Scrub Playhead (Spacebar / Ruler)"]
+    C --> D["Step 2: Check Contiguity Badge & Auto-Align (Wand2)"]
+    D --> E["Step 3: Fine-Tune Scene Timing & Trimming"]
+    E --> F["Step 4: Configure Ken Burns Camera Motion & Transitions"]
+    F --> G["Step 5: Add PowerPoint Slide Templates or Graphic Overlays"]
+    G --> H["Step 6: Mix Audio & Enable Background Music Ducking"]
+    H --> I["Proceed to Stage 5: Export Video (Film)"]
+```
+
+#### Step 1: Scrubbing & Inspecting Scenes
+1. Navigate to the **Timeline** stage using the top stage navigation bar.
+2. Press `Spacebar` to start playback; watch the **Cinema Preview** and listen to the synced voiceover.
+3. Click any point along the interactive ruler to scrub the playhead to that exact frame.
+4. Click any visual block on the timeline track to focus that scene in the **Scene Inspector**.
+
+#### Step 2: Healing Timing Gaps with Auto-Align
+1. Observe the **Contiguity Status Badge** in the top toolbar.
+2. If it displays `⚠️ Timing Issues` due to clip edge adjustments, click the **"Auto-Align"** button (`Wand2`).
+3. The platform will automatically adjust boundaries back-to-back with zero silence gaps and display a green `✓ Contiguous Timeline` toast confirmation.
+
+#### Step 3: Direct Trimming, Splitting, and Reordering
+1. **Trimming**: Hover over the left or right edge of a clip on the timeline and drag the handle to extend or shorten its duration.
+2. **Splitting**: Move the playhead inside an active clip and press `S` (or click `Split Scene at Playhead` in the Inspector) to slice it into two independent scenes.
+3. **Reordering**: Use the `Move Earlier` or `Move Later` buttons in the Timing inspector to swap the scene's sequence order.
+4. **Undoing mistakes**: Press `Ctrl+Z` at any time to instantly roll back any timeline changes.
+
+#### Step 4: Applying Camera Motion & Transitions
+1. In the **Scene Inspector**, click the **Motion** tab.
+2. Select a motion dynamic (e.g. `Slow Zoom In` for emotional emphasis, or `Pan Right` for landscape establishing shots).
+3. Click the **Transitions** tab and choose a cut style (e.g. `Crossfade` or `Fade` with `0.5s` duration).
+4. Scrub or play the scene in the Cinema Preview to observe the real-time CSS motion simulation.
+
+#### Step 5: Designing Graphic Slides & Overlays
+1. To insert an infographic or summary slide, click **"+ Add Slide"** in the top toolbar.
+2. Choose a template (e.g. `Key Takeaway` or `Quote Slide`).
+3. Select a background gradient or solid color, enter the takeaway headline, and click **"Add as New Slide"**.
+4. To add floating callouts, badges, or emojis, switch to the **Overlays** tab and drag elements into position directly on the preview canvas.
+
+#### Step 6: Audio Mixing & Auto-Ducking
+1. Switch to the **Audio** tab in the Inspector.
+2. Drag and drop a background music file (`.mp3` or `.wav`) into the BGM dropzone.
+3. Ensure **Auto-Ducking** is checked so background music automatically lowers to `25%` volume whenever voice narration is speaking.
+4. Adjust narration volume (`100%`) and music volume (`25%`) and set a 1.5s fade-out curve.
+
+---
+
+### 4. Production Audit & Upgrades Log (Stage 4 Fixes)
+
+- **Non-Blocking Toast System**: Eliminated 15 blocking browser `alert()` calls across `TimelineEditor.tsx`, `SceneInspector.tsx`, `TimelineTracks.tsx`, and `CinemaPreview.tsx`. Replaced them with an elegant, auto-dismissing (3.5s) floating toast banner system with error, success, and info styles.
+- **Real-Time Contiguity Status Badge**: Added automatic gap and overlap detection in the Stage 4 toolbar (`✓ Contiguous Timeline` vs `⚠️ Timing Issues`).
+- **1-Click Auto-Align Timestamps Action**: Integrated the `Wand2` Auto-Align button into Stage 4 toolbar, enabling instant healing of scene boundaries directly from the timeline editor.
+- **Slide Studio & Audio Inline Error Banners**: Replaced modal-level `alert()` calls in `SlideTemplateModal.tsx` and `AudioSettingsPanel.tsx` with non-blocking, inline alert banners that preserve user input.
+- **Duplicate Dead Code Elimination**: Removed an incomplete duplicate `add_slide` method in `backend/app/services/project_service.py` that lacked database persistence, leaving the production implementation clean.
+- **100% Automated Test Suite Passing**: Verified 14/14 frontend tests, 13/13 backend timeline and motion integration tests, and clean Vite production build.
+
+---
+
 ## Roadmap: Upcoming Stages (To Be Updated)
 
-### Stage 4: Timeline Studio & Motion Engine *(Next)*
-- Multi-track timeline sequencing with real-time playback preview.
-- Camera motion dynamic controls (Ken Burns pans, zooms, tilts).
-- Visual transitions (crossfades, cuts, wipes, dissolves).
-- Audio waveform synchronization, speech speed adjustments, and background music (BGM) mixing.
-
-### Stage 5: Export & Deliver *(Pending)*
-- Multi-track FFmpeg rendering pipeline.
-- Subtitle synchronization and on-screen caption burning.
-- Aspect ratio conversions (16:9 widescreen, 9:16 vertical shorts/reels).
-- Cloud asset packaging and instant MP4 export delivery.
+### Stage 5: Export & Deliver *(Next)*
+- Multi-track FFmpeg rendering pipeline (Full HD 1080p / 4K MP4).
+- Subtitle synchronization and on-screen caption burning with styling presets.
+- Aspect ratio conversions (16:9 widescreen YouTube, 9:16 vertical shorts/reels).
+- Multi-format download formats: Full HD MP4, WebM, Audio-only MP3, and animated preview GIF.
+- Cloud asset packaging and delivery.
 

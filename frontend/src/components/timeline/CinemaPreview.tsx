@@ -17,6 +17,7 @@ interface CinemaPreviewProps {
   selectedElementId?: string | null;
   onSelectElement?: (elementId: string | null) => void;
   onUpdateElements?: (sceneId: string, elements: SceneElement[]) => void;
+  onShowToast?: (message: string, type?: "error" | "success" | "info") => void;
 }
 
 export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
@@ -33,6 +34,7 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
   selectedElementId,
   onSelectElement,
   onUpdateElements,
+  onShowToast,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasScreenRef = useRef<HTMLDivElement>(null);
@@ -460,7 +462,11 @@ export const CinemaPreview: React.FC<CinemaPreviewProps> = ({
       try {
         await onUploadImage(activeScene.id, file);
       } catch (err: any) {
-        alert(err.message || "Failed to upload replacement image");
+        if (onShowToast) {
+          onShowToast(err.message || "Failed to upload replacement image", "error");
+        } else {
+          console.error(err);
+        }
       } finally {
         setIsCanvasUploading(false);
       }

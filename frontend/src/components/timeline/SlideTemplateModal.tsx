@@ -155,6 +155,12 @@ export const SlideTemplateModal: React.FC<SlideTemplateModalProps> = ({
   );
   const [duration, setDuration] = useState<number>(5.0);
   const [loading, setLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  // Clear modal error when modal is opened
+  useEffect(() => {
+    if (isOpen) setModalError(null);
+  }, [isOpen]);
 
   // Sync initial scene caption if available
   useEffect(() => {
@@ -188,17 +194,17 @@ export const SlideTemplateModal: React.FC<SlideTemplateModalProps> = ({
 
   const getActiveBackground = (): SceneBackground => {
     if (bgType === "preset_gradient") {
+      const angle = gradientDirection === "vertical" ? "180deg" : "90deg";
       return {
         type: "gradient",
-        gradient_stops: selectedGradient,
-        direction: gradientDirection,
+        value: `linear-gradient(${angle}, ${selectedGradient[0]} 0%, ${selectedGradient[1]} 100%)`,
       };
     }
     if (bgType === "custom_gradient") {
+      const angle = gradientDirection === "vertical" ? "180deg" : "90deg";
       return {
         type: "gradient",
-        gradient_stops: [customStart, customEnd],
-        direction: gradientDirection,
+        value: `linear-gradient(${angle}, ${customStart} 0%, ${customEnd} 100%)`,
       };
     }
     return {
@@ -221,10 +227,11 @@ export const SlideTemplateModal: React.FC<SlideTemplateModalProps> = ({
   const handleApplyCurrent = async () => {
     try {
       setLoading(true);
+      setModalError(null);
       await onApplyToCurrentScene(selectedTemplate, getActiveBackground(), slideCaption.trim());
       onClose();
     } catch (err: any) {
-      alert("Failed to apply slide template: " + (err.message || "Unknown error"));
+      setModalError("Failed to apply slide template: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
@@ -233,6 +240,7 @@ export const SlideTemplateModal: React.FC<SlideTemplateModalProps> = ({
   const handleAddSlide = async () => {
     try {
       setLoading(true);
+      setModalError(null);
       await onAddNewSlide(
         selectedTemplate,
         getActiveBackground(),
@@ -241,7 +249,7 @@ export const SlideTemplateModal: React.FC<SlideTemplateModalProps> = ({
       );
       onClose();
     } catch (err: any) {
-      alert("Failed to add new slide: " + (err.message || "Unknown error"));
+      setModalError("Failed to add new slide: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
@@ -340,6 +348,26 @@ export const SlideTemplateModal: React.FC<SlideTemplateModalProps> = ({
             <X size={18} />
           </button>
         </div>
+
+        {/* Modal Error Banner */}
+        {modalError && (
+          <div
+            style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              borderBottom: "1px solid rgba(239, 68, 68, 0.3)",
+              color: "#fca5a5",
+              padding: "10px 24px",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span>⚠️</span>
+            <span>{modalError}</span>
+          </div>
+        )}
 
         {/* ================= MODAL BODY (SPLIT VIEW) ================= */}
         <div

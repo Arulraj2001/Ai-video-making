@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Film, MessageSquare, Music, Layout, Sliders, Keyboard, Tag, Plus } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Film, MessageSquare, Music, Layout, Sliders, Keyboard, Tag, Plus, Wand2 } from "lucide-react";
 import type { Project, Scene, SceneUpdateInput, SceneTemplateType, SceneBackground, SceneElement } from "../../types/project";
 import { CinemaPreview } from "./CinemaPreview";
 import { TimelineTracks } from "./TimelineTracks";
@@ -35,6 +35,43 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   const [deleteTargetSceneId, setDeleteTargetSceneId] = useState<string | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+  // Non-blocking Toast Notification Banner System
+  const [toast, setToast] = useState<{ message: string; type: "error" | "success" | "info" } | null>(null);
+  const showToast = useCallback((message: string, type: "error" | "success" | "info" = "info") => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((cur) => (cur?.message === message ? null : cur));
+    }, 3500);
+  }, []);
+
+  // Check for contiguity gaps or overlaps between adjacent scenes
+  const contiguityIssues = useMemo(() => {
+    const issues: { index: number; diff: number }[] = [];
+    const sc = project.scenes || [];
+    for (let i = 0; i < sc.length - 1; i++) {
+      const diff = Number((sc[i + 1].start - sc[i].end).toFixed(2));
+      if (Math.abs(diff) > 0.05) {
+        issues.push({ index: i, diff });
+      }
+    }
+    return issues;
+  }, [project.scenes]);
+
+  const [isAligning, setIsAligning] = useState(false);
+  const handleAutoAlign = async () => {
+    try {
+      setIsAligning(true);
+      const updated = await api.autoAlignTimeline(project.id);
+      pushHistorySnapshot(updated.scenes);
+      onProjectUpdated(updated);
+      showToast("Timeline auto-aligned seamlessly!", "success");
+    } catch (err: any) {
+      showToast(err.message || "Auto-align failed", "error");
+    } finally {
+      setIsAligning(false);
+    }
+  };
 
   // Undo / Redo History Stack with synchronous Ref to eliminate stale closures
   const historyRef = useRef<Scene[][]>([]);
@@ -288,7 +325,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
       pushHistorySnapshot(updatedProject.scenes);
       onProjectUpdated(updatedProject);
     } catch (err: any) {
-      alert(err.message || "Failed to update scene timeline");
+      showToast(err.message || "Failed to update scene timeline", "error");
     }
   };
 
@@ -337,7 +374,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         handleSeek(newlyCreated.start);
       }
     } catch (err: any) {
-      alert("Failed to add slide: " + (err.message || "Unknown error"));
+      showToast("Failed to add slide: " + (err.message || "Unknown error"), "error");
     }
   };
 
@@ -364,7 +401,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         setSelectedSceneId(newlyCreated.id);
       }
     } catch (err: any) {
-      alert(err.message || "Failed to split scene");
+      showToast(err.message || "Failed to split scene", "error");
     }
   };
 
@@ -380,7 +417,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         setSelectedSceneId(newlyCreated.id);
       }
     } catch (err: any) {
-      alert(err.message || "Failed to duplicate scene");
+      showToast(err.message || "Failed to duplicate scene", "error");
     }
   };
 
@@ -405,7 +442,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         setSelectedSceneId(null);
       }
     } catch (err: any) {
-      alert(err.message || "Failed to delete scene");
+      showToast(err.message || "Failed to delete scene", "error");
     }
   };
 
@@ -431,7 +468,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         handleSeek(movedScene.start);
       }
     } catch (err: any) {
-      alert(err.message || "Failed to reorder scenes");
+      showToast(err.message || "Failed to reorder scenes", "error");
     }
   };
 
@@ -451,7 +488,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         return { ...previous, scenes: updatedScenes };
       });
     } catch (err: any) {
-      alert(err.message || "Regeneration failed");
+      showToast(err.message || "Regeneration failed", "error");
     }
   };
 
@@ -465,7 +502,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         return { ...previous, scenes: updatedScenes };
       });
     } catch (err: any) {
-      alert(err.message || "Failed to upload image");
+      showToast(err.message || "Failed to upload image", "error");
     }
   };
 
@@ -557,8 +594,8 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           gap: "12px",
         }}
       >
-        {/* Left: Master Timeline Rule Banner */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {/* Left: Master Timeline Rule Banner & Contiguity Status */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
           <div
             style={{
               display: "flex",
@@ -576,6 +613,70 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             <span>⏱</span>
             <span>Master Timeline Rule Enforced (Caption Timestamps Authoritative)</span>
           </div>
+
+          {/* Contiguity Status Badge */}
+          {contiguityIssues.length === 0 ? (
+            <span
+              id="timeline-contiguity-badge"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                fontSize: "0.78rem",
+                color: "#10b981",
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                borderRadius: "12px",
+                padding: "3px 10px",
+                fontWeight: 600,
+              }}
+              title="All scenes are perfectly contiguous with no gaps or audio overlaps"
+            >
+              ✓ Contiguous Timeline
+            </span>
+          ) : (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              <span
+                id="timeline-contiguity-badge"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "0.78rem",
+                  color: "#f59e0b",
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  borderRadius: "12px",
+                  padding: "3px 10px",
+                  fontWeight: 600,
+                }}
+                title={`${contiguityIssues.length} timing gap(s) or overlap(s) detected`}
+              >
+                ⚠️ {contiguityIssues.length} Timing Issue{contiguityIssues.length > 1 ? "s" : ""}
+              </span>
+              <button
+                id="timeline-auto-align-btn"
+                type="button"
+                onClick={handleAutoAlign}
+                disabled={isAligning}
+                className="btn-secondary"
+                style={{
+                  padding: "3px 10px",
+                  fontSize: "0.76rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  color: "var(--primary)",
+                  borderColor: "rgba(99, 102, 241, 0.4)",
+                  cursor: isAligning ? "wait" : "pointer",
+                }}
+                title="Automatically eliminate gaps and align scene start and end times"
+              >
+                <Wand2 size={12} />
+                <span>{isAligning ? "Aligning..." : "Auto-Align"}</span>
+              </button>
+            </div>
+          )}
 
           <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
             {project.scenes?.length || 0} scenes • {totalDuration.toFixed(1)}s duration
@@ -769,6 +870,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             selectedElementId={selectedElementId}
             onSelectElement={setSelectedElementId}
             onUpdateElements={handleUpdateSceneElements}
+            onShowToast={showToast}
           />
         </div>
 
@@ -890,6 +992,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                   onMoveScene={handleMoveScene}
                   onRegenerateImage={handleRegenerateImage}
                   onUploadImage={handleUploadImage}
+                  onShowToast={showToast}
                 />
               ) : (
                 <div
@@ -1094,6 +1197,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
           onOpenSlideModal={() => setIsSlideModalOpen(true)}
           onDuplicateScene={handleDuplicateScene}
           onSplitScene={handleSplitScene}
+          onShowToast={showToast}
         />
       </div>
 
@@ -1130,6 +1234,39 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
       />
+
+      {/* Toast Notification Banner */}
+      {toast && (
+        <div
+          id="timeline-toast-banner"
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            zIndex: 9999,
+            padding: "12px 20px",
+            borderRadius: "8px",
+            backgroundColor:
+              toast.type === "error"
+                ? "rgba(239, 68, 68, 0.95)"
+                : toast.type === "success"
+                ? "rgba(16, 185, 129, 0.95)"
+                : "rgba(39, 39, 42, 0.95)",
+            color: "#FFFFFF",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+          }}
+        >
+          <span>{toast.type === "error" ? "⚠️" : toast.type === "success" ? "✓" : "ℹ️"}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 };

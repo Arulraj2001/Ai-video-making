@@ -14,6 +14,7 @@ interface SceneInspectorProps {
   onMoveScene: (sceneId: string, direction: "earlier" | "later") => Promise<void>;
   onRegenerateImage: (sceneId: string, promptOverride?: string) => Promise<void>;
   onUploadImage: (sceneId: string, file: File) => Promise<void>;
+  onShowToast?: (message: string, type?: "error" | "success" | "info") => void;
 }
 
 const MOTION_OPTIONS: { value: ImageMotion; label: string; icon: string }[] = [
@@ -53,7 +54,16 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
   onMoveScene,
   onRegenerateImage,
   onUploadImage,
+  onShowToast,
 }) => {
+  const notify = (message: string, type: "error" | "success" | "info" = "error") => {
+    if (onShowToast) {
+      onShowToast(message, type);
+    } else {
+      console.error(message);
+    }
+  };
+
   const [start, setStart] = useState(scene.start);
   const [end, setEnd] = useState(scene.end);
   const [caption, setCaption] = useState(scene.caption || "");
@@ -75,21 +85,13 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"visual" | "framing" | "motion" | "color" | "timing">("visual");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const lastSceneIdRef = useRef(scene.id);
-
-  // Sync state when selected scene changes or external values update
+  // Sync state with incoming active scene prop
   useEffect(() => {
-    const isDifferentScene = scene.id !== lastSceneIdRef.current;
-    lastSceneIdRef.current = scene.id;
-
-    if (isDifferentScene) {
-      setStart(scene.start);
-      setEnd(scene.end);
-      setCaption(scene.caption || "");
-      setPrompt(scene.image_prompt || "");
-    }
+    setStart(scene.start);
+    setEnd(scene.end);
+    setCaption(scene.caption || "");
+    setPrompt(scene.image_prompt || "");
     setMotion(scene.motion || "none");
     setTransition(scene.transition || "none");
     setTransitionDuration(scene.transition_duration || 0.5);
@@ -103,6 +105,9 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
     setColorFilter(scene.color_filter || "none");
   }, [scene]);
 
+  // File input ref for upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const sceneIndex = (project.scenes || []).findIndex((s) => s.id === scene.id);
   const safeSceneIndex = sceneIndex !== -1 ? sceneIndex : 0;
   const canMoveEarlier = sceneIndex > 0;
@@ -114,7 +119,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
 
   const handleSaveTimes = async () => {
     if (end <= start) {
-      alert("End time must be greater than start time.");
+      notify("End time must be greater than start time.");
       return;
     }
     setIsSaving(true);
@@ -140,7 +145,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
         ripple
       );
     } catch (err: any) {
-      alert(err.message || "Failed to update scene");
+      notify(err.message || "Failed to update scene");
     } finally {
       setIsSaving(false);
     }
@@ -196,7 +201,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
     try {
       await onUploadImage(scene.id, file);
     } catch (err: any) {
-      alert(err.message || "Failed to upload image");
+      notify(err.message || "Failed to upload image");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -208,7 +213,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
     try {
       await onRegenerateImage(scene.id, prompt);
     } catch (err: any) {
-      alert(err.message || "Regeneration failed");
+      notify(err.message || "Regeneration failed");
     } finally {
       setIsRegenerating(false);
     }
@@ -267,7 +272,7 @@ export const SceneInspector: React.FC<SceneInspectorProps> = ({
       try {
         await onUploadImage(scene.id, file);
       } catch (err: any) {
-        alert(err.message || "Failed to upload image");
+        notify(err.message || "Failed to upload image");
       } finally {
         setIsUploading(false);
       }

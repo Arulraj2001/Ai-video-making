@@ -1082,45 +1082,6 @@ class ProjectService:
         self._save_to_disk(project)
         return project
 
-    def add_slide(
-        self,
-        project_id: str,
-        caption: str = "New Slide",
-        duration: float = 4.0,
-        template_type: str = "blank_slide",
-        background: Optional[dict] = None,
-        elements: Optional[list] = None,
-    ) -> ProjectModel:
-        """Appends a new slide template scene to the project timeline."""
-        project = self.get_project(project_id)
-        if not project:
-            raise ValueError(f"Project '{project_id}' not found")
-
-        last_end = max((s.end for s in project.scenes), default=0.0)
-        new_start = round(last_end, 3)
-        new_end = round(new_start + duration, 3)
-
-        existing_ids = {s.id for s in project.scenes}
-        seq = len(project.scenes) + 1
-        new_id = f"scene_{seq:03d}"
-        while new_id in existing_ids:
-            seq += 1
-            new_id = f"scene_{seq:03d}"
-
-        new_scene = SceneModel(
-            id=new_id,
-            start=new_start,
-            end=new_end,
-            duration=round(duration, 3),
-            caption=caption.strip(),
-            template_type=template_type,
-            background=background,
-            elements=elements or [],
-            image_status="completed",
-        )
-        project.scenes.append(new_scene)
-        project.scenes.sort(key=lambda s: s.start)
-        project.updated_at = datetime.now(timezone.utc).isoformat()
     def add_scene(
         self,
         project_id: str,

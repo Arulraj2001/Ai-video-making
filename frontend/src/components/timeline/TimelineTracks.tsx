@@ -15,6 +15,7 @@ interface TimelineTracksProps {
   onOpenSlideModal?: () => void;
   onDuplicateScene?: (sceneId: string) => void;
   onSplitScene?: (sceneId: string, splitTime: number) => void;
+  onShowToast?: (message: string, type?: "error" | "success" | "info") => void;
 }
 
 export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
@@ -30,6 +31,7 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
   onOpenSlideModal,
   onDuplicateScene,
   onSplitScene,
+  onShowToast,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
@@ -423,9 +425,13 @@ export const TimelineTracksComponent: React.FC<TimelineTracksProps> = ({
                     setDragOverSceneId(null);
                     const file = e.dataTransfer.files?.[0];
                     if (file && file.type.startsWith("image/") && onUploadImage) {
-                      onUploadImage(scene.id, file).catch((err: any) =>
-                        alert(err.message || "Failed to upload image")
-                      );
+                      onUploadImage(scene.id, file).catch((err: any) => {
+                        if (onShowToast) {
+                          onShowToast(err.message || "Failed to upload image", "error");
+                        } else {
+                          console.error(err);
+                        }
+                      });
                     }
                   }}
                   style={{

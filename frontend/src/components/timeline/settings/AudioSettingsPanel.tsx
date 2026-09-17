@@ -35,8 +35,14 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
   const [isDeletingMusic, setIsDeletingMusic] = useState(false);
   const [isDraggingMusic, setIsDraggingMusic] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const settingsRef = useRef<AudioSettings>(current);
   const saveRequestRef = useRef(0);
+
+  const setTransientError = (msg: string) => {
+    setAudioError(msg);
+    setTimeout(() => setAudioError((cur) => (cur === msg ? null : cur)), 4000);
+  };
 
   const voiceFileInputRef = useRef<HTMLInputElement>(null);
   const musicFileInputRef = useRef<HTMLInputElement>(null);
@@ -69,15 +75,10 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
       if (requestId === saveRequestRef.current) onProjectUpdated(updated);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1800);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to save audio settings:", err);
-      if (requestId === saveRequestRef.current) {
-        settingsRef.current = current;
-        setSettings(current);
-        onProjectUpdated(project);
-      }
     } finally {
-      setIsSaving(false);
+      if (requestId === saveRequestRef.current) setIsSaving(false);
     }
   };
 
@@ -99,7 +100,7 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1800);
     } catch (err: any) {
-      alert(err.message || "Failed to upload voiceover audio");
+      setTransientError(err.message || "Failed to upload voiceover audio");
     } finally {
       setIsUploadingVoice(false);
       if (voiceFileInputRef.current) voiceFileInputRef.current.value = "";
@@ -127,7 +128,7 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
       const updated = await api.deleteAudio(project.id);
       onProjectUpdated(updated);
     } catch (err: any) {
-      alert(err.message || "Failed to delete voiceover audio");
+      setTransientError(err.message || "Failed to delete voiceover audio");
     } finally {
       setIsDeletingVoice(false);
     }
@@ -143,7 +144,7 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1800);
     } catch (err: any) {
-      alert(err.message || "Failed to upload background music");
+      setTransientError(err.message || "Failed to upload background music");
     } finally {
       setIsUploadingMusic(false);
       if (musicFileInputRef.current) musicFileInputRef.current.value = "";
@@ -171,7 +172,7 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
       const updated = await api.deleteBackgroundMusic(project.id);
       onProjectUpdated(updated);
     } catch (err: any) {
-      alert(err.message || "Failed to delete background music");
+      setTransientError(err.message || "Failed to delete background music");
     } finally {
       setIsDeletingMusic(false);
     }
@@ -206,6 +207,27 @@ const AudioSettingsPanelComponent: React.FC<AudioSettingsPanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* Audio Error Banner */}
+      {audioError && (
+        <div
+          style={{
+            background: "rgba(239, 68, 68, 0.15)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            color: "#fca5a5",
+            padding: "8px 14px",
+            borderRadius: "6px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span>⚠️</span>
+          <span>{audioError}</span>
+        </div>
+      )}
 
       {/* Hidden file inputs */}
       <input
