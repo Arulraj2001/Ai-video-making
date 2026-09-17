@@ -1,4 +1,5 @@
 import asyncio
+import os
 from pathlib import Path
 import subprocess
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -141,6 +142,7 @@ async def download_rendered_video(
     base_name = Path(job.output_filename or f"{project_id}_{job.resolution}").stem
     ffmpeg_exe = get_ffmpeg_executable()
     loop = asyncio.get_running_loop()
+    transcode_threads = str(min(8, max(2, os.cpu_count() or 2)))
 
     if format == "mp3":
         # Extract audio-only master mix
@@ -148,7 +150,7 @@ async def download_rendered_video(
         if not mp3_path.exists() or mp3_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
-                "-threads", "2",
+                "-threads", transcode_threads,
                 "-i", str(master_path),
                 "-vn",
                 "-c:a", "libmp3lame",
@@ -171,7 +173,7 @@ async def download_rendered_video(
         if not p720_path.exists() or p720_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
-                "-threads", "2",
+                "-threads", transcode_threads,
                 "-i", str(master_path),
                 "-vf", "scale=-2:720",
                 "-c:v", "libx264",
@@ -196,7 +198,7 @@ async def download_rendered_video(
         if not webm_path.exists() or webm_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
-                "-threads", "2",
+                "-threads", transcode_threads,
                 "-i", str(master_path),
                 "-c:v", "libvpx-vp9",
                 "-crf", "32",
@@ -220,7 +222,7 @@ async def download_rendered_video(
         if not gif_path.exists() or gif_path.stat().st_size == 0:
             cmd = [
                 ffmpeg_exe, "-y",
-                "-threads", "2",
+                "-threads", transcode_threads,
                 "-i", str(master_path),
                 "-t", "6",
                 "-vf", "fps=12,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",

@@ -83,6 +83,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [recentJobs, setRecentJobs] = useState<RenderJob[]>([]);
   const [activePreviewJobId, setActivePreviewJobId] = useState<string | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [jobToDeleteId, setJobToDeleteId] = useState<string | null>(null);
   const [downloadingFormat, setDownloadingFormat] = useState<string | null>(null);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [activePreviewJobUrl, setActivePreviewJobUrl] = useState<string | null>(null);
@@ -126,7 +127,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const filename = `${cleanBase}_${formatId}.${ext}`;
       await api.downloadRenderFile(project.id, jobId, formatId, filename);
     } catch (err: any) {
-      alert(err.message || "Failed to download render file.");
+      setErrorMsg(err.message || "Failed to download render file.");
     } finally {
       setDownloadingFormat(null);
     }
@@ -268,20 +269,28 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     setErrorMsg(null);
   };
 
-  const handleDeleteJob = async (jobId: string) => {
-    if (!confirm("Are you sure you want to delete this export?")) return;
-    setDeletingJobId(jobId);
+  const requestDeleteJob = (jobId: string) => {
+    setErrorMsg(null);
+    setJobToDeleteId(jobId);
+  };
+
+  const confirmDeleteJob = async () => {
+    if (!jobToDeleteId) return;
+    const targetId = jobToDeleteId;
+    setDeletingJobId(targetId);
     try {
-      await api.deleteRenderJob(project.id, jobId);
-      if (activeJob?.id === jobId) {
+      await api.deleteRenderJob(project.id, targetId);
+      if (activeJob?.id === targetId) {
         setActiveJob(null);
       }
-      if (activePreviewJobId === jobId) {
+      if (activePreviewJobId === targetId) {
         setActivePreviewJobId(null);
       }
+      setJobToDeleteId(null);
       await fetchRecentJobs();
     } catch (err: any) {
-      alert(err.message || "Failed to delete export");
+      setErrorMsg(err.message || "Failed to delete export");
+      setJobToDeleteId(null);
     } finally {
       setDeletingJobId(null);
     }
@@ -380,6 +389,99 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <X size={18} />
           </button>
         </div>
+
+        {/* Top-Level Error Notification Banner */}
+        {errorMsg && (
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "rgba(239, 68, 68, 0.12)",
+              border: "1px solid rgba(239, 68, 68, 0.35)",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              color: "#fca5a5",
+              fontSize: "0.85rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#fca5a5",
+                cursor: "pointer",
+                padding: "2px",
+              }}
+              title="Dismiss error"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* Non-Blocking Delete Confirmation Dialog */}
+        {jobToDeleteId && (
+          <div
+            style={{
+              padding: "14px 18px",
+              borderRadius: "14px",
+              background: "rgba(239, 68, 68, 0.12)",
+              border: "1px solid rgba(239, 68, 68, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              flexWrap: "wrap",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.4)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
+              <span style={{ fontSize: "0.86rem", fontWeight: 600, color: "#fff" }}>
+                Permanently delete this export?
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setJobToDeleteId(null)}
+                className="btn-secondary"
+                style={{ padding: "5px 12px", fontSize: "0.78rem" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteJob}
+                disabled={Boolean(deletingJobId)}
+                style={{
+                  padding: "5px 14px",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                  color: "#fff",
+                  cursor: deletingJobId ? "wait" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                {deletingJobId ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                <span>{deletingJobId ? "Deleting..." : "Confirm Delete"}</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* --- STATE 1: SELECTION & CONFIGURATION --- */}
         {!activeJob && (
@@ -1142,7 +1244,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => handleDeleteJob(j.id)}
+                        onClick={() => requestDeleteJob(j.id)}
                         disabled={deletingJobId === j.id}
                         title="Delete Export"
                         style={{

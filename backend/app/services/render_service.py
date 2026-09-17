@@ -886,10 +886,11 @@ class RenderService:
                 with open(ass_file, "w", encoding="utf-8") as f:
                     f.write(ass_content)
 
+                single_pass_threads = str(min(8, max(2, os.cpu_count() or 2)))
                 subtitled_video_path = temp_dir / "subtitled_video.mp4"
                 cmd_subs = [
                     ffmpeg_exe, "-y",
-                    "-threads", "2",
+                    "-threads", single_pass_threads,
                     "-i", "merged_video.mp4",
                     "-vf", "subtitles=captions.ass",
                     "-c:v", "libx264",
