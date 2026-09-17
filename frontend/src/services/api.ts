@@ -570,6 +570,23 @@ class ApiService {
     );
   }
 
+  async addTimelineScene(
+    projectId: string,
+    caption: string = "New scene narration...",
+    duration: number = 5.0
+  ): Promise<Project> {
+    return this.request<Project>(`/api/projects/${projectId}/timeline/scenes`, {
+      method: "POST",
+      body: JSON.stringify({ caption, duration }),
+    });
+  }
+
+  async autoAlignTimeline(projectId: string): Promise<Project> {
+    return this.request<Project>(`/api/projects/${projectId}/timeline/auto-align`, {
+      method: "POST",
+    });
+  }
+
   async reorderScenes(projectId: string, sceneIds: string[]): Promise<Project> {
     return this.request<Project>(`/api/projects/${projectId}/timeline/reorder`, {
       method: "POST",

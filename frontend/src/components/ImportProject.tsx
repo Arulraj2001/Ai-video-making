@@ -72,6 +72,7 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
   const [isStale, setIsStale] = useState(false);
   const [validating, setValidating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState<string>("");
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const audioFileInputRef = useRef<HTMLInputElement>(null);
@@ -185,6 +186,8 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
       return;
     }
 
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
     try {
       setSubmitting(true);
       setGeneralError(null);
@@ -196,6 +199,10 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
           setSubmitting(false);
           return;
         }
+
+        setSubmitPhase("Synthesizing neural AI voiceover...");
+        timers.push(setTimeout(() => setSubmitPhase("Analyzing speech boundaries & sentence timecodes..."), 1600));
+        timers.push(setTimeout(() => setSubmitPhase("Building Master Timeline scenes..."), 3200));
 
         if (targetProject) {
           project = await api.generateVoiceover(
@@ -221,6 +228,10 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
           return;
         }
 
+        setSubmitPhase(audioFile ? "Uploading narration audio & subtitle track..." : "Parsing captions into Master Timeline...");
+        timers.push(setTimeout(() => setSubmitPhase("Calculating scene timestamps & durations..."), 1200));
+        timers.push(setTimeout(() => setSubmitPhase("Locking Master Timeline..."), 2600));
+
         const formData = new FormData();
         if (audioFile) {
           formData.append("audio_file", audioFile);
@@ -238,11 +249,14 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
         }
       }
 
+      setSubmitPhase("Master Timeline Ready!");
       onSuccess(project);
     } catch (err: any) {
       setGeneralError(err.message || "Failed to process project ingestion");
     } finally {
+      timers.forEach(clearTimeout);
       setSubmitting(false);
+      setSubmitPhase("");
     }
   };
 
@@ -269,14 +283,26 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
 
       <div className="studio-card p-6 sm:p-8">
         <div className="mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold font-display" style={{ color: "var(--text-primary)" }}>
-            {targetProject ? "Ingest Media & Master Timeline" : "Create Master Timeline"}
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-xl sm:text-2xl font-bold font-display" style={{ color: "var(--text-primary)" }}>
+              {targetProject ? "Ingest Media & Master Timeline" : "Create Master Timeline"}
+            </h2>
+            <div
+              className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--color-primary)] cursor-help transition-colors"
+              title="The Master Timeline is the core timing backbone of your video, locking narration audio to timestamped visual scenes so every AI image and subtitle remains perfectly synchronized."
+            >
+              <Info size={16} />
+            </div>
+          </div>
           <p className="text-xs sm:text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
             {targetProject
               ? `Configure narration audio and timestamped scenes for ${targetProject.name}.`
               : "Choose whether to upload existing voiceover & captions, or generate natural AI voiceover directly from your script."}
           </p>
+          <div className="mt-2.5 px-3 py-2 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-secondary)] flex items-center gap-2">
+            <span className="font-bold text-[var(--color-primary)]">Pro Tip:</span>
+            <span>The Master Timeline locks your voiceover audio to visual scenes so AI image diffusion and video pacing stay locked to spoken words.</span>
+          </div>
         </div>
 
         {/* Ingestion Mode Switcher */}
@@ -730,7 +756,7 @@ export const ImportProject: React.FC<ImportProjectProps> = ({ onSuccess, onCance
               {submitting ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>{ingestMode === "tts" ? "Synthesizing AI Audio..." : "Building Master Timeline..."}</span>
+                  <span className="font-medium">{submitPhase || (ingestMode === "tts" ? "Synthesizing AI Audio..." : "Building Master Timeline...")}</span>
                 </>
               ) : (
                 <>

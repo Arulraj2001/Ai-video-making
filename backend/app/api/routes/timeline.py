@@ -7,6 +7,7 @@ from app.schemas.project import (
     SceneUpdate,
     SplitSceneRequest,
     AddSlideRequest,
+    AddSceneRequest,
     ReorderScenesRequest,
     ProjectResponse,
     TimelineUpdateResponse,
@@ -198,3 +199,45 @@ def restore_timeline_scenes(
     project.updated_at = datetime.now(timezone.utc).isoformat()
     project_service._save_to_disk(project)
     return _to_project_response(project)
+
+@router.post("/scenes", response_model=ProjectResponse)
+def add_timeline_scene(
+    project_id: str,
+    request: AddSceneRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Appends a new narration scene to the Master Timeline with automatic start/end time.
+    """
+    try:
+        project = project_service.add_scene(
+            project_id=project_id,
+            caption=request.caption,
+            duration=request.duration,
+            owner_id=current_user.uid,
+        )
+        return _to_project_response(project)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.post("/auto-align", response_model=ProjectResponse)
+def auto_align_timeline_scenes(
+    project_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Resolves timeline gaps and overlaps, ensuring all scenes are contiguously aligned.
+    """
+    try:
+        project = project_service.auto_align_scenes(
+            project_id=project_id,
+            owner_id=current_user.uid,
+        )
+        return _to_project_response(project)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+

@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import os
 import re
@@ -143,6 +144,7 @@ class FirebaseStorageAdapter(AssetStorage):
         self.local_storage = local_fallback or LocalAssetStorage()
         self.bucket = get_storage_bucket()
         self._url_cache: dict = {}  # {cloud_blob_path: (url, expiry_timestamp)}
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="cloud_asset_uploader")
 
     def save_asset(
         self,
@@ -163,20 +165,23 @@ class FirebaseStorageAdapter(AssetStorage):
             owner_id=owner_id,
         )
 
-        # If Cloud Storage bucket is available and owner is specified, upload to Firebase Storage
+        # If Cloud Storage bucket is available and owner is specified, upload to Firebase Storage asynchronously in background
         if self.bucket and owner_id:
-            try:
-                import time
-                safe_name = sanitize_filename(filename)
-                cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
-                blob = self.bucket.blob(cloud_blob_path)
-                blob.upload_from_string(content, content_type=content_type)
-                signed_url = blob.generate_signed_url(expiration=timedelta(days=7))
-                self._url_cache[cloud_blob_path] = (signed_url, time.time() + 86400 * 6)
-                logger.info(f"Uploaded asset to Firebase Storage: {cloud_blob_path}")
-                return local_rel, signed_url
-            except Exception as e:
-                logger.warning(f"Firebase Storage upload failed, keeping local fallback: {e}")
+            safe_name = sanitize_filename(filename)
+            cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
+
+            def _background_upload(b_content=content, b_type=content_type, b_path=cloud_blob_path):
+                try:
+                    import time
+                    blob = self.bucket.blob(b_path)
+                    blob.upload_from_string(b_content, content_type=b_type)
+                    signed_url = blob.generate_signed_url(expiration=timedelta(days=7))
+                    self._url_cache[b_path] = (signed_url, time.time() + 86400 * 6)
+                except Exception:
+                    # Cloud storage unavailable or bucket not configured; local storage is active fallback
+                    pass
+
+            self._executor.submit(_background_upload)
 
         return local_rel, local_url
 

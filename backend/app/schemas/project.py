@@ -89,6 +89,10 @@ class AddSlideRequest(BaseModel):
     background: Optional[Dict[str, Any]] = None
     elements: Optional[List[Dict[str, Any]]] = None
 
+class AddSceneRequest(BaseModel):
+    caption: str = Field(default="New scene narration...", description="Narration or dialogue text for the scene")
+    duration: float = Field(default=5.0, ge=0.5, le=120.0, description="Duration in seconds")
+
 class ReorderScenesRequest(BaseModel):
     scene_ids: List[str] = Field(..., description="Ordered list of scene IDs defining the new sequence")
 

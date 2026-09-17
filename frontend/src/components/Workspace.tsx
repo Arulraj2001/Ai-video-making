@@ -222,6 +222,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   const updated = await api.deleteTimelineScene(project.id, sceneId);
                   if (onProjectUpdated) onProjectUpdated(updated);
                 }}
+                onAddScene={async () => {
+                  const updated = await api.addTimelineScene(project.id);
+                  if (onProjectUpdated) onProjectUpdated(updated);
+                }}
+                onAutoAlign={async () => {
+                  const updated = await api.autoAlignTimeline(project.id);
+                  if (onProjectUpdated) onProjectUpdated(updated);
+                }}
               />
 
               {/* Stage 1 Guided Navigation Bar */}

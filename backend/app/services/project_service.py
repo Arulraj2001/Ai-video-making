@@ -1085,6 +1085,119 @@ class ProjectService:
         project.scenes.append(new_scene)
         project.scenes.sort(key=lambda s: s.start)
         project.updated_at = datetime.now(timezone.utc).isoformat()
+    def add_scene(
+        self,
+        project_id: str,
+        caption: str = "New scene narration...",
+        duration: float = 5.0,
+        owner_id: Optional[str] = None,
+    ) -> ProjectModel:
+        """Appends a new narration scene to the project Master Timeline."""
+        project = self.get_project(project_id, owner_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        last_end = max((s.end for s in project.scenes), default=0.0)
+        new_start = round(last_end, 3)
+        new_end = round(new_start + max(duration, 1.0), 3)
+
+        existing_ids = {s.id for s in project.scenes}
+        seq = len(project.scenes) + 1
+        new_id = f"SC_{seq:03d}"
+        while new_id in existing_ids:
+            seq += 1
+            new_id = f"SC_{seq:03d}"
+
+        new_scene = SceneModel(
+            id=new_id,
+            start=new_start,
+            end=new_end,
+            duration=round(new_end - new_start, 3),
+            caption=caption.strip(),
+            visual_description="",
+            image_prompt="",
+            suggested_motion="slow zoom in",
+            suggested_transition="fade",
+            image_status="pending",
+        )
+        project.scenes.append(new_scene)
+        project.scenes.sort(key=lambda s: s.start)
+        project.updated_at = datetime.now(timezone.utc).isoformat()
+        self._save_to_disk(project)
+        return project
+
+    def add_slide(
+        self,
+        project_id: str,
+        caption: str = "New Slide",
+        duration: float = 4.0,
+        template_type: str = "blank_slide",
+        background: Optional[dict] = None,
+        elements: Optional[list] = None,
+        owner_id: Optional[str] = None,
+    ) -> ProjectModel:
+        """Appends a new presentation slide scene to the project timeline."""
+        project = self.get_project(project_id, owner_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        last_end = max((s.end for s in project.scenes), default=0.0)
+        new_start = round(last_end, 3)
+        new_end = round(new_start + max(duration, 0.5), 3)
+
+        existing_ids = {s.id for s in project.scenes}
+        seq = len(project.scenes) + 1
+        new_id = f"SC_{seq:03d}"
+        while new_id in existing_ids:
+            seq += 1
+            new_id = f"SC_{seq:03d}"
+
+        new_scene = SceneModel(
+            id=new_id,
+            start=new_start,
+            end=new_end,
+            duration=round(new_end - new_start, 3),
+            caption=caption.strip(),
+            visual_description="",
+            image_prompt="",
+            suggested_motion="none",
+            suggested_transition="fade",
+            image_status="pending",
+            template_type=template_type,
+            background=background,
+            elements=elements or [],
+        )
+        project.scenes.append(new_scene)
+        project.scenes.sort(key=lambda s: s.start)
+        project.updated_at = datetime.now(timezone.utc).isoformat()
+        self._save_to_disk(project)
+        return project
+
+    def auto_align_scenes(
+        self,
+        project_id: str,
+        owner_id: Optional[str] = None,
+    ) -> ProjectModel:
+        """Resolves all timeline gaps and overlaps, ensuring strict contiguous alignment."""
+        project = self.get_project(project_id, owner_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        if not project.scenes:
+            return project
+
+        # Sort scenes by start time
+        project.scenes.sort(key=lambda s: s.start)
+
+        current_time = 0.0
+        for sc in project.scenes:
+            dur = sc.duration if sc.duration and sc.duration > 0.5 else max(sc.end - sc.start, 1.0)
+            sc.start = round(current_time, 3)
+            sc.end = round(current_time + dur, 3)
+            sc.duration = round(sc.end - sc.start, 3)
+            current_time = sc.end
+
+        project.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_to_disk(project)
         return project
 
