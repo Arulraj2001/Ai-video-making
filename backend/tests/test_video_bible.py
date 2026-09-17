@@ -142,6 +142,12 @@ def test_video_bible_api_and_persistence():
     assert len(reloaded_proj.video_bible.locations) == 1
     assert len(reloaded_proj.video_bible.objects) == 1
 
-    # 10. Clean up
+    # 10. Test deleting reference image
+    del_ref_res = client.delete(f"/api/projects/{proj_id}/bible/characters/{char_id}/reference")
+    assert del_ref_res.status_code == 204
+    get_proj_res = client.get(f"/api/projects/{proj_id}")
+    assert get_proj_res.json()["video_bible"]["characters"][0]["reference_image"] is None
+
+    # 11. Clean up
     del_res = client.delete(f"/api/projects/{proj_id}")
     assert del_res.status_code == 204

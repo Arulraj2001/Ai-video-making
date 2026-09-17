@@ -9,6 +9,7 @@ interface CharactersSectionProps {
   onUpdate: (charId: string, char: Partial<Character>) => Promise<any>;
   onDelete: (charId: string) => Promise<any>;
   onUploadReference: (charId: string, file: File) => Promise<any>;
+  onDeleteReference?: (charId: string) => Promise<any>;
 }
 
 export const CharactersSection: React.FC<CharactersSectionProps> = ({
@@ -17,6 +18,7 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
   onUpdate,
   onDelete,
   onUploadReference,
+  onDeleteReference,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
@@ -62,7 +64,10 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError("Please enter a character name.");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -216,20 +221,38 @@ export const CharactersSection: React.FC<CharactersSectionProps> = ({
 
               {/* Bottom Actions */}
               <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
-                <button
-                  onClick={() => triggerUpload(char.id)}
-                  disabled={uploadingId === char.id}
-                  className="text-cyan-400 hover:text-cyan-300 text-[11px] font-medium flex items-center gap-1"
-                >
-                  <UploadCloud size={12} />
-                  <span>
-                    {uploadingId === char.id
-                      ? "Uploading..."
-                      : char.reference_image
-                      ? "Change Reference"
-                      : "Upload Reference"}
-                  </span>
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => triggerUpload(char.id)}
+                    disabled={uploadingId === char.id}
+                    className="text-cyan-400 hover:text-cyan-300 text-[11px] font-medium flex items-center gap-1"
+                  >
+                    <UploadCloud size={12} />
+                    <span>
+                      {uploadingId === char.id
+                        ? "Uploading..."
+                        : char.reference_image
+                        ? "Change Photo"
+                        : "Upload Photo"}
+                    </span>
+                  </button>
+
+                  {char.reference_image && onDeleteReference && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Remove reference photo for "${char.name}"?`)) {
+                          onDeleteReference(char.id);
+                        }
+                      }}
+                      className="text-rose-400/80 hover:text-rose-300 text-[11px] font-medium flex items-center gap-1"
+                      title="Remove reference photo"
+                    >
+                      <X size={11} />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-1">
                   <button

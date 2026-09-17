@@ -38,6 +38,9 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
       setBible(updated);
       if (onBibleUpdated) onBibleUpdated(updated);
       setExtractSuccess("Continuity entities automatically extracted from script!");
+      if (updated.characters && updated.characters.length > 0) {
+        setActiveTab("characters");
+      }
       setTimeout(() => setExtractSuccess(null), 4000);
     } catch (err: any) {
       setError(err.message || "Failed to auto-extract Video Bible");
@@ -139,6 +142,21 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
     return ref;
   };
 
+  const handleDeleteCharacterReference = async (charId: string) => {
+    await api.deleteCharacterReference(projectId, charId);
+    setBible((prev) => {
+      if (!prev) return null;
+      const next = {
+        ...prev,
+        characters: prev.characters.map((c) =>
+          c.id === charId ? { ...c, reference_image: null } : c
+        ),
+      };
+      if (onBibleUpdated) onBibleUpdated(next);
+      return next;
+    });
+  };
+
   // Handlers for Locations
   const handleAddLocation = async (loc: Partial<Location>) => {
     const added = await api.addLocation(projectId, loc);
@@ -194,6 +212,21 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
     return ref;
   };
 
+  const handleDeleteLocationReference = async (locId: string) => {
+    await api.deleteLocationReference(projectId, locId);
+    setBible((prev) => {
+      if (!prev) return null;
+      const next = {
+        ...prev,
+        locations: prev.locations.map((l) =>
+          l.id === locId ? { ...l, reference_image: null } : l
+        ),
+      };
+      if (onBibleUpdated) onBibleUpdated(next);
+      return next;
+    });
+  };
+
   // Handlers for Objects
   const handleAddObject = async (obj: Partial<VideoObject>) => {
     const added = await api.addObject(projectId, obj);
@@ -247,6 +280,21 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
       return next;
     });
     return ref;
+  };
+
+  const handleDeleteObjectReference = async (objId: string) => {
+    await api.deleteObjectReference(projectId, objId);
+    setBible((prev) => {
+      if (!prev) return null;
+      const next = {
+        ...prev,
+        objects: prev.objects.map((o) =>
+          o.id === objId ? { ...o, reference_image: null } : o
+        ),
+      };
+      if (onBibleUpdated) onBibleUpdated(next);
+      return next;
+    });
   };
 
   // Handlers for Rules
@@ -330,7 +378,7 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
         )}
       </div>
 
-      {/* Sub-navigation */}
+      {/* Sub-navigation with count badges */}
       <div className="flex items-center gap-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab("style")}
@@ -344,6 +392,11 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
           className={`video-bible-tab ${activeTab === "characters" ? "is-active" : ""}`}
         >
           <span>Characters</span>
+          {bible.characters.length > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-white/10 font-mono">
+              {bible.characters.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -351,6 +404,11 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
           className={`video-bible-tab ${activeTab === "locations" ? "is-active" : ""}`}
         >
           <span>Locations</span>
+          {bible.locations.length > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-white/10 font-mono">
+              {bible.locations.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -358,6 +416,11 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
           className={`video-bible-tab ${activeTab === "objects" ? "is-active" : ""}`}
         >
           <span>Key Objects</span>
+          {bible.objects.length > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-white/10 font-mono">
+              {bible.objects.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -365,8 +428,45 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
           className={`video-bible-tab ${activeTab === "rules" ? "is-active" : ""}`}
         >
           <span>Global Rules</span>
+          {bible.rules.length > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-white/10 font-mono">
+              {bible.rules.length}
+            </span>
+          )}
         </button>
       </div>
+
+      {/* Helpful banner if Bible has 0 characters and 0 locations */}
+      {bible.characters.length === 0 && bible.locations.length === 0 && (
+        <div
+          className="p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          style={{
+            background: "rgba(99, 102, 241, 0.08)",
+            borderColor: "rgba(99, 102, 241, 0.25)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-indigo-200">AI Auto-Extract Available</h5>
+              <p className="text-[11px] text-zinc-400">
+                Instantly scan your narration to extract recurring characters, locations, and visual style.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleAutoExtract}
+            disabled={extracting}
+            className="btn-primary text-xs py-1.5 px-3 shrink-0 self-start sm:self-auto"
+          >
+            <Sparkles size={13} className={extracting ? "animate-spin" : ""} />
+            <span>{extracting ? "Analyzing..." : "Auto-Extract Now"}</span>
+          </button>
+        </div>
+      )}
 
       {/* Tab Panels */}
       <div className="pt-2">
@@ -384,6 +484,7 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
             onUpdate={handleUpdateCharacter}
             onDelete={handleDeleteCharacter}
             onUploadReference={handleUploadCharacterReference}
+            onDeleteReference={handleDeleteCharacterReference}
           />
         )}
 
@@ -394,6 +495,7 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
             onUpdate={handleUpdateLocation}
             onDelete={handleDeleteLocation}
             onUploadReference={handleUploadLocationReference}
+            onDeleteReference={handleDeleteLocationReference}
           />
         )}
 
@@ -404,6 +506,7 @@ export const VideoBibleEditor: React.FC<VideoBibleEditorProps> = ({
             onUpdate={handleUpdateObject}
             onDelete={handleDeleteObject}
             onUploadReference={handleUploadObjectReference}
+            onDeleteReference={handleDeleteObjectReference}
           />
         )}
 

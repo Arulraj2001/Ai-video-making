@@ -838,6 +838,42 @@ class ProjectService:
         self._save_to_disk(project)
         return ref_model
 
+    def delete_reference_image(
+        self,
+        project_id: str,
+        entity_type: str,
+        entity_id: str,
+        owner_id: Optional[str] = None
+    ) -> bool:
+        project = self.get_project(project_id, owner_id)
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found")
+
+        found = False
+        if entity_type == "character":
+            char = next((c for c in project.video_bible.characters if c.id == entity_id), None)
+            if char:
+                char.reference_image = None
+                found = True
+        elif entity_type == "location":
+            loc = next((l for l in project.video_bible.locations if l.id == entity_id), None)
+            if loc:
+                loc.reference_image = None
+                found = True
+        elif entity_type == "object":
+            obj = next((o for o in project.video_bible.objects if o.id == entity_id), None)
+            if obj:
+                obj.reference_image = None
+                found = True
+        else:
+            raise ValueError(f"Unknown entity type '{entity_type}'")
+
+        if found:
+            project.updated_at = datetime.now(timezone.utc).isoformat()
+            self._save_to_disk(project)
+            return True
+        return False
+
     def update_scene_timeline(
         self,
         project_id: str,

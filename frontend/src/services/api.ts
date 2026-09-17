@@ -297,6 +297,15 @@ class ApiService {
     );
   }
 
+  async deleteCharacterReference(projectId: string, charId: string): Promise<void> {
+    return this.request<void>(
+      `/api/projects/${projectId}/bible/characters/${charId}/reference`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
   // Locations
   async addLocation(projectId: string, data: Partial<Location>): Promise<Location> {
     return this.request<Location>(`/api/projects/${projectId}/bible/locations`, {
@@ -338,6 +347,15 @@ class ApiService {
     );
   }
 
+  async deleteLocationReference(projectId: string, locId: string): Promise<void> {
+    return this.request<void>(
+      `/api/projects/${projectId}/bible/locations/${locId}/reference`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
   // Objects
   async addObject(projectId: string, data: Partial<VideoObject>): Promise<VideoObject> {
     return this.request<VideoObject>(`/api/projects/${projectId}/bible/objects`, {
@@ -375,6 +393,15 @@ class ApiService {
       {
         method: "POST",
         body: formData,
+      }
+    );
+  }
+
+  async deleteObjectReference(projectId: string, objId: string): Promise<void> {
+    return this.request<void>(
+      `/api/projects/${projectId}/bible/objects/${objId}/reference`,
+      {
+        method: "DELETE",
       }
     );
   }

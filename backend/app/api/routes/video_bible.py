@@ -212,7 +212,9 @@ async def auto_extract_video_bible(
                     resp = await client.post(url, json=payload)
                     if resp.status_code == 200:
                         raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-                        extracted_data = json.loads(raw)
+                        raw_clean = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
+                        raw_clean = re.sub(r"\s*```$", "", raw_clean).strip()
+                        extracted_data = json.loads(raw_clean)
             elif provider.provider_name in ("openai", "openrouter"):
                 import httpx
                 base = getattr(provider, "base_url", None) or "https://api.openai.com/v1"
@@ -226,7 +228,9 @@ async def auto_extract_video_bible(
                     resp = await client.post(f"{base}/chat/completions", headers=headers, json=payload)
                     if resp.status_code == 200:
                         content = resp.json()["choices"][0]["message"]["content"]
-                        extracted_data = json.loads(content)
+                        content_clean = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.IGNORECASE)
+                        content_clean = re.sub(r"\s*```$", "", content_clean).strip()
+                        extracted_data = json.loads(content_clean)
     except Exception as e:
         logger.warning(f"LLM extraction encountered error, falling back to heuristic parsing: {e}")
 
@@ -355,6 +359,14 @@ async def upload_character_reference(project_id: str, char_id: str, file: Upload
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@router.delete("/characters/{char_id}/reference", status_code=status.HTTP_204_NO_CONTENT)
+def delete_character_reference(project_id: str, char_id: str):
+    """Removes the reference image from a character."""
+    deleted = project_service.delete_reference_image(project_id, "character", char_id)
+    if not deleted:
+        raise NotFoundException("Character", char_id)
+    return None
+
 # Location endpoints
 @router.post("/locations", response_model=LocationSchema, status_code=status.HTTP_201_CREATED)
 def add_location(project_id: str, data: LocationCreate):
@@ -412,6 +424,15 @@ async def upload_location_reference(project_id: str, loc_id: str, file: UploadFi
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@router.delete("/locations/{loc_id}/reference", status_code=status.HTTP_204_NO_CONTENT)
+def delete_location_reference(project_id: str, loc_id: str):
+    """Removes the reference image from a location."""
+    deleted = project_service.delete_reference_image(project_id, "location", loc_id)
+    if not deleted:
+        raise NotFoundException("Location", loc_id)
+    return None
+
+
 # Object endpoints
 @router.post("/objects", response_model=ObjectSchema, status_code=status.HTTP_201_CREATED)
 def add_object(project_id: str, data: ObjectCreate):
@@ -464,3 +485,12 @@ async def upload_object_reference(project_id: str, obj_id: str, file: UploadFile
         return _serialize_ref(ref)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.delete("/objects/{obj_id}/reference", status_code=status.HTTP_204_NO_CONTENT)
+def delete_object_reference(project_id: str, obj_id: str):
+    """Removes the reference image from an object."""
+    deleted = project_service.delete_reference_image(project_id, "object", obj_id)
+    if not deleted:
+        raise NotFoundException("Object", obj_id)
+    return None
+

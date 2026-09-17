@@ -9,6 +9,7 @@ interface ObjectsSectionProps {
   onUpdate: (objId: string, obj: Partial<VideoObject>) => Promise<any>;
   onDelete: (objId: string) => Promise<any>;
   onUploadReference: (objId: string, file: File) => Promise<any>;
+  onDeleteReference?: (objId: string) => Promise<any>;
 }
 
 export const ObjectsSection: React.FC<ObjectsSectionProps> = ({
@@ -17,6 +18,7 @@ export const ObjectsSection: React.FC<ObjectsSectionProps> = ({
   onUpdate,
   onDelete,
   onUploadReference,
+  onDeleteReference,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingObj, setEditingObj] = useState<VideoObject | null>(null);
@@ -50,7 +52,10 @@ export const ObjectsSection: React.FC<ObjectsSectionProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError("Please enter an object name.");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -205,9 +210,25 @@ export const ObjectsSection: React.FC<ObjectsSectionProps> = ({
                       </div>
 
                       {obj.reference_image ? (
-                        <span className="inline-block mt-0.5 text-[10px] text-amber-400 bg-amber-950/40 border border-amber-900/50 px-1.5 py-0.2 rounded">
-                          Ref Image Active
-                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-amber-400 bg-amber-950/40 border border-amber-900/50 px-1.5 py-0.5 rounded">
+                            Ref Image Active
+                          </span>
+                          {onDeleteReference && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm(`Remove reference photo for "${obj.name}"?`)) {
+                                  onDeleteReference(obj.id);
+                                }
+                              }}
+                              className="text-[10px] text-rose-400/80 hover:text-rose-300 underline"
+                              title="Remove photo"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <span className="inline-block mt-0.5 text-[10px] text-zinc-500">
                           No reference image
