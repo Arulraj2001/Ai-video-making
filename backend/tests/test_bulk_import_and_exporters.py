@@ -178,3 +178,20 @@ def test_bulk_import_pro_gating_and_success():
     assert len(data["updated_scenes"]) == 2
     assert data["updated_scenes"][0]["image_status"] == "completed"
     assert data["updated_scenes"][0]["image_url"] is not None
+
+    # Verify that the newly registered /media route serves the image
+    img_url = data["updated_scenes"][0]["image_url"]
+    media_res = client.get(img_url)
+    assert media_res.status_code == 200
+    assert media_res.headers["content-type"] in ("image/png", "application/octet-stream")
+
+
+def test_media_endpoint_traversal_and_404():
+    # 1. 404 for completely non-existent asset
+    res_404 = client.get("/media/proj_fake/audio/non_existent_voice.mp3")
+    assert res_404.status_code == 404
+
+    # 2. Path traversal attack protection
+    res_bad = client.get("/media/proj_fake/audio/../../../etc/passwd")
+    assert res_bad.status_code in (400, 404)
+

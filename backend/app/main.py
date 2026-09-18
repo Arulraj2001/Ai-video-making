@@ -1,7 +1,8 @@
 import time
 import logging
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -10,6 +11,8 @@ from starlette.requests import Request
 from app.configuration.config import settings, validate_security_configuration
 from app.configuration.logging_config import setup_logging
 from app.utils.security import sanitize_secrets
+from app.services.storage.asset_storage import default_asset_storage, sanitize_filename
+from app.services.project_service import project_service
 from app.api.routes.health import router as health_router, check_diagnostics
 from app.api.routes.projects import router as projects_router
 from app.api.routes.video_bible import router as video_bible_router
@@ -111,9 +114,66 @@ app.add_middleware(
 app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
-# Mount media directory for audio and images (supports persistent volume configuration)
+# Mount media directory for audio and images (supports persistent volume configuration & cloud fallback)
 media_dir = Path(settings.STORAGE_DIR) / "projects"
 media_dir.mkdir(parents=True, exist_ok=True)
+
+
+@app.get("/media/{project_id}/{asset_category}/{filename:path}")
+async def get_media_asset(project_id: str, asset_category: str, filename: str):
+    """
+    Serves project assets (narration audio, images, BGM, renders) with resilient
+    Cloud Storage fallback:
+    1. Serves directly from local container disk if present (supports HTTP Range headers).
+    2. If missing locally (e.g. Render ephemeral disk recycle), restores from Firebase
+       Cloud Storage to local disk and serves via FileResponse.
+    3. If local file write fails, redirects (307) directly to the signed cloud URL.
+    4. Returns clean 404 if the asset does not exist in any storage tier.
+    """
+    safe_name = sanitize_filename(Path(filename).name)
+    local_file = (media_dir / project_id / asset_category / safe_name).resolve()
+
+    # Path traversal protection
+    try:
+        local_file.relative_to(media_dir.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid media file path.")
+
+    if local_file.exists() and local_file.is_file():
+        return FileResponse(str(local_file))
+
+    # Resolve project owner for durable Cloud Storage lookup
+    owner_id = None
+    try:
+        proj = project_service.get_project(project_id)
+        if proj:
+            owner_id = proj.owner_id
+    except Exception:
+        pass
+
+    # Attempt restoration from Cloud Storage to local disk
+    restored = default_asset_storage.ensure_local_asset(
+        project_id=project_id,
+        asset_category=asset_category,
+        filename=safe_name,
+        owner_id=owner_id,
+    )
+    if restored and restored.exists() and restored.is_file():
+        return FileResponse(str(restored))
+
+    # Secondary fallback: check if signed URL can be generated for redirection
+    signed_url = default_asset_storage.get_media_url(
+        project_id=project_id,
+        asset_category=asset_category,
+        filename=safe_name,
+        owner_id=owner_id,
+    )
+    if signed_url and (signed_url.startswith("http://") or signed_url.startswith("https://")):
+        return RedirectResponse(url=signed_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+    raise HTTPException(status_code=404, detail=f"Media asset '{safe_name}' not found.")
+
+
 app.mount("/media", StaticFiles(directory=str(media_dir)), name="media")
 
 # Include API routes under /api

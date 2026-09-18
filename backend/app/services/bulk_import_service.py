@@ -81,20 +81,21 @@ class BulkImportService:
     @staticmethod
     def sanitize_image_for_ffmpeg(raw_bytes: bytes, filename: str) -> Tuple[bytes, int, int]:
         """
-        Guarantees 100% FFmpeg rendering safety:
+        Guarantees 100% FFmpeg rendering safety with memory protection:
         1. EXIF orientation correction (ImageOps.exif_transpose)
         2. Color space normalization (converts CMYK, palette, greyscale to standard 8-bit sRGB)
         3. Even dimension constraint (libx264/yuv420p requires width & height divisible by 2)
-        4. Bounds enforcement: scales down images exceeding 3840px to prevent OOM
-        5. Encodes as pristine, uncorrupted PNG
+        4. Bounds enforcement: scales down images exceeding 2560px on cloud (3840px local) to prevent OOM
+        5. Encodes as pristine, uncorrupted PNG (fast compression, optimize=False to protect 512MB RAM)
         """
+        img = None
         try:
-            with Image.open(io.BytesIO(raw_bytes)) as img:
+            with Image.open(io.BytesIO(raw_bytes)) as source_img:
                 # 1. Correct EXIF orientation
                 try:
-                    img = ImageOps.exif_transpose(img)
+                    img = ImageOps.exif_transpose(source_img)
                 except Exception:
-                    pass
+                    img = source_img.copy()
 
                 # 2. Color space normalization
                 # If CMYK or Palette mode, convert to RGB
@@ -108,14 +109,16 @@ class BulkImportService:
                 elif img.mode != "RGB":
                     img = img.convert("RGB")
 
-                # 3. Dimension bounds check
+                # 3. Dimension bounds check (constrained for 512MB cloud environments)
+                is_cloud = bool(os.getenv("RENDER") or os.getenv("ENVIRONMENT") == "production")
+                max_bound = 2560 if is_cloud else MAX_IMAGE_DIMENSION
                 w, h = img.size
                 max_dim = max(w, h)
-                if max_dim > MAX_IMAGE_DIMENSION:
-                    ratio = MAX_IMAGE_DIMENSION / float(max_dim)
+                if max_dim > max_bound:
+                    ratio = max_bound / float(max_dim)
                     new_w = int(w * ratio)
                     new_h = int(h * ratio)
-                    img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                    img = img.resize((new_w, new_h), Image.Resampling.BILINEAR if is_cloud else Image.Resampling.LANCZOS)
                     w, h = img.size
 
                 # 4. Enforce even dimensions for libx264 compatibility
@@ -125,14 +128,23 @@ class BulkImportService:
                     img = img.crop((0, 0, even_w, even_h))
                     w, h = even_w, even_h
 
-                # 5. Output clean PNG
+                # 5. Output clean PNG without heavy trial-search optimize=True to guarantee memory safety
                 out_io = io.BytesIO()
-                img.save(out_io, format="PNG", optimize=True)
+                img.save(out_io, format="PNG", optimize=False, compress_level=4 if is_cloud else 6)
                 clean_bytes = out_io.getvalue()
+                out_io.close()
                 return clean_bytes, w, h
         except Exception as e:
             logger.error(f"Failed to sanitize image '{filename}': {e}")
             raise ValueError(f"Image '{filename}' could not be decoded or is corrupted: {e}")
+        finally:
+            if img:
+                try:
+                    img.close()
+                except Exception:
+                    pass
+            import gc
+            gc.collect()
 
     @classmethod
     def extract_zip_files(cls, zip_bytes: bytes) -> List[Tuple[str, bytes]]:

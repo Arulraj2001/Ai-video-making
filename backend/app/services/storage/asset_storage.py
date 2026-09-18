@@ -61,6 +61,16 @@ class AssetStorage(ABC):
         """
         raise NotImplementedError
 
+    def ensure_local_asset(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[Path]:
+        """Ensures the asset exists locally on disk, downloading from cloud storage if needed."""
+        return self.get_asset_path(project_id, asset_category, filename, owner_id)
+
     def upload_to_cloud(
         self,
         project_id: str,
@@ -185,6 +195,59 @@ class FirebaseStorageAdapter(AssetStorage):
 
         return local_rel, local_url
 
+    def ensure_local_asset(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[Path]:
+        """
+        Ensures the asset exists on the local container filesystem.
+        If missing locally (e.g. after container restart / cold start on Render),
+        retrieves the asset from Firebase Cloud Storage, restores it locally,
+        and returns the Path.
+        """
+        safe_name = sanitize_filename(filename)
+        local_path = self.local_storage.get_asset_path(project_id, asset_category, safe_name, owner_id)
+        if local_path and local_path.exists():
+            return local_path
+
+        dest_path = self.local_storage.projects_dir / project_id / asset_category / safe_name
+
+        if self.bucket:
+            # Candidate cloud blob paths to check
+            candidate_paths = []
+            if owner_id:
+                candidate_paths.append(f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}")
+            candidate_paths.append(f"projects/{project_id}/{asset_category}/{safe_name}")
+
+            for b_path in candidate_paths:
+                try:
+                    blob = self.bucket.blob(b_path)
+                    if blob.exists():
+                        dest_path.parent.mkdir(parents=True, exist_ok=True)
+                        blob.download_to_filename(str(dest_path))
+                        logger.info(f"Restored asset '{safe_name}' from Cloud Storage ({b_path}) to local disk.")
+                        return dest_path
+                except Exception as e:
+                    logger.debug(f"Could not download blob '{b_path}': {e}")
+
+            # If owner_id was unknown, search user storage folders for this project asset
+            try:
+                target_suffix = f"projects/{project_id}/{asset_category}/{safe_name}"
+                blobs = self.bucket.list_blobs(prefix="users/", max_results=100)
+                for b in blobs:
+                    if b.name.endswith(target_suffix):
+                        dest_path.parent.mkdir(parents=True, exist_ok=True)
+                        b.download_to_filename(str(dest_path))
+                        logger.info(f"Restored asset '{safe_name}' from Cloud Storage ({b.name}) to local disk.")
+                        return dest_path
+            except Exception as e:
+                logger.debug(f"Cloud blob search for '{safe_name}' failed: {e}")
+
+        return None
+
     def get_asset_path(
         self,
         project_id: str,
@@ -192,7 +255,7 @@ class FirebaseStorageAdapter(AssetStorage):
         filename: str,
         owner_id: Optional[str] = None,
     ) -> Optional[Path]:
-        return self.local_storage.get_asset_path(project_id, asset_category, filename, owner_id)
+        return self.ensure_local_asset(project_id, asset_category, filename, owner_id)
 
     def get_media_url(
         self,
@@ -204,16 +267,20 @@ class FirebaseStorageAdapter(AssetStorage):
         """
         Returns a durable, browser-consumable URL for an asset.
 
-        Serves the fast local `/media/...` URL whenever the file still exists
-        locally. When Render recycles its disk (or the file was never kept
-        locally), falls back to a freshly-signed Firebase Storage URL with
-        in-memory TTL caching so media never blocks on synchronous network roundtrips.
+        Serves the fast local `/media/...` URL whenever the file exists
+        locally or can be restored locally from Cloud Storage. Otherwise
+        falls back to a freshly-signed Firebase Storage URL with in-memory TTL caching.
         """
         safe_name = sanitize_filename(filename)
 
         local = self.local_storage.get_media_url(project_id, asset_category, safe_name)
         if local:
             return local
+
+        # Attempt to restore from Cloud Storage to local disk
+        restored = self.ensure_local_asset(project_id, asset_category, safe_name, owner_id)
+        if restored and restored.exists():
+            return f"/media/{project_id}/{asset_category}/{safe_name}"
 
         if self.bucket and owner_id:
             cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"

@@ -1,4 +1,6 @@
+import asyncio
 import csv
+import gc
 import io
 import json
 import re
@@ -582,6 +584,9 @@ async def bulk_import_scene_images(
     timestamp = int(time.time() * 1000)
 
     for scene_num, (filename, raw_bytes) in assigned.items():
+        # Yield to event loop to ensure /api/health and keep-alives stay responsive
+        await asyncio.sleep(0.01)
+
         # scene_num is 1-indexed
         target_scene = next((s for s in project.scenes if getattr(s, "scene_number", None) == scene_num), None)
         if not target_scene and 1 <= scene_num <= len(project.scenes):
@@ -591,13 +596,16 @@ async def bulk_import_scene_images(
             continue
 
         try:
-            clean_bytes, w, h = bulk_import_service.sanitize_image_for_ffmpeg(raw_bytes, filename)
+            clean_bytes, w, h = await asyncio.to_thread(
+                bulk_import_service.sanitize_image_for_ffmpeg, raw_bytes, filename
+            )
         except Exception as e:
             logger.warning(f"Skipping corrupted bulk image '{filename}': {e}")
             continue
 
         saved_name = f"bulk_{target_scene.id}_{timestamp}.png"
-        relative_path, public_url = project_service.save_scene_image_asset(
+        relative_path, public_url = await asyncio.to_thread(
+            project_service.save_scene_image_asset,
             project_id=project.id,
             scene_id=target_scene.id,
             image_bytes=clean_bytes,
@@ -617,6 +625,10 @@ async def bulk_import_scene_images(
             "imported_at": datetime.now(timezone.utc).isoformat()
         }
         updated_scenes.append(SceneSchema.model_validate(target_scene))
+
+        # Explicit cleanup of byte memory per item
+        del clean_bytes
+        gc.collect()
 
     project.updated_at = datetime.now(timezone.utc).isoformat()
     project_service._save_to_disk(project)

@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Union
 from app.models.render import RenderJobModel
 from app.configuration.config import settings
 from app.services.project_service import project_service, STORAGE_DIR
+from app.services.storage.asset_storage import default_asset_storage
 from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
@@ -741,6 +742,35 @@ class RenderService:
                     if cand.exists():
                         img_path = cand
 
+                # If missing on ephemeral disk, pre-fetch from Cloud Storage
+                if not img_path:
+                    cand_name = None
+                    if sc.image_path:
+                        cand_name = Path(sc.image_path).name
+                    elif sc.image_url and "/images/" in sc.image_url:
+                        cand_name = sc.image_url.split("/images/")[-1].split("?")[0]
+
+                    if cand_name:
+                        restored = default_asset_storage.ensure_local_asset(
+                            project_id=project.id,
+                            asset_category="images",
+                            filename=cand_name,
+                            owner_id=project.owner_id
+                        )
+                        if restored and restored.exists():
+                            img_path = restored
+
+                # If still not found and image_url is an external HTTP URL, download to temp_dir
+                if not img_path and sc.image_url and (sc.image_url.startswith("http://") or sc.image_url.startswith("https://")):
+                    try:
+                        import urllib.request
+                        downloaded_dest = temp_dir / f"downloaded_scene_{idx:03d}.png"
+                        urllib.request.urlretrieve(sc.image_url, str(downloaded_dest))
+                        if downloaded_dest.exists() and downloaded_dest.stat().st_size > 0:
+                            img_path = downloaded_dest
+                    except Exception as e:
+                        logger.warning(f"Could not download remote image for scene {idx}: {e}")
+
                 # Check if scene requires compositing (slide template, custom background, or overlay elements)
                 has_elements = bool(getattr(sc, "elements", None))
                 has_bg = bool(getattr(sc, "background", None))
@@ -769,7 +799,8 @@ class RenderService:
             # Render scene clips concurrently with motion and transition filters
             job_motion_preset = getattr(job, "motion_preset", "none")
             loop = asyncio.get_running_loop()
-            render_sem = asyncio.Semaphore(3)
+            is_cloud = bool(os.getenv("RENDER") or getattr(settings, "ENVIRONMENT", "") == "production")
+            render_sem = asyncio.Semaphore(1 if is_cloud else 3)
             completed_scenes = 0
 
             async def _render_scene_clip(idx: int, scene, img_path) -> Path:
@@ -918,22 +949,43 @@ class RenderService:
 
             # Locate narration audio track
             narr_path: Optional[Path] = None
-            if project.audio_file and project.audio_file.storage_path:
-                cand_narr = Path(project.audio_file.storage_path)
-                if not cand_narr.is_absolute():
-                    cand_narr = Path.cwd() / cand_narr
-                if cand_narr.exists():
+            if project.audio_file:
+                cand_narr = None
+                if project.audio_file.storage_path:
+                    cand_narr = Path(project.audio_file.storage_path)
+                    if not cand_narr.is_absolute():
+                        cand_narr = Path.cwd() / cand_narr
+                if cand_narr and cand_narr.exists():
                     narr_path = cand_narr.resolve()
+                else:
+                    # Attempt pre-fetch from Cloud Storage
+                    fname = project.audio_file.filename or (Path(project.audio_file.storage_path).name if project.audio_file.storage_path else None)
+                    if fname:
+                        restored = default_asset_storage.ensure_local_asset(
+                            project.id, "audio", fname, owner_id=project.owner_id
+                        )
+                        if restored and restored.exists():
+                            narr_path = restored.resolve()
 
             # Locate background music track
             bgm_path: Optional[Path] = None
             audio_settings = getattr(project, "audio_settings", None)
-            if audio_settings and audio_settings.music_file and audio_settings.music_file.storage_path:
-                cand_bgm = Path(audio_settings.music_file.storage_path)
-                if not cand_bgm.is_absolute():
-                    cand_bgm = Path.cwd() / cand_bgm
-                if cand_bgm.exists():
+            if audio_settings and audio_settings.music_file:
+                cand_bgm = None
+                if audio_settings.music_file.storage_path:
+                    cand_bgm = Path(audio_settings.music_file.storage_path)
+                    if not cand_bgm.is_absolute():
+                        cand_bgm = Path.cwd() / cand_bgm
+                if cand_bgm and cand_bgm.exists():
                     bgm_path = cand_bgm.resolve()
+                else:
+                    fname = audio_settings.music_file.filename or (Path(audio_settings.music_file.storage_path).name if audio_settings.music_file.storage_path else None)
+                    if fname:
+                        restored = default_asset_storage.ensure_local_asset(
+                            project.id, "audio", fname, owner_id=project.owner_id
+                        )
+                        if restored and restored.exists():
+                            bgm_path = restored.resolve()
 
             # Volume and fade parameters
             narr_vol = 1.0

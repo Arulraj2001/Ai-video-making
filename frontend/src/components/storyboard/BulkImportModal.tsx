@@ -110,7 +110,17 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
         onSuccess(res.project);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to process bulk image upload.");
+      let msg = err.message || "Failed to process bulk image upload.";
+      if (
+        err.status === 502 ||
+        err.statusCode === 502 ||
+        msg.includes("502") ||
+        msg.includes("Bad Gateway") ||
+        msg.includes("Cannot connect")
+      ) {
+        msg = "The cloud server is starting up from idle sleep (Render free tier takes ~45s to wake). Please wait 30 seconds and try uploading again.";
+      }
+      setError(msg);
     } finally {
       setUploading(false);
     }
