@@ -1,8 +1,8 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 
 const SITE_URL = "https://scenoraedits.web.app";
 const SITE_NAME = "ScenoraEdits";
-const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.svg`;
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 export interface SEOConfig {
   title: string;

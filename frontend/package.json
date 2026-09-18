@@ -6,9 +6,36 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:spa": "tsc -b && vite build",
+    "postbuild": "node scripts/prerender.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "node --test tests/auth.test.mjs tests/formatters.test.mjs tests/stage4-5-ui.test.mjs tests/storyboard-phase2.test.mjs tests/seo-and-positioning.test.mjs tests/ui-and-flows.test.mjs tests/bulk-import-and-exporters.test.mjs"
+  },
+  "reactSnap": {
+    "source": "dist",
+    "include": [
+      "/",
+      "/features",
+      "/how-it-works",
+      "/use-cases",
+      "/pricing",
+      "/blog",
+      "/contact",
+      "/terms",
+      "/privacy",
+      "/commercial-rights",
+      "/security",
+      "/cookies",
+      "/status"
+    ],
+    "crawl": false,
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ],
+    "skipThirdPartyRequests": true,
+    "inlineCss": false
   },
   "dependencies": {
     "firebase": "^12.18.0",
@@ -22,6 +49,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
+    "react-snap": "^1.23.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }
