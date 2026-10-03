@@ -15,10 +15,11 @@ import { SignInPage } from "./pages/public/SignInPage";
 import { SignUpPage } from "./pages/public/SignUpPage";
 import { NotFoundPage } from "./pages/public/NotFoundPage";
 
-// Primary App Pages (eagerly loaded for instant 0ms transitions)
-import { AppDashboardPage } from "./pages/app/AppDashboardPage";
-import { ProjectsListPage } from "./pages/app/ProjectsListPage";
-import { StudioPage } from "./pages/app/StudioPage";
+// Primary app pages are loaded on demand so the authenticated shell does not
+// download the full Studio editor before the user opens it.
+const AppDashboardPage = lazy(() => import("./pages/app/AppDashboardPage").then(({ AppDashboardPage }) => ({ default: AppDashboardPage })));
+const ProjectsListPage = lazy(() => import("./pages/app/ProjectsListPage").then(({ ProjectsListPage }) => ({ default: ProjectsListPage })));
+const StudioPage = lazy(() => import("./pages/app/StudioPage").then(({ StudioPage }) => ({ default: StudioPage })));
 
 // Authenticated App Shell Secondary Pages (lazy)
 const AdminLayout = lazy(() => import("./layouts/AdminLayout").then(({ AdminLayout }) => ({ default: AdminLayout })));

@@ -9,7 +9,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
-import { db } from "../lib/firebase";
+import { getDb } from "../lib/firebaseFirestore";
 import type { Project } from "../types";
 
 export interface FirestoreUserProfile {
@@ -23,7 +23,7 @@ export interface FirestoreUserProfile {
 
 export class FirestoreService {
   private getDb(): Firestore | null {
-    return db;
+    return getDb();
   }
 
   /**

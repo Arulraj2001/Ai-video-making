@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from app.utils.security import sanitize_secrets
+from app.utils.request_context import get_request_id
 
 class SensitiveDataFilter(logging.Filter):
     """
@@ -17,6 +18,7 @@ class SensitiveDataFilter(logging.Filter):
             self._secrets.append(secret)
 
     def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = get_request_id()
         if isinstance(record.msg, str):
             # 1. Regex scrubbing for unknown keys, Bearer tokens, headers
             record.msg = sanitize_secrets(record.msg)
@@ -50,7 +52,7 @@ def setup_logging():
     log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
     log_level = getattr(logging, log_level_name, logging.INFO)
 
-    log_format = "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s"
+    log_format = "[%(asctime)s] [%(levelname)s] [%(name)s] [request_id=%(request_id)s]: %(message)s"
     date_format = "%Y-%m-%d %H:%M:%S"
 
     # Known sensitive environment variables to redact
@@ -87,4 +89,3 @@ def setup_logging():
     logger.addFilter(redaction_filter)
     logger.info(f"Logging initialized with level: {log_level_name} (secret redaction active)")
     return logger
-

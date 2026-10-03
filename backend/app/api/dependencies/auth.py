@@ -64,11 +64,6 @@ def get_current_user(
         or "render.com" in req_host
     )
 
-    if not authorization:
-        token_param = request.query_params.get("token") or request.query_params.get("auth")
-        if token_param:
-            authorization = f"Bearer {token_param.strip()}"
-
     if authorization:
         parts = authorization.strip().split()
         if len(parts) == 2 and parts[0].lower() == "bearer":
@@ -148,7 +143,7 @@ def get_current_user(
     # If no token provided:
     auth_required = (
         is_prod
-        or getattr(settings, "FIREBASE_AUTH_REQUIRED", False)
+        or not getattr(settings, "LOCAL_DEV_FALLBACK_ENABLED", False)
         or request.headers.get("x-require-auth") == "true"
     )
 
@@ -194,14 +189,11 @@ def get_optional_user(
     Extracts the authenticated user if credentials/headers are supplied.
     Returns None for unauthenticated calls without raising 401 exceptions.
     """
-    token_param = request.query_params.get("token") or request.query_params.get("auth")
-    if not authorization and not token_param:
+    if not authorization:
         is_prod = (
             settings.ENVIRONMENT.lower() == "production"
-            or os.getenv("SCENORA_ENV", "").lower() == "production"
-            or any(k in os.environ for k in ("RENDER", "RENDER_SERVICE_ID", "RENDER_INSTANCE_ID", "RENDER_SERVICE_NAME"))
         )
-        if not is_prod and not getattr(settings, "FIREBASE_AUTH_REQUIRED", False):
+        if not is_prod and getattr(settings, "LOCAL_DEV_FALLBACK_ENABLED", False):
             default_uid = getattr(settings, "DEFAULT_LEGACY_UID", "legacy-local-user")
             return AuthenticatedUser(
                 uid=default_uid,
@@ -215,4 +207,3 @@ def get_optional_user(
         return get_current_user(request, authorization)
     except HTTPException:
         return None
-

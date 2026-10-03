@@ -169,4 +169,3 @@ def merge_scenes_endpoint(
     except Exception as e:
         logger.error(f"Error merging scenes in project {project_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Scene merge failed: {str(e)}")
-

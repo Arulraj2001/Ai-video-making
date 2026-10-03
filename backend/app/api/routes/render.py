@@ -8,8 +8,10 @@ from fastapi.responses import FileResponse
 from app.schemas.render import RenderRequest, RenderJobResponse, RenderJobListResponse
 from app.services.render_service import render_service, RESOLUTIONS, get_ffmpeg_executable
 from app.services.project_service import STORAGE_DIR, project_service
+from app.services.storage.asset_storage import default_asset_storage
 from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 from app.configuration.config import settings
+from app.services.platform.platform_service import get_platform_service
 
 router = APIRouter(prefix="/projects", tags=["render"])
 
@@ -29,9 +31,19 @@ def _to_response(job, project_id: str) -> RenderJobResponse:
         resolution=job.resolution,
         aspect_ratio=job.aspect_ratio,
         output_url=download_url,
+        durable_storage_path=getattr(job, "durable_storage_path", None),
         output_filename=job.output_filename,
         file_size=job.file_size,
         duration=job.duration,
+        manifest_version=getattr(job, "manifest_version", 1),
+        output_sha256=getattr(job, "output_sha256", None),
+        output_probe=getattr(job, "output_probe", None),
+        queue_wait_seconds=getattr(job, "queue_wait_seconds", None),
+        render_duration_seconds=getattr(job, "render_duration_seconds", None),
+        upload_duration_seconds=getattr(job, "upload_duration_seconds", None),
+        scene_count=getattr(job, "scene_count", None),
+        output_size_bytes=getattr(job, "output_size_bytes", None),
+        failure_code=getattr(job, "failure_code", None),
         error=job.error,
         created_at=job.created_at,
         updated_at=job.updated_at,
@@ -127,6 +139,11 @@ async def download_rendered_video(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to access this project's renders."
             )
+    elif getattr(settings, "ENVIRONMENT", "development").lower() == "production" or os.getenv("RENDER"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated ownership is required to download renders.",
+        )
 
     if job.status != "completed" or not job.output_path:
         raise HTTPException(
@@ -136,7 +153,17 @@ async def download_rendered_video(
 
     master_path = STORAGE_DIR / job.output_path
     if not master_path.exists():
-        raise HTTPException(status_code=404, detail="Rendered video file not found on disk.")
+        output_filename = Path(job.output_path).name
+        restored = default_asset_storage.ensure_local_asset(
+            project_id=project_id,
+            asset_category="renders",
+            filename=output_filename,
+            owner_id=project.owner_id,
+        )
+        if restored and restored.exists():
+            master_path = restored
+        else:
+            raise HTTPException(status_code=404, detail="Rendered video file is no longer available.")
 
     disp_type = "inline" if disposition == "inline" else "attachment"
     base_name = Path(job.output_filename or f"{project_id}_{job.resolution}").stem
@@ -265,7 +292,16 @@ def delete_render_job(
     if not job or job.project_id != project_id:
         raise HTTPException(status_code=404, detail=f"Render job '{job_id}' not found.")
 
-    render_service.delete_job(job_id)
+    try:
+        render_service.delete_job(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    get_platform_service().audit_repo.record_action(
+        admin_uid=current_user.uid,
+        admin_email=current_user.email or "",
+        action="render_deleted",
+        details={"project_id": project_id, "render_job_id": job_id},
+    )
     return None
 
 

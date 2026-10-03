@@ -154,6 +154,7 @@ export interface ProjectCreateInput {
   name: string;
   description?: string;
   raw_captions?: string;
+  canvas_settings?: Pick<CanvasSettings, "aspect_ratio" | "resolution">;
 }
 
 export interface ProjectSettingsUpdate {
@@ -324,4 +325,3 @@ export interface GenerateAllImagesResponse {
   failed_count: number;
   provider: string;
 }
-

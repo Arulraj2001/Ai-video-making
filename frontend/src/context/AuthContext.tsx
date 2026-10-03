@@ -12,7 +12,6 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider, ADMIN_EMAIL, isFirebaseConfigured, checkIsAdmin } from "../lib/firebase";
 import { formatAuthError } from "../utils/authErrors";
-import { firestoreService } from "../services/firestoreService";
 
 export interface AuthContextType {
   user: User | null;
@@ -51,9 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (firebaseUser) => {
         setUser(firebaseUser);
         if (firebaseUser) {
-          firestoreService.syncUserProfile(firebaseUser).catch((e) => {
-            console.warn("[ScenoraEdits] Background user sync notice:", e);
-          });
+          import("../services/firestoreService")
+            .then(({ firestoreService }) => firestoreService.syncUserProfile(firebaseUser))
+            .catch((e) => {
+              console.warn("[ScenoraEdits] Background user sync notice:", e);
+            });
         }
         setLoading(false);
       },

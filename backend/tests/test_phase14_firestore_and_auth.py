@@ -91,8 +91,8 @@ def test_strict_user_isolation():
     # 8. User A verifies Project A is gone
     assert client.get(f"/api/projects/{proj_a_id}", headers=headers_user_a).status_code == 404
 
-def test_dual_read_and_non_destructive_claim():
-    """Verify that unassigned legacy projects are non-destructively claimed by an authenticated creator."""
+def test_dual_read_does_not_claim_unassigned_project():
+    """Unassigned legacy projects require explicit migration before access."""
     fs_repo = FilesystemProjectRepository()
     dual_repo = DualReadProjectRepository(fs_repo=fs_repo)
 
@@ -105,16 +105,14 @@ def test_dual_read_and_non_destructive_claim():
     saved_legacy = fs_repo.save_project(legacy_project)
     legacy_id = saved_legacy.id
 
-    # Creator claims the project
     claimed = dual_repo.get_project(legacy_id, owner_id="creator_gamma")
-    assert claimed is not None
-    assert claimed.owner_id == "creator_gamma"
+    assert claimed is None
 
     # Disk file is still intact (non-destructive)
     disk_file = fs_repo._get_project_file(legacy_id)
     assert disk_file.exists()
 
-    # Another user cannot claim or access this now-owned project
+    # Another user cannot claim or access the unassigned project either.
     other_user_read = dual_repo.get_project(legacy_id, owner_id="creator_delta")
     assert other_user_read is None
 

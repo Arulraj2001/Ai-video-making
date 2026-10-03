@@ -52,7 +52,10 @@ test("2. Marketing Pricing Page connects directly to Admin / Firestore live with
 
   // Firestore rules allow public read of platform/config
   assert.ok(firestoreRules.includes("match /platform/config {"), "Rules match /platform/config");
-  assert.ok(firestoreRules.includes("allow read: if true;"), "Rules allow public read of platform/config");
+  assert.ok(
+    firestoreRules.includes("request.auth.token.admin == true"),
+    "Platform configuration requires admin authorization"
+  );
 });
 
 test("3. Studio Project Creation starts explicitly on Stage 1 (Script & Audio)", () => {
@@ -106,4 +109,3 @@ test("5. Stage 4 Ken Burns Scene Motion & Live Player Preview", () => {
   // ExportModal initialized from project
   assert.ok(exportModal.includes("project.canvas_settings?.motion_preset === \"ken_burns\""), "ExportModal syncs kenBurnsEnabled from Stage 4");
 });
-

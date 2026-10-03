@@ -13,9 +13,6 @@ export default defineConfig({
           if (path.includes("/node_modules/react/") || path.includes("/node_modules/react-dom/") || path.includes("/node_modules/scheduler/")) {
             return "react-vendor"
           }
-          if (path.includes("firebase") && (path.includes("/node_modules/") || path.includes("/src/lib/firebase"))) {
-            return "firebase-vendor"
-          }
           if (path.includes("/node_modules/lucide-react/")) {
             return "lucide-vendor"
           }
@@ -24,9 +21,6 @@ export default defineConfig({
           }
           if (path.includes("/components/storyboard/")) {
             return "storyboard"
-          }
-          if (path.includes("/pages/admin/")) {
-            return "admin"
           }
           if (/(HeroStudioShowcase|PipelineDiagram|HubAndSpokeSchematic|ExportShowcase|VideoBibleShowcase|TimelineShowcase)/.test(path)) {
             return "marketing-showcase"

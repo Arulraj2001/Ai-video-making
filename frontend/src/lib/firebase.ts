@@ -1,6 +1,5 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
 
 export interface FirebaseClientConfig {
   apiKey?: string;
@@ -49,21 +48,18 @@ export const isFirebaseConfigured: boolean = Boolean(
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
-let db: Firestore | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
 
 if (isFirebaseConfigured) {
   try {
     app = getApps().length === 0 ? initializeApp(config as Record<string, string>) : getApp();
     auth = getAuth(app);
-    db = getFirestore(app);
     googleProvider = new GoogleAuthProvider();
     googleProvider.setCustomParameters({ prompt: "select_account" });
   } catch (error) {
     console.error("[ScenoraEdits] Failed to initialize Firebase Services:", error);
     app = null;
     auth = null;
-    db = null;
     googleProvider = null;
   }
 } else {
@@ -72,4 +68,4 @@ if (isFirebaseConfigured) {
   );
 }
 
-export { app, auth, db, googleProvider };
+export { app, auth, googleProvider };

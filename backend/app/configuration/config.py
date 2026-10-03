@@ -8,6 +8,7 @@ class Settings:
     PROJECT_NAME: str = "AI Video Maker Backend"
     VERSION: str = "0.1.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production" if os.getenv("RENDER") else "development")
+    LOCAL_DEV_FALLBACK_ENABLED: bool = os.getenv("LOCAL_DEV_FALLBACK_ENABLED", "true" if not os.getenv("RENDER") else "false").lower() == "true"
     
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
@@ -87,6 +88,11 @@ class Settings:
     STORAGE_DIR: str = os.getenv("STORAGE_DIR", "storage")
     # Rendered videos remain local only and are removed after this many hours.
     RENDER_RETENTION_HOURS: int = max(1, int(os.getenv("RENDER_RETENTION_HOURS", "24")))
+    EXPENSIVE_REQUESTS_PER_MINUTE: int = max(1, int(os.getenv("EXPENSIVE_REQUESTS_PER_MINUTE", "20")))
+    RATE_LIMIT_STORAGE_BACKEND: str = os.getenv(
+        "RATE_LIMIT_STORAGE_BACKEND",
+        "firestore" if os.getenv("RENDER") else "memory",
+    ).strip().lower()
 
     # Firebase Backend Configuration
     FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID", "scenoraedits").strip()
@@ -242,6 +248,3 @@ def validate_security_configuration(current_settings: Optional[Settings] = None)
 
 
 settings = Settings()
-
-
-

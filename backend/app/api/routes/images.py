@@ -176,7 +176,6 @@ async def generate_scene_image(
     provider = request.provider if request else None
     model_id = request.model_id if request else None
     aspect_ratio = request.aspect_ratio if request else None
-
     try:
         updated_scene = await scene_image_service.generate_scene_image(
             project=project,
@@ -224,7 +223,6 @@ async def generate_scene_variations(
     style_mode = request.style_mode if request else None
     provider = request.provider if request else None
     model_id = request.model_id if request else None
-
     try:
         vars_raw = await scene_image_service.generate_scene_variations(
             project=project,
@@ -269,7 +267,6 @@ async def generate_all_scene_images(
     style_mode = request.style_mode if request else None
     provider = request.provider if request else None
     model_id = request.model_id if request else None
-
     try:
         active_gen = None
         if provider or model_id or style_mode:
@@ -328,7 +325,6 @@ async def retry_failed_scene_images(
     style_mode = request.style_mode if request else None
     provider = request.provider if request else None
     model_id = request.model_id if request else None
-
     try:
         active_gen = None
         if provider or model_id or style_mode:
@@ -427,4 +423,3 @@ def apply_graphic_template(
     project.updated_at = datetime.now(timezone.utc).isoformat()
     project_service._save_to_disk(project)
     return SceneSchema.model_validate(target_scene)
-

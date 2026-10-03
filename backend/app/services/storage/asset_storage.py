@@ -86,6 +86,16 @@ class AssetStorage(ABC):
         """
         return None
 
+    def delete_asset(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> bool:
+        """Deletes a durable cloud asset when the backend supports deletion."""
+        return False
+
 
 class LocalAssetStorage(AssetStorage):
     """Local filesystem asset storage for local dev, offline fallback, and fast media delivery."""
@@ -322,6 +332,53 @@ class FirebaseStorageAdapter(AssetStorage):
             return blob.generate_signed_url(expiration=timedelta(days=7))
         except Exception as e:
             logger.warning(f"Firebase durability upload failed for {asset_category}/{safe_name}: {e}")
+            return None
+
+    def upload_file_to_cloud(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        local_path: Path,
+        content_type: str,
+        owner_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """Uploads a local file without loading the complete file into memory."""
+        safe_name = sanitize_filename(filename)
+        if not (self.bucket and owner_id):
+            return None
+
+    def delete_asset(
+        self,
+        project_id: str,
+        asset_category: str,
+        filename: str,
+        owner_id: Optional[str] = None,
+    ) -> bool:
+        safe_name = sanitize_filename(filename)
+        if not (self.bucket and owner_id):
+            return False
+        cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
+        try:
+            blob = self.bucket.blob(cloud_blob_path)
+            if blob.exists():
+                blob.delete()
+            self._url_cache.pop(cloud_blob_path, None)
+            logger.info("Deleted durable asset %s", cloud_blob_path)
+            return True
+        except Exception as e:
+            logger.warning("Firebase asset deletion failed for %s: %s", cloud_blob_path, e)
+            return False
+        if not local_path.exists() or local_path.stat().st_size == 0:
+            raise FileNotFoundError(f"Cannot upload missing or empty asset: {local_path}")
+        try:
+            cloud_blob_path = f"users/{owner_id}/projects/{project_id}/{asset_category}/{safe_name}"
+            blob = self.bucket.blob(cloud_blob_path)
+            blob.upload_from_filename(str(local_path), content_type=content_type)
+            logger.info(f"Uploaded file to Firebase Storage: {cloud_blob_path}")
+            return cloud_blob_path
+        except Exception as e:
+            logger.warning(f"Firebase file durability upload failed for {asset_category}/{safe_name}: {e}")
             return None
 
 

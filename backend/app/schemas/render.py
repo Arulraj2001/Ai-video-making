@@ -16,9 +16,19 @@ class RenderJobResponse(BaseModel):
     resolution: str
     aspect_ratio: str
     output_url: Optional[str] = None
+    durable_storage_path: Optional[str] = None
     output_filename: Optional[str] = None
     file_size: Optional[int] = None
     duration: Optional[float] = None
+    manifest_version: int = 1
+    output_sha256: Optional[str] = None
+    output_probe: Optional[dict] = None
+    queue_wait_seconds: Optional[float] = None
+    render_duration_seconds: Optional[float] = None
+    upload_duration_seconds: Optional[float] = None
+    scene_count: Optional[int] = None
+    output_size_bytes: Optional[int] = None
+    failure_code: Optional[str] = None
     error: Optional[str] = None
     created_at: str
     updated_at: str

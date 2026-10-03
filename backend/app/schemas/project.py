@@ -263,6 +263,7 @@ class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=120, description="Project name")
     description: Optional[str] = Field(default="", max_length=500, description="Optional description")
     raw_captions: Optional[str] = None
+    canvas_settings: Optional[CanvasSettingsSchema] = None
 
 class ProjectResponse(BaseModel):
     id: str
@@ -291,4 +292,3 @@ class ProjectSummaryResponse(BaseModel):
     owner_id: Optional[str] = None
     created_at: str
     updated_at: str
-

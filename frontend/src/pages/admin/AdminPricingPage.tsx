@@ -5,7 +5,9 @@ import { Button } from "../../components/ui/Button";
 import { Alert } from "../../components/ui/Feedback";
 import { LoadingState } from "../../components/ui/StateViews";
 import { api, type PlatformConfig } from "../../services/api";
-import { db } from "../../lib/firebase";
+import { getDb } from "../../lib/firebaseFirestore";
+// Firestore is intentionally lazy-loaded; this preserves the previous db integration contract.
+// import { db } from "../../lib/firebase";
 import { Save, RefreshCw, Zap, Tag, Calendar } from "lucide-react";
 
 export const AdminPricingPage: React.FC = () => {
@@ -41,8 +43,8 @@ export const AdminPricingPage: React.FC = () => {
       try {
         data = await api.getAdminConfig(force);
       } catch (apiErr) {
-        if (db) {
-          const firestore = db;
+        const firestore = getDb();
+        if (firestore) {
           const { doc, getDoc } = await import("firebase/firestore");
           const snap = await getDoc(doc(firestore, "platform", "config"));
           if (snap.exists()) {
@@ -116,8 +118,8 @@ export const AdminPricingPage: React.FC = () => {
         free_generation_limit: Number(freeLimit),
       };
 
-      if (db) {
-        const firestore = db;
+      const firestore = getDb();
+      if (firestore) {
         try {
           const { doc, setDoc } = await import("firebase/firestore");
           await setDoc(doc(firestore, "platform", "config"), payload, { merge: true });

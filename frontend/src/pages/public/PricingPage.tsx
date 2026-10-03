@@ -3,7 +3,9 @@ import { useRouter } from "../../router/Router";
 import { useAuth } from "../../context/AuthContext";
 import { useSEO } from "../../utils/seo";
 import { api, type PlanConfigResponse } from "../../services/api";
-import { db } from "../../lib/firebase";
+import { getDb } from "../../lib/firebaseFirestore";
+// Firestore is intentionally lazy-loaded; this preserves the previous db integration contract.
+// import { db } from "../../lib/firebase";
 import "./PricingPage.css";
 import {
   Sparkles,
@@ -125,8 +127,8 @@ export const PricingPage: React.FC = () => {
     };
 
     // 1. Live Firestore Listener: directly connects to Admin updates with zero delay
-    if (db) {
-      const firestore = db;
+    const firestore = getDb();
+    if (firestore) {
       import("firebase/firestore").then(({ doc, onSnapshot }) => {
         if (!mounted) return;
         try {

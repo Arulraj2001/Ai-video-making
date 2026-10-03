@@ -1,7 +1,9 @@
 import time
 import logging
+import uuid
+import re
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +16,7 @@ from app.utils.security import sanitize_secrets
 from app.services.storage.asset_storage import default_asset_storage, sanitize_filename
 from app.services.project_service import project_service
 from app.api.routes.health import router as health_router, check_diagnostics
+from app.api.dependencies.auth import get_current_user, AuthenticatedUser
 from app.api.routes.projects import router as projects_router
 from app.api.routes.video_bible import router as video_bible_router
 from app.api.routes.storyboard import router as storyboard_router
@@ -27,6 +30,8 @@ from app.api.routes.admin import router as admin_router
 from app.api.routes.tts import router as tts_router
 from app.api.routes.contact import router as contact_router
 from app.utils.errors import AppException, app_exception_handler, global_exception_handler
+from app.middleware.rate_limit import ExpensiveOperationRateLimitMiddleware
+from app.utils.request_context import reset_request_id, set_request_id
 
 
 # Validate security configuration at startup (fails closed in production)
@@ -44,14 +49,24 @@ app = FastAPI(
 # HTTP Request Logging Middleware
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        supplied_request_id = request.headers.get("X-Request-ID", "").strip()
+        request_id = (
+            supplied_request_id
+            if re.fullmatch(r"[A-Za-z0-9._-]{1,128}", supplied_request_id)
+            else uuid.uuid4().hex
+        )
+        context_token = set_request_id(request_id)
         start_time = time.time()
-        response = await call_next(request)
-        duration_ms = (time.time() - start_time) * 1000
-        # Avoid cluttering logs with frequent health checks
-        if request.url.path not in ("/health", "/api/health", "/healthz"):
-            safe_path = sanitize_secrets(request.url.path)
-            logger.info(f"{request.method} {safe_path} -> {response.status_code} ({duration_ms:.1f}ms)")
-        return response
+        try:
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = request_id
+            duration_ms = (time.time() - start_time) * 1000
+            if request.url.path not in ("/health", "/api/health", "/healthz"):
+                safe_path = sanitize_secrets(request.url.path)
+                logger.info(f"{request.method} {safe_path} -> {response.status_code} ({duration_ms:.1f}ms)")
+            return response
+        finally:
+            reset_request_id(context_token)
 
 class MaintenanceModeMiddleware(BaseHTTPMiddleware):
     """
@@ -99,6 +114,7 @@ class MaintenanceModeMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(MaintenanceModeMiddleware)
+app.add_middleware(ExpensiveOperationRateLimitMiddleware)
 
 # CORS configuration for local development and Netlify deployment
 app.add_middleware(
@@ -120,7 +136,12 @@ media_dir.mkdir(parents=True, exist_ok=True)
 
 
 @app.get("/media/{project_id}/{asset_category}/{filename:path}")
-async def get_media_asset(project_id: str, asset_category: str, filename: str):
+async def get_media_asset(
+    project_id: str,
+    asset_category: str,
+    filename: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     """
     Serves project assets (narration audio, images, BGM, renders) with resilient
     Cloud Storage fallback:
@@ -148,6 +169,10 @@ async def get_media_asset(project_id: str, asset_category: str, filename: str):
         proj = project_service.get_project(project_id)
         if proj:
             owner_id = proj.owner_id
+            if owner_id and current_user.uid != owner_id and not current_user.is_admin:
+                raise HTTPException(status_code=403, detail="Not authorized to access this media.")
+            if not owner_id and not current_user.is_admin:
+                raise HTTPException(status_code=403, detail="Media owner is not assigned.")
     except Exception:
         pass
 

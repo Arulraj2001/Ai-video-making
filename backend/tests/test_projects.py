@@ -31,3 +31,28 @@ def test_project_lifecycle():
     # 5. Verify 404 on deleted project
     get_del_res = client.get(f"/api/projects/{project_id}")
     assert get_del_res.status_code == 404
+
+
+def test_project_creation_persists_canvas_settings():
+    create_res = client.post(
+        "/api/projects",
+        json={
+            "name": "Vertical Demo",
+            "canvas_settings": {
+                "aspect_ratio": "9:16",
+                "resolution": "1080x1920",
+            },
+        },
+    )
+    assert create_res.status_code == 201
+    created = create_res.json()
+    assert created["canvas_settings"]["aspect_ratio"] == "9:16"
+    assert created["canvas_settings"]["resolution"] == "1080x1920"
+
+    project_id = created["id"]
+    get_res = client.get(f"/api/projects/{project_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["canvas_settings"]["aspect_ratio"] == "9:16"
+
+    delete_res = client.delete(f"/api/projects/{project_id}")
+    assert delete_res.status_code == 204

@@ -25,6 +25,15 @@ export const CreateProjectPage: React.FC = () => {
       const created = await createProject({
         name: name.trim(),
         description: description.trim() || undefined,
+        canvas_settings: {
+          aspect_ratio: aspectRatio,
+          resolution:
+            aspectRatio === "16:9"
+              ? "1920x1080"
+              : aspectRatio === "1:1"
+                ? "1080x1080"
+                : "1080x1920",
+        },
       });
       setActiveStage("script");
       navigate(`/app/studio/${created.id}?stage=script`);

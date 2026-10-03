@@ -5,7 +5,7 @@ service cloud.firestore {
     // User document and nested subcollections
     match /users/{userId} {
       // Any authenticated user can read public creator profiles; only owner can write
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if request.auth != null && request.auth.uid == userId;
 
       // Project subcollection: Strictly accessible ONLY by the owning user
@@ -49,11 +49,12 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
 
-    // Central platform configuration & dynamic pricing
-    // Publicly readable so prospective creators on /pricing always see real-time admin pricing; writable by authenticated administrators
+    // Central platform configuration & dynamic pricing.
+    // Client reads are admin-only; public and authenticated pricing pages use
+    // the server-side /api/plans endpoint instead.
     match /platform/config {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
     }
 
     // Backend payment index: server Admin SDK only
@@ -68,4 +69,3 @@ service cloud.firestore {
     }
   }
 }
-

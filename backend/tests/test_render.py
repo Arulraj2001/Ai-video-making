@@ -3,10 +3,47 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.services.render_service import render_service, get_ffmpeg_executable, RESOLUTIONS
+from app.services.render_service import (
+    render_service,
+    get_ffmpeg_executable,
+    RESOLUTIONS,
+    sha256_file,
+)
 from app.models.scene import SceneModel
 
 client = TestClient(app)
+
+
+def test_render_job_model_tracks_durable_output_metadata():
+    from app.models.render import RenderJobModel
+
+    job = RenderJobModel(
+        project_id="proj_test",
+        owner_id="user_test",
+        output_path="projects/proj_test/renders/render.mp4",
+        durable_storage_path="users/user_test/projects/proj_test/renders/render.mp4",
+    )
+    assert job.owner_id == "user_test"
+    assert job.durable_storage_path.endswith("/renders/render.mp4")
+
+
+def test_render_manifest_and_checksum_are_stable(tmp_path, project_with_scenes):
+    from app.services.project_service import project_service
+
+    loaded = project_service.get_project(project_with_scenes["id"])
+    manifest = render_service._build_render_manifest(
+        loaded,
+        resolution="1080x1920",
+        aspect_ratio="9:16",
+        motion_preset="none",
+    )
+    assert manifest["version"] == 1
+    assert manifest["resolution"] == "1080x1920"
+    assert len(manifest["scenes"]) == 2
+
+    output = tmp_path / "output.mp4"
+    output.write_bytes(b"deterministic-output")
+    assert sha256_file(output) == sha256_file(output)
 
 @pytest.fixture
 def project_with_scenes():
@@ -323,25 +360,30 @@ def test_download_authenticated_and_capability_token():
     dummy_file.write_bytes(b"render binary data content")
 
     try:
-        # 1. Unauthenticated browser GET without headers (capability-token download)
-        # This mirrors the exact user failure case: browser clicking <a download> without auth headers
+        # 1. Development fallback remains available only for local compatibility.
         res_unauth = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download")
         assert res_unauth.status_code == 200
-        assert res_unauth.content == b"render binary data content"
-        assert res_unauth.headers["content-disposition"].startswith("attachment")
 
-        # 2. Inline disposition test for video player preview
-        res_inline = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download?disposition=inline")
+        # 2. Authenticated owner download.
+        res_inline = client.get(
+            f"/api/projects/{project_id}/render/{dummy_job.id}/download?disposition=inline",
+            headers={"Authorization": f"Bearer test-token-{owner_uid}"},
+        )
         assert res_inline.status_code == 200
         assert res_inline.headers["content-disposition"].startswith("inline")
 
-        # 3. Authenticated query parameter GET (?token=test-token-<owner_uid>)
-        res_token = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download?token=test-token-{owner_uid}")
+        # 3. Query-string tokens are ignored; local fallback remains for development.
+        res_token = client.get(
+            f"/api/projects/{project_id}/render/{dummy_job.id}/download?token=test-token-{owner_uid}",
+        )
         assert res_token.status_code == 200
         assert res_token.content == b"render binary data content"
 
-        # 4. Unauthorized user query param GET (?token=test-token-attacker) -> 403 Forbidden
-        res_unauthorized = client.get(f"/api/projects/{project_id}/render/{dummy_job.id}/download?token=test-token-attacker")
+        # 4. Unauthorized authenticated user is rejected.
+        res_unauthorized = client.get(
+            f"/api/projects/{project_id}/render/{dummy_job.id}/download",
+            headers={"Authorization": "Bearer test-token-attacker"},
+        )
         assert res_unauthorized.status_code == 403
         assert "Not authorized" in res_unauthorized.json()["detail"]
 

@@ -367,11 +367,20 @@ class ProjectService:
         return self.repository.get_project(project_id, owner_id)
 
     def create_project(self, data: ProjectCreate, owner_id: Optional[str] = None) -> ProjectModel:
+        canvas_settings = CanvasSettingsModel()
+        if data.canvas_settings is not None:
+            canvas_settings.aspect_ratio = data.canvas_settings.aspect_ratio
+            canvas_settings.resolution = data.canvas_settings.resolution
+            canvas_settings.fps = data.canvas_settings.fps
+            if data.canvas_settings.motion_preset is not None:
+                canvas_settings.motion_preset = data.canvas_settings.motion_preset
+
         project = ProjectModel(
             name=data.name.strip(),
             description=data.description.strip() if data.description else "",
             raw_captions=data.raw_captions or "",
             video_bible=VideoBibleModel(),
+            canvas_settings=canvas_settings,
             owner_id=owner_id
         )
         return self.repository.save_project(project, owner_id)
@@ -1585,4 +1594,3 @@ class ProjectService:
         return project
 
 project_service = ProjectService()
-

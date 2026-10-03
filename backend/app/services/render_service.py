@@ -1,10 +1,12 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
 import re
 import shutil
 import subprocess
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -329,9 +331,19 @@ def probe_video_metadata(file_path: Union[str, Path]) -> dict:
     return meta
 
 
+def sha256_file(file_path: Union[str, Path], chunk_size: int = 1024 * 1024) -> str:
+    """Return a stable content digest without loading a render into memory."""
+    digest = hashlib.sha256()
+    with Path(file_path).open("rb") as stream:
+        while chunk := stream.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 class RenderService:
     def __init__(self):
         self._jobs: Dict[str, RenderJobModel] = {}
+        self._last_cleanup_at: Optional[datetime] = None
         self.renders_root = STORAGE_DIR / "renders"
         self.renders_root.mkdir(parents=True, exist_ok=True)
         self._load_jobs_from_disk()
@@ -351,6 +363,7 @@ class RenderService:
     def cleanup_expired_renders(self, now: Optional[datetime] = None) -> int:
         """Deletes completed local renders after the configured free-tier retention window."""
         current_time = now or datetime.now(timezone.utc)
+        self._last_cleanup_at = current_time
         cutoff = current_time - timedelta(hours=settings.RENDER_RETENTION_HOURS)
         expired_jobs = []
         for job in list(self._jobs.values()):
@@ -363,6 +376,11 @@ class RenderService:
 
         return len(expired_jobs)
 
+    def _maybe_cleanup_expired_renders(self) -> None:
+        now = datetime.now(timezone.utc)
+        if not self._last_cleanup_at or (now - self._last_cleanup_at).total_seconds() >= 30:
+            self.cleanup_expired_renders(now=now)
+
     def _get_project_renders_dir(self, project_id: str) -> Path:
         pdir = STORAGE_DIR / "projects" / project_id / "renders"
         pdir.mkdir(parents=True, exist_ok=True)
@@ -370,6 +388,37 @@ class RenderService:
 
     def _get_jobs_file(self, project_id: str) -> Path:
         return self._get_project_renders_dir(project_id) / "render_jobs.json"
+
+    @staticmethod
+    def _build_render_manifest(project, resolution: str, aspect_ratio: str, motion_preset: str) -> dict:
+        """Snapshot every render-affecting project value at enqueue time."""
+        canvas = getattr(project, "canvas_settings", None)
+        scenes = []
+        for scene in sorted(getattr(project, "scenes", []) or [], key=lambda item: item.start):
+            scenes.append({
+                "id": scene.id,
+                "start": round(float(scene.start), 3),
+                "end": round(float(scene.end), 3),
+                "duration": round(float(scene.duration), 3),
+                "caption": scene.caption or "",
+                "image_path": scene.image_path,
+                "image_url": scene.image_url,
+                "motion": scene.motion,
+                "transition": scene.transition,
+                "transition_duration": round(float(scene.transition_duration or 0), 3),
+            })
+        return {
+            "version": 1,
+            "resolution": resolution,
+            "aspect_ratio": aspect_ratio,
+            "motion_preset": motion_preset,
+            "fps": int(getattr(canvas, "fps", 30) or 30),
+            "scenes": scenes,
+            "audio": {
+                "narration": getattr(getattr(project, "audio_file", None), "storage_path", None),
+                "music": getattr(getattr(getattr(project, "audio_settings", None), "music_file", None), "storage_path", None),
+            },
+        }
 
     def _load_jobs_from_disk(self):
         """Loads historical render jobs from project directories."""
@@ -388,7 +437,6 @@ class RenderService:
                                 status = j_data["status"]
                                 stage = j_data.get("stage", "Finalizing...")
                                 error = j_data.get("error")
-                                # If the container restarted while a job was active, the worker is gone
                                 if status in ("queued", "processing"):
                                     status = "failed"
                                     stage = "Interrupted"
@@ -403,9 +451,18 @@ class RenderService:
                                     resolution=j_data.get("resolution", DEFAULT_RESOLUTION),
                                     aspect_ratio=j_data.get("aspect_ratio", "9:16"),
                                     motion_preset=j_data.get("motion_preset", "none"),
+                                    owner_id=j_data.get("owner_id"),
                                     output_path=j_data.get("output_path"),
+                                    durable_storage_path=j_data.get("durable_storage_path"),
+                                    lease_owner=j_data.get("lease_owner"),
+                                    lease_expires_at=j_data.get("lease_expires_at"),
+                                    attempts=j_data.get("attempts", 0),
                                     output_filename=j_data.get("output_filename"),
                                     file_size=j_data.get("file_size"),
+                                    manifest_version=j_data.get("manifest_version", 1),
+                                    render_manifest=j_data.get("render_manifest"),
+                                    output_sha256=j_data.get("output_sha256"),
+                                    output_probe=j_data.get("output_probe"),
                                     duration=j_data.get("duration"),
                                     error=error,
                                     created_at=j_data.get("created_at", datetime.now(timezone.utc).isoformat()),
@@ -428,10 +485,19 @@ class RenderService:
                 "resolution": j.resolution,
                 "aspect_ratio": j.aspect_ratio,
                 "motion_preset": getattr(j, "motion_preset", "none"),
+                "owner_id": getattr(j, "owner_id", None),
                 "output_path": j.output_path,
+                "durable_storage_path": getattr(j, "durable_storage_path", None),
+                "lease_owner": getattr(j, "lease_owner", None),
+                "lease_expires_at": getattr(j, "lease_expires_at", None),
+                "attempts": getattr(j, "attempts", 0),
                 "output_filename": j.output_filename,
                 "file_size": j.file_size,
                 "duration": j.duration,
+                "manifest_version": getattr(j, "manifest_version", 1),
+                "render_manifest": getattr(j, "render_manifest", None),
+                "output_sha256": getattr(j, "output_sha256", None),
+                "output_probe": getattr(j, "output_probe", None),
                 "error": j.error,
                 "created_at": j.created_at,
                 "updated_at": j.updated_at,
@@ -459,15 +525,16 @@ class RenderService:
                 logger.debug(f"Could not sync render jobs to Firestore: {e}")
 
     def get_job(self, job_id: str) -> Optional[RenderJobModel]:
-        self.cleanup_expired_renders()
+        self._maybe_cleanup_expired_renders()
         job = self._jobs.get(job_id)
-        if job:
+        if job and not self._is_production_runtime():
             return job
 
         # Fallback 1: check local disk in case saved by another process
-        self._load_jobs_from_disk()
+        if not self._is_production_runtime():
+            self._load_jobs_from_disk()
         job = self._jobs.get(job_id)
-        if job:
+        if job and not self._is_production_runtime():
             return job
 
         # Fallback 2: check Firestore if available
@@ -483,18 +550,19 @@ class RenderService:
                             status = j_data.get("status", "failed")
                             stage = j_data.get("stage", "Interrupted")
                             error = j_data.get("error")
-                            if status in ("queued", "processing"):
+                            if status == "processing" and not self._is_production_runtime():
                                 status = "failed"
                                 stage = "Interrupted"
                                 error = "Render was interrupted due to a server restart. Please export again."
 
                             output_path = j_data.get("output_path")
+                            durable_storage_path = j_data.get("durable_storage_path")
                             if status == "completed" and output_path:
                                 p = STORAGE_DIR / output_path
-                                if not p.exists():
+                                if not p.exists() and not durable_storage_path:
                                     status = "failed"
                                     stage = "Expired"
-                                    error = "The rendered video file on the server expired after a server restart. Please re-export."
+                                    error = "The rendered video file expired and has no durable copy. Please re-export."
 
                             reconstructed = RenderJobModel(
                                 id=j_data["id"],
@@ -505,10 +573,19 @@ class RenderService:
                                 resolution=j_data.get("resolution", DEFAULT_RESOLUTION),
                                 aspect_ratio=j_data.get("aspect_ratio", "9:16"),
                                 motion_preset=j_data.get("motion_preset", "none"),
+                                owner_id=j_data.get("owner_id"),
                                 output_path=output_path,
+                                durable_storage_path=durable_storage_path,
+                                lease_owner=j_data.get("lease_owner"),
+                                lease_expires_at=j_data.get("lease_expires_at"),
+                                attempts=j_data.get("attempts", 0),
                                 output_filename=j_data.get("output_filename"),
                                 file_size=j_data.get("file_size"),
                                 duration=j_data.get("duration"),
+                                manifest_version=j_data.get("manifest_version", 1),
+                                render_manifest=j_data.get("render_manifest"),
+                                output_sha256=j_data.get("output_sha256"),
+                                output_probe=j_data.get("output_probe"),
                                 error=error,
                                 created_at=j_data.get("created_at", datetime.now(timezone.utc).isoformat()),
                                 updated_at=j_data.get("updated_at", datetime.now(timezone.utc).isoformat()),
@@ -521,9 +598,11 @@ class RenderService:
         return None
 
     def list_jobs_for_project(self, project_id: str) -> List[RenderJobModel]:
-        self.cleanup_expired_renders()
+        self._maybe_cleanup_expired_renders()
         jobs = [j for j in self._jobs.values() if j.project_id == project_id]
-        if not jobs and not (os.getenv("PYTEST_CURRENT_TEST") and os.getenv("TEST_FIRESTORE") != "1"):
+        if (self._is_production_runtime() or not jobs) and not (
+            os.getenv("PYTEST_CURRENT_TEST") and os.getenv("TEST_FIRESTORE") != "1"
+        ):
             try:
                 from app.configuration.firebase import get_firestore_client
                 db = get_firestore_client()
@@ -531,11 +610,11 @@ class RenderService:
                     docs = db.collection("render_jobs").where("project_id", "==", project_id).stream()
                     for doc in docs:
                         j_data = doc.to_dict()
-                        if j_data and j_data["id"] not in self._jobs:
+                        if j_data and (self._is_production_runtime() or j_data["id"] not in self._jobs):
                             status = j_data.get("status", "failed")
                             stage = j_data.get("stage", "Interrupted")
                             error = j_data.get("error")
-                            if status in ("queued", "processing"):
+                            if status == "processing" and not self._is_production_runtime():
                                 status = "failed"
                                 stage = "Interrupted"
                                 error = "Render was interrupted due to a server restart. Please export again."
@@ -558,9 +637,18 @@ class RenderService:
                                 aspect_ratio=j_data.get("aspect_ratio", "9:16"),
                                 motion_preset=j_data.get("motion_preset", "none"),
                                 output_path=output_path,
+                                durable_storage_path=j_data.get("durable_storage_path"),
                                 output_filename=j_data.get("output_filename"),
+                                owner_id=j_data.get("owner_id"),
+                                lease_owner=j_data.get("lease_owner"),
+                                lease_expires_at=j_data.get("lease_expires_at"),
+                                attempts=j_data.get("attempts", 0),
                                 file_size=j_data.get("file_size"),
                                 duration=j_data.get("duration"),
+                                manifest_version=j_data.get("manifest_version", 1),
+                                render_manifest=j_data.get("render_manifest"),
+                                output_sha256=j_data.get("output_sha256"),
+                                output_probe=j_data.get("output_probe"),
                                 error=error,
                                 created_at=j_data.get("created_at", datetime.now(timezone.utc).isoformat()),
                                 updated_at=j_data.get("updated_at", datetime.now(timezone.utc).isoformat()),
@@ -575,6 +663,15 @@ class RenderService:
         job = self._jobs.get(job_id)
         if not job:
             return False
+        if job.status in ("queued", "processing"):
+            raise ValueError("Active render jobs cannot be deleted. Cancel or wait for completion first.")
+        if job.durable_storage_path and job.output_filename:
+            default_asset_storage.delete_asset(
+                project_id=job.project_id,
+                asset_category="renders",
+                filename=job.output_filename,
+                owner_id=job.owner_id,
+            )
         if job.output_path:
             p = STORAGE_DIR / job.output_path
             if p.exists():
@@ -651,26 +748,124 @@ class RenderService:
             resolution=resolution,
             aspect_ratio=aspect_ratio,
             motion_preset=motion_preset,
+            owner_id=owner_id,
             output_filename=f"{project.name.lower().replace(' ', '_')[:30]}_{resolution}.mp4",
+        )
+        job.render_manifest = self._build_render_manifest(
+            project=project,
+            resolution=resolution,
+            aspect_ratio=aspect_ratio,
+            motion_preset=motion_preset,
         )
         self._jobs[job.id] = job
         self._save_jobs_for_project(project_id)
 
-        # Launch background async worker safely across ASGI server and TestClient
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(self._run_render_worker(job.id))
-        except RuntimeError:
-            import threading
-            def _thread_target():
-                try:
-                    asyncio.run(self._run_render_worker(job.id))
-                except Exception:
-                    pass
-            t = threading.Thread(target=_thread_target, daemon=True)
-            t.start()
+        # Production workers claim jobs from Firestore. Local/test mode keeps
+        # an in-process worker so the API remains usable without infrastructure.
+        if not self._is_production_runtime():
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._run_render_worker(job.id))
+            except RuntimeError:
+                import threading
+                def _thread_target():
+                    try:
+                        asyncio.run(self._run_render_worker(job.id))
+                    except Exception:
+                        logger.exception("In-process render worker failed for %s", job.id)
+                t = threading.Thread(target=_thread_target, daemon=True)
+                t.start()
 
         return job
+
+    @staticmethod
+    def _is_production_runtime() -> bool:
+        return (
+            getattr(settings, "ENVIRONMENT", "").lower() == "production"
+            or bool(os.getenv("RENDER"))
+        )
+
+    def claim_next_queued_job(self, worker_id: str, lease_seconds: int = 900) -> Optional[RenderJobModel]:
+        """Atomically claim one queued Firestore job for a dedicated worker."""
+        from app.configuration.firebase import get_firestore_client
+
+        db = get_firestore_client()
+        if not db:
+            raise RuntimeError("Firestore is required for production render workers.")
+
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        candidates = (
+            db.collection("render_jobs")
+            .where("status", "==", "queued")
+            .order_by("created_at")
+            .limit(10)
+            .stream()
+        )
+        for candidate in candidates:
+            data = candidate.to_dict() or {}
+            existing_expiry = self._parse_timestamp(data.get("lease_expires_at"))
+            if existing_expiry and existing_expiry > now:
+                continue
+
+            transaction = db.transaction()
+            try:
+                snapshot = candidate.reference.get(transaction=transaction)
+                current = snapshot.to_dict() or {}
+                current_expiry = self._parse_timestamp(current.get("lease_expires_at"))
+                if current.get("status") != "queued" or (current_expiry and current_expiry > now):
+                    continue
+                lease_expires_at = (now + timedelta(seconds=lease_seconds)).isoformat()
+                attempts = int(current.get("attempts", 0)) + 1
+                transaction.update(
+                    candidate.reference,
+                    {
+                        "lease_owner": worker_id,
+                        "lease_expires_at": lease_expires_at,
+                        "attempts": attempts,
+                        "updated_at": now.isoformat(),
+                    },
+                )
+                transaction.commit()
+            except Exception:
+                logger.exception("Failed to claim render job %s", candidate.id)
+                continue
+
+            job = RenderJobModel(
+                id=current["id"],
+                project_id=current["project_id"],
+                status="queued",
+                stage=current.get("stage", "Preparing..."),
+                progress=current.get("progress", 0),
+                resolution=current.get("resolution", DEFAULT_RESOLUTION),
+                aspect_ratio=current.get("aspect_ratio", "9:16"),
+                motion_preset=current.get("motion_preset", "none"),
+                owner_id=current.get("owner_id"),
+                output_path=current.get("output_path"),
+                durable_storage_path=current.get("durable_storage_path"),
+                output_filename=current.get("output_filename"),
+                file_size=current.get("file_size"),
+                duration=current.get("duration"),
+                manifest_version=current.get("manifest_version", 1),
+                render_manifest=current.get("render_manifest"),
+                output_sha256=current.get("output_sha256"),
+                output_probe=current.get("output_probe"),
+                queue_wait_seconds=current.get("queue_wait_seconds"),
+                render_duration_seconds=current.get("render_duration_seconds"),
+                upload_duration_seconds=current.get("upload_duration_seconds"),
+                scene_count=current.get("scene_count"),
+                output_size_bytes=current.get("output_size_bytes"),
+                failure_code=current.get("failure_code"),
+                error=current.get("error"),
+                lease_owner=worker_id,
+                lease_expires_at=lease_expires_at,
+                attempts=attempts,
+                created_at=current.get("created_at", now.isoformat()),
+                updated_at=now.isoformat(),
+            )
+            self._jobs[job.id] = job
+            return job
+        return None
 
     def retry_render_job(self, job_id: str, owner_id: Optional[str] = None) -> RenderJobModel:
         """Retries a failed render job using identical resolution and settings."""
@@ -694,6 +889,15 @@ class RenderService:
         if job.status in ("processing", "completed"):
             return
         job.status = "processing"
+        render_started = time.perf_counter()
+        created_at = self._parse_timestamp(job.created_at)
+        if created_at:
+            job.queue_wait_seconds = max(
+                0.0, (datetime.now(timezone.utc) - created_at).total_seconds()
+            )
+        job.failure_code = None
+        job.updated_at = datetime.now(timezone.utc).isoformat()
+        self._save_jobs_for_project(job.project_id)
 
         project = project_service.get_project(job.project_id)
         if not project:
@@ -720,10 +924,10 @@ class RenderService:
             job.progress = 5
             job.updated_at = datetime.now(timezone.utc).isoformat()
             self._save_jobs_for_project(job.project_id)
-            await asyncio.sleep(0.1)
 
             scenes = sorted(project.scenes, key=lambda s: s.start)
             total_scenes = len(scenes)
+            job.scene_count = total_scenes
             total_duration = max(s.end for s in scenes)
 
             # Validate or fallback image paths and composite overlays/templates
@@ -793,14 +997,14 @@ class RenderService:
             job.stage = "Generating timeline..."
             job.updated_at = datetime.now(timezone.utc).isoformat()
             self._save_jobs_for_project(job.project_id)
-            await asyncio.sleep(0.1)
 
             # --- STAGE 2: Generating timeline... (15% -> 55%) ---
             # Render scene clips concurrently with motion and transition filters
             job_motion_preset = getattr(job, "motion_preset", "none")
             loop = asyncio.get_running_loop()
             is_cloud = bool(os.getenv("RENDER") or getattr(settings, "ENVIRONMENT", "") == "production")
-            render_sem = asyncio.Semaphore(1 if is_cloud else 3)
+            configured_concurrency = max(1, int(os.getenv("RENDER_SCENE_CONCURRENCY", "1" if is_cloud else "3")))
+            render_sem = asyncio.Semaphore(configured_concurrency)
             completed_scenes = 0
 
             async def _render_scene_clip(idx: int, scene, img_path) -> Path:
@@ -1112,6 +1316,43 @@ class RenderService:
             if not final_mp4_path.exists() or final_mp4_path.stat().st_size == 0:
                 raise RuntimeError("Render output file is empty or missing.")
 
+            output_probe = probe_video_metadata(final_mp4_path)
+            expected_width = target_width
+            expected_height = target_height
+            if (
+                not output_probe["is_valid"]
+                or output_probe["width"] != expected_width
+                or output_probe["height"] != expected_height
+                or not output_probe["fps"]
+                or abs(float(output_probe["fps"]) - target_fps) > 0.1
+                or output_probe["duration"] is None
+                or abs(float(output_probe["duration"]) - total_duration) > 0.25
+                or output_probe["video_codec"] not in ("h264", "avc1")
+                or output_probe["pix_fmt"] not in ("yuv420p", "yuvj420p")
+            ):
+                raise RuntimeError(
+                    "Rendered output failed validation: "
+                    f"{output_probe}"
+                )
+            output_sha256 = sha256_file(final_mp4_path)
+
+            upload_started = time.perf_counter()
+            durable_storage_path = default_asset_storage.upload_file_to_cloud(
+                project_id=job.project_id,
+                asset_category="renders",
+                filename=final_mp4_path.name,
+                local_path=final_mp4_path,
+                content_type="video/mp4",
+                owner_id=job.owner_id,
+            )
+            job.upload_duration_seconds = round(time.perf_counter() - upload_started, 3)
+            is_production = (
+                getattr(settings, "ENVIRONMENT", "").lower() == "production"
+                or bool(os.getenv("RENDER"))
+            )
+            if is_production and not durable_storage_path:
+                raise RuntimeError("Render completed locally but could not be uploaded to durable storage.")
+
             # Safe cleanup of intermediate temporary directory
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -1120,12 +1361,29 @@ class RenderService:
             job.stage = "Finalizing..."
             job.progress = 100
             job.output_path = str(final_mp4_path.relative_to(STORAGE_DIR).as_posix())
+            job.durable_storage_path = durable_storage_path
             job.file_size = final_mp4_path.stat().st_size
-            job.duration = total_duration
+            job.output_size_bytes = job.file_size
+            job.duration = output_probe["duration"]
+            job.output_sha256 = output_sha256
+            job.output_probe = output_probe
             job.error = None
+            job.failure_code = None
+            job.render_duration_seconds = round(time.perf_counter() - render_started, 3)
+            job.lease_owner = None
+            job.lease_expires_at = None
             job.updated_at = datetime.now(timezone.utc).isoformat()
             self._save_jobs_for_project(job.project_id)
-            logger.info(f"Render job {job.id} completed successfully: {final_mp4_path}")
+            logger.info(
+                "Render job %s completed: scenes=%s duration=%.3fs queue_wait=%.3fs "
+                "upload=%.3fs output_bytes=%s",
+                job.id,
+                job.scene_count or 0,
+                job.render_duration_seconds or 0,
+                job.queue_wait_seconds or 0,
+                job.upload_duration_seconds or 0,
+                job.output_size_bytes or 0,
+            )
 
         except Exception as e:
             try:
@@ -1134,10 +1392,34 @@ class RenderService:
                 pass
             job.status = "failed"
             job.error = str(e)
+            job.failure_code = self._classify_render_failure(e)
+            job.render_duration_seconds = round(time.perf_counter() - render_started, 3)
+            logger.error(
+                "Render job %s failed: code=%s duration=%.3fs attempt=%s",
+                job.id,
+                job.failure_code,
+                job.render_duration_seconds,
+                job.attempts,
+            )
+            job.lease_owner = None
+            job.lease_expires_at = None
             job.updated_at = datetime.now(timezone.utc).isoformat()
             self._save_jobs_for_project(job.project_id)
             # Cleanup temp files on failure
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @staticmethod
+    def _classify_render_failure(error: Exception) -> str:
+        message = str(error).lower()
+        if "upload" in message or "storage" in message:
+            return "durable_storage_failed"
+        if "validation" in message or "dimensions" in message or "codec" in message:
+            return "output_validation_failed"
+        if "ffmpeg" in message:
+            return "ffmpeg_failed"
+        if "project was deleted" in message:
+            return "project_missing"
+        return "render_failed"
 
     # Ken Burns effect pool — cycles by scene index for natural variety within a video
     _KB_EFFECTS = ["zoom_in", "pan_left", "zoom_out", "pan_right", "pan_up"]
@@ -1632,4 +1914,3 @@ class RenderService:
 
 
 render_service = RenderService()
-

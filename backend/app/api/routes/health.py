@@ -10,6 +10,7 @@ from app.schemas.health import HealthResponse, HealthDiagnosticsResponse
 from app.configuration.config import settings
 from app.services.render_service import get_ffmpeg_executable
 from app.services.project_service import STORAGE_DIR
+from app.services.worker_health_service import worker_health_service
 
 router = APIRouter(tags=["health"])
 
@@ -47,6 +48,7 @@ def check_diagnostics() -> dict:
         "ffmpeg_path": "[CONFIGURED]" if (ffmpeg_ok and is_prod) else (ffmpeg_exe if ffmpeg_ok else None),
         "storage_writable": storage_ok,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "render_workers": worker_health_service.diagnostics(),
     }
 
 @router.get("/health", response_model=Union[HealthDiagnosticsResponse, HealthResponse])

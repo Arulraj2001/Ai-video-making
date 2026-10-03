@@ -450,9 +450,8 @@ class FilesystemProjectRepository(ProjectRepository):
                 # Belongs to a different user -> Not accessible
                 return None
             if proj.owner_id is None and owner_id != default_legacy:
-                # Unassigned legacy project accessed by an authenticated user -> claim it!
-                proj.owner_id = owner_id
-                self.save_project(proj, owner_id)
+                # Unassigned records require explicit migration/admin ownership transfer.
+                return None
 
         return proj
 
