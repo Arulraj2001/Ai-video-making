@@ -614,3 +614,18 @@ Implementation is now authorized by the user, but deployment and browser testing
 3. Run authenticated staging smoke tests for project ownership, media access, render queue processing, durable download, deletion, quotas, and rate limiting.
 4. Verify FFmpeg and provider behavior with representative real media and long-running multi-scene renders.
 5. Configure production alerting for worker heartbeat staleness, queue growth, render failure categories, provider failures, and quota/payment inconsistencies.
+
+### Live deployment - completed with one Firebase prerequisite
+
+- Pushed commit `0a85905` to `origin/main`.
+- Firebase Hosting deployed successfully to `https://scenoraedits.web.app`.
+- Firestore Standard/Native rules deployed successfully.
+- Firestore indexes deployed successfully for the default database.
+- Live checks passed:
+  - `https://scenoraedits.web.app`: HTTP 200;
+  - `https://scenoraedits.web.app/app/projects`: HTTP 200;
+  - `https://scenoraedits.onrender.com/health`: HTTP 200 with `{"status":"ok"}`.
+- Firebase Storage rules were not deployable because Storage is not initialized for project `scenora-46cfe`. Firebase requires the project owner to open the Firebase Console Storage page and click **Get started** before the CLI can deploy Storage rules.
+- Render deployment is controlled by the repository's Render integration; the pushed `main` commit is available for the configured web and worker services. Live health verification passed for the backend web service.
+- No browser automation was used.
+- Remaining operational action: initialize Firebase Storage, deploy `storage.rules`, and verify the render worker can upload/delete durable outputs.
