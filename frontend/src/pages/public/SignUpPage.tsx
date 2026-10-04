@@ -92,10 +92,10 @@ export const SignUpPage: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-7">
           <ScenoraLogo size="lg" className="justify-center mb-3" />
-          <h2 className="text-xl font-bold font-sans text-[var(--neu-text)]">
+          <h2 className="text-xl font-bold font-sans text-[var(--color-text)]">
             Create your Scenora Account
           </h2>
-          <p className="text-xs text-[var(--neu-text-secondary)] mt-1 font-sans">
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1 font-sans">
             Start directing AI-consistent scenes, timelines, and multi-angle videos.
           </p>
         </div>
@@ -121,7 +121,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="Samuel Creator"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              leftElement={<UserIcon size={16} className="text-[var(--neu-text-muted)]" />}
+              leftElement={<UserIcon size={16} className="text-[var(--color-text-muted)]" />}
             />
 
             <Input
@@ -131,7 +131,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="creator@scenoraedits.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              leftElement={<Mail size={16} className="text-[var(--neu-text-muted)]" />}
+              leftElement={<Mail size={16} className="text-[var(--color-text-muted)]" />}
               required
             />
 
@@ -142,7 +142,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              leftElement={<Lock size={16} className="text-[var(--neu-text-muted)]" />}
+              leftElement={<Lock size={16} className="text-[var(--color-text-muted)]" />}
               required
             />
 
@@ -153,13 +153,13 @@ export const SignUpPage: React.FC = () => {
               placeholder="Re-enter password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              leftElement={<Lock size={16} className="text-[var(--neu-text-muted)]" />}
+              leftElement={<Lock size={16} className="text-[var(--color-text-muted)]" />}
               required
             />
 
             <Button
               type="submit"
-              variant="neu-primary"
+              variant="primary"
               size="md"
               className="w-full mt-2 font-bold py-3"
               isLoading={isSubmitting}
@@ -171,16 +171,16 @@ export const SignUpPage: React.FC = () => {
 
           <div className="relative my-6 text-center">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[var(--neu-border-subtle)]" />
+              <div className="w-full border-t border-[var(--color-border-subtle)]" />
             </div>
-            <span className="relative px-3 bg-[var(--neu-bg)] text-[10px] uppercase font-mono tracking-wider text-[var(--neu-text-muted)] font-semibold">
+            <span className="relative px-3 bg-[var(--color-surface)] text-[10px] uppercase font-mono tracking-wider text-[var(--color-text-muted)] font-semibold">
               Or continue with
             </span>
           </div>
 
           <Button
             type="button"
-            variant="neu-secondary"
+            variant="secondary"
             size="md"
             className="w-full font-semibold py-2.5"
             isLoading={isGoogleSubmitting}
@@ -209,11 +209,11 @@ export const SignUpPage: React.FC = () => {
             Google
           </Button>
 
-          <div className="mt-6 pt-5 border-t border-[var(--neu-border-subtle)] text-center text-xs text-[var(--neu-text-secondary)] font-sans">
+          <div className="mt-6 pt-5 border-t border-[var(--color-border-subtle)] text-center text-xs text-[var(--color-text-secondary)] font-sans">
             Already have an account?{" "}
             <Link
               to={`/sign-in${returnUrl !== "/app" ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
-              className="text-[var(--neu-accent)] font-bold hover:underline"
+              className="text-[var(--color-primary)] font-bold hover:underline"
             >
               Sign in
             </Link>

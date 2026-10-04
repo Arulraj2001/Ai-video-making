@@ -35,7 +35,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     // Cards define content boundaries without making every section float.
     const baseCardStyle: React.CSSProperties = {
       backgroundColor: "var(--color-card)",
-      border: "1px solid var(--color-outline)",
+      border: "1px solid var(--color-card-border, var(--color-border))",
       borderRadius: "var(--radius-md)",
       boxShadow: "none",
     };
@@ -49,7 +49,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       },
       schematic: {
         ...baseCardStyle,
-        border: "1px solid var(--color-outline-strong)",
+        border: "1px solid var(--color-border-strong, var(--color-border))",
       },
       info: {
         ...baseCardStyle,
@@ -60,11 +60,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       },
       scene: {
         ...baseCardStyle,
-        border: "1px solid var(--color-outline)",
+        border: "1px solid var(--color-card-border, var(--color-border))",
       },
       action: {
         backgroundColor: "var(--surface)",
-        border: "1.5px dashed var(--orange)",
+        border: "1.5px dashed var(--color-primary)",
         borderRadius: "12px",
         cursor: "pointer",
       },
@@ -77,7 +77,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       },
       admin: {
         ...baseCardStyle,
-        border: "1px solid var(--color-outline-strong)",
+        border: "1px solid var(--color-border-strong, var(--color-border))",
       },
     };
 

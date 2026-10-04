@@ -171,13 +171,6 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes sbModalIn {
-          from { opacity: 0; transform: scale(0.97) translateY(6px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
     </div>
   );
 };

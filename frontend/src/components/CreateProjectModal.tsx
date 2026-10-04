@@ -1,6 +1,9 @@
 import React, { useState } from "react";
-import { X, FolderPlus } from "lucide-react";
+import { FolderPlus, AlertCircle } from "lucide-react";
 import type { ProjectCreateInput } from "../types";
+import { Modal } from "./ui/Modal";
+import { Input, Textarea } from "./ui/Input";
+import { Button } from "./ui/Button";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -38,97 +41,69 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-2xl p-6 max-w-md w-full shadow-2xl"
-        style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-subtle)",
-          color: "var(--text-primary)",
-          boxShadow: "var(--shadow-modal)",
-        }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
-              <FolderPlus size={18} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold font-display" style={{ color: "var(--text-primary)" }}>Create Video Project</h3>
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-                Name your project. Next, you'll import your voiceover audio and Clipchamp captions to generate your timeline.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg transition-colors"
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {error && (
-          <div className="p-3 mb-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-secondary)" }}>
-              Project Name <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              autoFocus
-              placeholder="e.g. Neon Horizon Documentary"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input-text"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-secondary)" }}>
-              Description (Optional)
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Brief summary or creative notes for this video..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="textarea-custom"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2.5 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="btn-secondary text-xs"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !name.trim()}
-              className="btn-primary text-xs"
-            >
-              {loading ? "Creating..." : "Create Project"}
-            </button>
-          </div>
-        </form>
+  const modalTitle = (
+    <div className="flex items-center gap-2.5">
+      <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary)] flex items-center justify-center shrink-0">
+        <FolderPlus size={18} />
+      </div>
+      <div>
+        <h3 className="text-base font-bold text-[var(--color-text)]">Create Video Project</h3>
       </div>
     </div>
+  );
+
+  const modalFooter = (
+    <div className="flex items-center justify-end gap-2.5 w-full">
+      <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
+        Cancel
+      </Button>
+      <Button
+        variant="primary"
+        size="sm"
+        type="submit"
+        form="create-project-form"
+        disabled={loading || !name.trim()}
+        isLoading={loading}
+      >
+        Create Project
+      </Button>
+    </div>
+  );
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={modalTitle}
+      description="Name your project. Next, you'll import your voiceover audio and Clipchamp captions to generate your timeline."
+      size="sm"
+      footer={modalFooter}
+    >
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+          <AlertCircle size={15} className="shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form id="create-project-form" onSubmit={handleSubmit} className="space-y-4 py-1">
+        <Input
+          label="Project Name *"
+          required
+          autoFocus
+          placeholder="e.g. Neon Horizon Documentary"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <Textarea
+          label="Description (Optional)"
+          rows={3}
+          placeholder="Brief summary or creative notes for this video..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </form>
+    </Modal>
   );
 };

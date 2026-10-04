@@ -94,8 +94,9 @@
   --color-card-interactive: var(--white);
   --color-card-border: var(--border);
   --color-card-hover: var(--white);
-  --color-outline: rgba(255, 107, 0, 0.28);
-  --color-outline-strong: rgba(255, 107, 0, 0.48);
+  --color-outline: var(--border);
+  --color-outline-strong: var(--border-strong);
+  --color-outline-brand: rgba(255, 107, 0, 0.32);
 
   --color-modal: var(--white);
   --color-modal-backdrop: rgba(26, 26, 26, 0.5);
@@ -293,8 +294,9 @@
   --color-card-interactive: #20222A;
   --color-card-border: var(--border);
   --color-card-hover: #22242D;
-  --color-outline: rgba(255, 145, 77, 0.42);
-  --color-outline-strong: rgba(255, 145, 77, 0.68);
+  --color-outline: rgba(255, 255, 255, 0.12);
+  --color-outline-strong: rgba(255, 255, 255, 0.22);
+  --color-outline-brand: rgba(255, 145, 77, 0.45);
 
   --color-modal: var(--white);
   --color-modal-backdrop: rgba(0, 0, 0, 0.75);
@@ -781,6 +783,13 @@ select:focus,
 .select-custom:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-subtle);
+}
+
+select option,
+.scenora-select option,
+.select-custom option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 
 /* ==========================================================================
@@ -2938,6 +2947,66 @@ button .text-white,
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes sbModalIn {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BRACKET SYNTAX UTILITIES (Compatibility for TSX component arbitrary classes)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.border-\[var\(--color-border\)\] { border-color: var(--color-border) !important; }
+.border-\[var\(--color-border-subtle\)\] { border-color: var(--color-border-subtle) !important; }
+.border-\[var\(--color-error\)\] { border-color: var(--color-error) !important; }
+.border-\[var\(--color-outline\)\] { border-color: var(--color-outline) !important; }
+.border-\[var\(--border-subtle\)\] { border-color: var(--border-subtle) !important; }
+.border-\[var\(--modal-border\)\] { border-color: var(--modal-border) !important; }
+.border-\[var\(--modal-header-border\)\] { border-color: var(--modal-header-border) !important; }
+
+.text-\[var\(--color-text\)\] { color: var(--color-text) !important; }
+.text-\[var\(--color-text-secondary\)\] { color: var(--color-text-secondary) !important; }
+.text-\[var\(--color-text-muted\)\] { color: var(--color-text-muted) !important; }
+.text-\[var\(--color-primary\)\] { color: var(--color-primary) !important; }
+.text-\[var\(--color-error\)\] { color: var(--color-error) !important; }
+.text-\[var\(--text\)\] { color: var(--text) !important; }
+.text-\[var\(--text-primary\)\] { color: var(--text-primary) !important; }
+.text-\[var\(--text-secondary\)\] { color: var(--text-secondary) !important; }
+.text-\[var\(--text-muted\)\] { color: var(--text-muted) !important; }
+.text-\[var\(--neu-text\)\] { color: var(--color-text) !important; }
+.text-\[var\(--neu-text-secondary\)\] { color: var(--color-text-secondary) !important; }
+.text-\[var\(--neu-text-muted\)\] { color: var(--color-text-muted) !important; }
+.text-\[var\(--neu-accent\)\] { color: var(--color-primary) !important; }
+.text-\[var\(--modal-text-title\)\] { color: var(--modal-text-title) !important; }
+.text-\[var\(--modal-close-color\)\] { color: var(--modal-close-color) !important; }
+
+.bg-\[var\(--color-card-subtle\)\] { background-color: var(--color-card-subtle) !important; }
+.bg-\[var\(--color-primary-subtle\)\] { background-color: var(--color-primary-subtle) !important; }
+.bg-\[var\(--color-surface\)\] { background-color: var(--color-surface) !important; }
+.bg-\[var\(--color-background\)\] { background-color: var(--color-background) !important; }
+.bg-\[var\(--surface\)\] { background-color: var(--surface) !important; }
+.bg-\[var\(--modal-bg\)\] { background-color: var(--modal-bg) !important; }
+.bg-\[var\(--modal-footer-bg\)\] { background-color: var(--modal-footer-bg) !important; }
+
+.text-\[9px\] { font-size: 9px !important; }
+.text-\[10px\] { font-size: 10px !important; }
+.text-\[11px\] { font-size: 11px !important; }
+.text-\[13px\] { font-size: 13px !important; }
+
+.bg-black\/70 { background-color: rgba(0, 0, 0, 0.70) !important; }
+.bg-black\/60 { background-color: rgba(0, 0, 0, 0.60) !important; }
+.bg-black\/80 { background-color: rgba(0, 0, 0, 0.80) !important; }
+.bg-black\/50 { background-color: rgba(0, 0, 0, 0.50) !important; }
+
+.bg-indigo-500\/20 { background-color: rgba(99, 102, 241, 0.20) !important; }
+.text-indigo-400 { color: #818CF8 !important; }
+.bg-rose-500\/10 { background-color: rgba(244, 63, 94, 0.10) !important; }
+.border-rose-500\/20 { border-color: rgba(244, 63, 94, 0.20) !important; }
+.text-rose-300 { color: #FDA4AF !important; }
+.text-rose-400 { color: #FB7185 !important; }
+
+.focus\:border-\[var\(--color-error\)\]:focus { border-color: var(--color-error) !important; }
+.hover\:border-\[var\(--color-primary\)\]:hover { border-color: var(--color-primary) !important; }
 
 /* ==========================================================================
    Phase 7 — Responsive Timeline Studio Layout

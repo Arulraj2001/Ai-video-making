@@ -33,32 +33,32 @@ export const Badge: React.FC<BadgeProps> = ({
     primary: {
       backgroundColor: "var(--color-primary-subtle)",
       color: "var(--color-primary)",
-      border: "1px solid rgba(230, 72, 51, 0.25)",
+      border: "1px solid var(--color-outline-brand, rgba(255, 107, 0, 0.3))",
     },
     secondary: {
       backgroundColor: "var(--color-secondary-subtle)",
       color: "var(--color-secondary)",
-      border: "1px solid rgba(36, 72, 85, 0.2)",
+      border: "1px solid var(--color-border)",
     },
     accent: {
       backgroundColor: "var(--color-accent-subtle)",
       color: "var(--color-accent)",
-      border: "1px solid rgba(135, 79, 65, 0.25)",
+      border: "1px solid var(--color-accent-subtle)",
     },
     success: {
       backgroundColor: "var(--color-success-subtle)",
       color: "var(--color-success-text)",
-      border: "1px solid rgba(30, 127, 96, 0.25)",
+      border: "1px solid var(--color-success-subtle)",
     },
     warning: {
       backgroundColor: "var(--color-warning-subtle)",
       color: "var(--color-warning-text)",
-      border: "1px solid rgba(194, 94, 0, 0.25)",
+      border: "1px solid var(--color-warning-subtle)",
     },
     error: {
       backgroundColor: "var(--color-error-subtle)",
       color: "var(--color-error-text)",
-      border: "1px solid rgba(211, 47, 47, 0.25)",
+      border: "1px solid var(--color-error-subtle)",
     },
     outline: {
       backgroundColor: "transparent",
